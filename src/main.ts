@@ -1,9 +1,9 @@
 import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { SimpleNoteChatSettingsTab } from './SettingsTab';
 import { ChatService } from './ChatService';
-import { OpenRouterService } from './OpenRouterService'; // Import OpenRouterService
+import { OpenRouterService } from './OpenRouterService';
 import { EditorHandler } from './EditorHandler';
-import { FileSystemService } from './FileSystemService'; // Import FileSystemService
+import { FileSystemService } from './FileSystemService';
 import { PluginSettings, DEFAULT_SETTINGS } from './types';
 
 // Settings interface and defaults are now imported from './types'
@@ -11,18 +11,17 @@ import { PluginSettings, DEFAULT_SETTINGS } from './types';
 export default class SimpleNoteChatPlugin extends Plugin {
 	settings: PluginSettings;
 	chatService: ChatService;
-	openRouterService: OpenRouterService; // Add property for the service
+	openRouterService: OpenRouterService;
 	editorHandler: EditorHandler;
-	fileSystemService: FileSystemService; // Add property for the file system service
+	fileSystemService: FileSystemService;
 
 	async onload() {
 		console.log('Loading Simple Note Chat plugin');
 		await this.loadSettings();
 
-		// Instantiate services
-		this.openRouterService = new OpenRouterService(); // Instantiate OpenRouterService
-		this.chatService = new ChatService(this, this.openRouterService); // Pass it to ChatService
-		this.fileSystemService = new FileSystemService(this.app); // Instantiate FileSystemService
+		this.openRouterService = new OpenRouterService();
+		this.chatService = new ChatService(this, this.openRouterService);
+		this.fileSystemService = new FileSystemService(this.app);
 		this.editorHandler = new EditorHandler(this.app, this);
 
 		this.addSettingTab(new SimpleNoteChatSettingsTab(this.app, this));
