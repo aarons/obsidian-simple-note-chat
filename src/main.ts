@@ -5,9 +5,22 @@ import { OpenRouterService } from './OpenRouterService';
 import { EditorHandler } from './EditorHandler';
 import { FileSystemService } from './FileSystemService';
 import { PluginSettings, DEFAULT_SETTINGS } from './types';
-import { DEFAULT_NN_TITLE_FORMAT, CHAT_SEPARATOR } from './constants'; // Import CHAT_SEPARATOR
+import {
+	DEFAULT_NN_TITLE_FORMAT,
+	CC_COMMAND_DEFAULT,
+	GG_COMMAND_DEFAULT,
+	DD_COMMAND_DEFAULT,
+	NN_COMMAND_DEFAULT,
+	CHAT_SEPARATOR_DEFAULT
+} from './constants';
 
 // Settings interface and defaults are now imported from './types'
+// Assign the actual defaults from constants to the imported DEFAULT_SETTINGS object
+DEFAULT_SETTINGS.ccCommandPhrase = CC_COMMAND_DEFAULT;
+DEFAULT_SETTINGS.ggCommandPhrase = GG_COMMAND_DEFAULT;
+DEFAULT_SETTINGS.ddCommandPhrase = DD_COMMAND_DEFAULT;
+DEFAULT_SETTINGS.nnCommandPhrase = NN_COMMAND_DEFAULT;
+DEFAULT_SETTINGS.chatSeparator = CHAT_SEPARATOR_DEFAULT;
 
 export default class SimpleNoteChatPlugin extends Plugin {
 	settings: PluginSettings;
@@ -46,7 +59,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 						if (activeFile) {
 							try {
 								const content = await this.app.vault.read(activeFile);
-								if (content.includes(CHAT_SEPARATOR)) {
+								if (content.includes(this.settings.chatSeparator)) { // Use setting
 									// Pass the whole settings object now
 									const archiveResult = await this.fileSystemService.moveFileToArchive(activeFile, this.settings.archiveFolderName, this.settings);
 									if (archiveResult === null) {

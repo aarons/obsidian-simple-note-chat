@@ -1,6 +1,6 @@
 import { App, Editor, MarkdownView, TFile, EditorPosition, Notice } from 'obsidian';
 import SimpleNoteChat from './main';
-import { CC_COMMAND, GG_COMMAND, DD_COMMAND, NN_COMMAND, CHAT_SEPARATOR } from './constants';
+// Command constants and separator are now fetched from settings
 import { PluginSettings } from './types';
 
 export class EditorHandler {
@@ -58,12 +58,12 @@ export class EditorHandler {
 
     	// --- CC Command Check (Existing Logic) ---
     	const content = editor.getValue(); // Re-get content in case it was modified by stop sequence logic
-    	const commandPhrase = `\n${CC_COMMAND}\n`; // Command must be on its own line preceded and followed by a newline
     	const trimmedContent = content.trimEnd();
+    	const ccCommandPhrase = `\n${settings.ccCommandPhrase}\n`; // Get from settings
 
-    	if (trimmedContent.endsWith(commandPhrase)) {
+    	if (trimmedContent.endsWith(ccCommandPhrase)) {
     		// Calculate the range of the command phrase to replace
-    		const commandStartIndex = trimmedContent.length - commandPhrase.length;
+    		const commandStartIndex = trimmedContent.length - ccCommandPhrase.length;
     		const startPos = editor.offsetToPos(commandStartIndex);
     		const endPos = editor.offsetToPos(trimmedContent.length); // Use trimmed length for end position
 
@@ -93,14 +93,15 @@ export class EditorHandler {
     	}
 
     	// --- GG Command Check (Archive Note) ---
-    	const ggCommandPhrase = `\n${GG_COMMAND}\n`;
+    	const ggCommandPhrase = `\n${settings.ggCommandPhrase}\n`; // Get from settings
     	if (trimmedContent.endsWith(ggCommandPhrase)) {
     		const settings = this.plugin.settings; // Get settings
     		const noteContent = editor.getValue(); // Get full content for separator check
 
     		// Separator Check
-    		if (!noteContent.includes(CHAT_SEPARATOR)) {
-    			new Notice(`Archive command ('gg') requires at least one chat separator ('${CHAT_SEPARATOR}') in the note.`);
+    		const chatSeparator = settings.chatSeparator; // Get from settings
+    		if (!noteContent.includes(chatSeparator)) {
+    			new Notice(`Archive command ('gg') requires at least one chat separator ('${chatSeparator}') in the note.`);
     			return; // Stop processing if separator is missing
     		}
 
@@ -140,7 +141,7 @@ export class EditorHandler {
     		}
 
     		// --- DD Command Check (Delete Note) ---
-    		const ddCommandPhrase = `\n${DD_COMMAND}\n`;
+    		const ddCommandPhrase = `\n${settings.ddCommandPhrase}\n`; // Get from settings
     		if (trimmedContent.endsWith(ddCommandPhrase)) {
     			const settings = this.plugin.settings; // Get settings
 
@@ -152,8 +153,9 @@ export class EditorHandler {
     			const noteContent = editor.getValue(); // Get full content for separator check
 
     			// 2. Separator Check (Line 105)
-    			if (!noteContent.includes(CHAT_SEPARATOR)) {
-    				new Notice(`Delete command ('dd') requires at least one chat separator ('${CHAT_SEPARATOR}') in the note for safety.`);
+    			const chatSeparator = settings.chatSeparator; // Get from settings (already fetched for gg, but get again for clarity/safety)
+    			if (!noteContent.includes(chatSeparator)) {
+    				new Notice(`Delete command ('dd') requires at least one chat separator ('${chatSeparator}') in the note for safety.`);
     				return; // Stop processing if separator is missing
     			}
 
@@ -188,7 +190,7 @@ export class EditorHandler {
     		}
 
    // --- NN Command Check (New Note) ---
-   const nnCommandPhrase = `\n${NN_COMMAND}\n`;
+   const nnCommandPhrase = `\n${settings.nnCommandPhrase}\n`; // Get from settings
    // Re-check trimmedContent as it might have changed if other handlers modified it, though unlikely with current returns
    const currentTrimmedContent = editor.getValue().trimEnd();
 

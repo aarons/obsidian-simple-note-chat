@@ -17,6 +17,11 @@ export interface PluginSettings {
   llmRenameWordLimit: number;
   llmRenameIncludeEmojis: boolean;
   llmRenameModel: string; // Stores the ID of the model to use for titling
+  ccCommandPhrase: string;
+  ggCommandPhrase: string;
+  ddCommandPhrase: string;
+  nnCommandPhrase: string;
+  chatSeparator: string;
 }
 
 // Define the default settings
@@ -35,7 +40,12 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	enableArchiveRenameLlm: false,
 	llmRenameWordLimit: 5, // Default word limit
 	llmRenameIncludeEmojis: false,
-	llmRenameModel: '' // Default to empty, maybe use `defaultModel` later if empty?
+	llmRenameModel: '', // Default to empty, maybe use `defaultModel` later if empty?
+	ccCommandPhrase: '', // Will be set from constants in main.ts
+	ggCommandPhrase: '', // Will be set from constants in main.ts
+	ddCommandPhrase: '', // Will be set from constants in main.ts
+	nnCommandPhrase: '', // Will be set from constants in main.ts
+	chatSeparator: '' // Will be set from constants in main.ts
 };
 // Defines the structure for a chat message
 export interface ChatMessage {

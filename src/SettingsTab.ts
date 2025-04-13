@@ -3,7 +3,16 @@ import { App, PluginSettingTab, Setting, Notice, DropdownComponent } from 'obsid
 import SimpleNoteChatPlugin from './main';
 import { OpenRouterService, OpenRouterModel } from './OpenRouterService';
 import { PluginSettings } from './types'; // Import PluginSettings
-import { DEFAULT_STOP_SEQUENCE, DEFAULT_ARCHIVE_FOLDER, DEFAULT_NN_TITLE_FORMAT } from './constants'; // Import constants
+import {
+	DEFAULT_STOP_SEQUENCE,
+	DEFAULT_ARCHIVE_FOLDER,
+	DEFAULT_NN_TITLE_FORMAT,
+	CC_COMMAND_DEFAULT,
+	GG_COMMAND_DEFAULT,
+	DD_COMMAND_DEFAULT,
+	NN_COMMAND_DEFAULT,
+	CHAT_SEPARATOR_DEFAULT
+} from './constants'; // Import constants
 
 export class SimpleNoteChatSettingsTab extends PluginSettingTab {
     plugin: SimpleNoteChatPlugin;
@@ -139,6 +148,103 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                     new Notice(`Delete command ('dd') ${value ? 'enabled' : 'disabled'}.`);
                    }));
+
+                // --- Custom Phrases & Separator Settings ---
+                containerEl.createEl('h3', { text: 'Custom Phrases & Separator' });
+
+                new Setting(containerEl)
+                    .setName('`cc` Command Phrase')
+                    .setDesc('Phrase to trigger chat completion.')
+                    .addText(text => text
+                        .setPlaceholder(CC_COMMAND_DEFAULT)
+                        .setValue(this.plugin.settings.ccCommandPhrase)
+                        .onChange(async (value) => {
+                            const trimmedValue = value.trim();
+                            if (trimmedValue && this.plugin.settings.ccCommandPhrase !== trimmedValue) {
+                                this.plugin.settings.ccCommandPhrase = trimmedValue;
+                                await this.plugin.saveSettings();
+                                new Notice('`cc` command phrase saved.');
+                            } else if (!trimmedValue) {
+                                new Notice('Command phrase cannot be empty.');
+                                text.setValue(this.plugin.settings.ccCommandPhrase); // Revert if empty
+                            }
+                        }));
+
+                new Setting(containerEl)
+                    .setName('`gg` Command Phrase')
+                    .setDesc('Phrase to trigger archiving the current chat note.')
+                    .addText(text => text
+                        .setPlaceholder(GG_COMMAND_DEFAULT)
+                        .setValue(this.plugin.settings.ggCommandPhrase)
+                        .onChange(async (value) => {
+                            const trimmedValue = value.trim();
+                            if (trimmedValue && this.plugin.settings.ggCommandPhrase !== trimmedValue) {
+                                this.plugin.settings.ggCommandPhrase = trimmedValue;
+                                await this.plugin.saveSettings();
+                                new Notice('`gg` command phrase saved.');
+                            } else if (!trimmedValue) {
+                                new Notice('Command phrase cannot be empty.');
+                                text.setValue(this.plugin.settings.ggCommandPhrase); // Revert if empty
+                            }
+                        }));
+
+                new Setting(containerEl)
+                    .setName('`dd` Command Phrase')
+                    .setDesc('Phrase to trigger deleting the current chat note (if enabled).')
+                    .addText(text => text
+                        .setPlaceholder(DD_COMMAND_DEFAULT)
+                        .setValue(this.plugin.settings.ddCommandPhrase)
+                        .onChange(async (value) => {
+                            const trimmedValue = value.trim();
+                            if (trimmedValue && this.plugin.settings.ddCommandPhrase !== trimmedValue) {
+                                this.plugin.settings.ddCommandPhrase = trimmedValue;
+                                await this.plugin.saveSettings();
+                                new Notice('`dd` command phrase saved.');
+                            } else if (!trimmedValue) {
+                                new Notice('Command phrase cannot be empty.');
+                                text.setValue(this.plugin.settings.ddCommandPhrase); // Revert if empty
+                            }
+                        }));
+
+                new Setting(containerEl)
+                    .setName('`nn` Command Phrase')
+                    .setDesc('Phrase to trigger creating a new chat note (if enabled).')
+                    .addText(text => text
+                        .setPlaceholder(NN_COMMAND_DEFAULT)
+                        .setValue(this.plugin.settings.nnCommandPhrase)
+                        .onChange(async (value) => {
+                            const trimmedValue = value.trim();
+                            if (trimmedValue && this.plugin.settings.nnCommandPhrase !== trimmedValue) {
+                                this.plugin.settings.nnCommandPhrase = trimmedValue;
+                                await this.plugin.saveSettings();
+                                new Notice('`nn` command phrase saved.');
+                            } else if (!trimmedValue) {
+                                new Notice('Command phrase cannot be empty.');
+                                text.setValue(this.plugin.settings.nnCommandPhrase); // Revert if empty
+                            }
+                        }));
+
+                new Setting(containerEl)
+                    .setName('Chat Separator')
+                    .setDesc(`Markdown or text used to separate messages in chat notes. Default: ${CHAT_SEPARATOR_DEFAULT}`)
+                    .addText(text => text
+                        .setPlaceholder(CHAT_SEPARATOR_DEFAULT)
+                        .setValue(this.plugin.settings.chatSeparator)
+                        .onChange(async (value) => {
+                            // Allow empty separator? Let's assume yes for now.
+                            // Trim whitespace, but allow potentially empty string
+                            const trimmedValue = value.trim();
+                            if (this.plugin.settings.chatSeparator !== trimmedValue) {
+                                this.plugin.settings.chatSeparator = trimmedValue;
+                                await this.plugin.saveSettings();
+                                new Notice('Chat separator saved.');
+                            }
+                        }));
+
+                // Add the notice about reloading
+                new Setting(containerEl)
+                    .setName('Note on Custom Phrases & Separator')
+                    .setDesc('Changing command phrases or the separator may require Obsidian to be reloaded for the changes to take full effect in the editor detection.');
 
                 // --- Archive Chat (gg) Command Settings ---
                 containerEl.createEl('h3', { text: 'Archive Chat (`gg`) Command Settings' });
