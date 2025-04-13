@@ -170,7 +170,19 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
                    new Notice(`Keyboard shortcut availability ${value ? 'enabled' : 'disabled'}. Configure the shortcut in Obsidian Hotkeys.`);
                   }));
 
-                 // --- Initial Model Load ---
+               // --- Archive Previous Note on nn Setting ---
+               new Setting(containerEl)
+                .setName('Archive Current Note on `nn`')
+                .setDesc('Automatically archive the current note (like using \'gg\') before creating the new one when using the \'nn\' command/phrase/button.')
+                .addToggle(toggle => toggle
+                 .setValue(this.plugin.settings.archivePreviousNoteOnNn)
+                 .onChange(async (value) => {
+                  this.plugin.settings.archivePreviousNoteOnNn = value;
+                  await this.plugin.saveSettings();
+                  new Notice(`Archive on 'nn' ${value ? 'enabled' : 'disabled'}.`);
+                 }));
+
+                // --- Initial Model Load ---
         // Attempt to load models when the tab is displayed if an API key exists
         if (this.plugin.settings.apiKey) {
             // Load models silently in the background on initial display

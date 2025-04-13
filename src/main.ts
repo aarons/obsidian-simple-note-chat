@@ -5,7 +5,7 @@ import { OpenRouterService } from './OpenRouterService';
 import { EditorHandler } from './EditorHandler';
 import { FileSystemService } from './FileSystemService';
 import { PluginSettings, DEFAULT_SETTINGS } from './types';
-import { DEFAULT_NN_TITLE_FORMAT } from './constants';
+import { DEFAULT_NN_TITLE_FORMAT, CHAT_SEPARATOR } from './constants'; // Import CHAT_SEPARATOR
 
 // Settings interface and defaults are now imported from './types'
 
@@ -40,6 +40,32 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			name: 'Create New Chat Note',
 			callback: async () => {
 				try {
+					// --- Optional: Archive previous note ---
+					if (this.settings.archivePreviousNoteOnNn) {
+						const activeFile = this.app.workspace.getActiveFile();
+						if (activeFile) {
+							try {
+								const content = await this.app.vault.read(activeFile);
+								if (content.includes(CHAT_SEPARATOR)) {
+									const archiveResult = await this.fileSystemService.moveFileToArchive(activeFile, this.settings.archiveFolderName);
+									if (archiveResult === null) {
+										new Notice(`Failed to archive previous note '${activeFile.name}'. Continuing to create new note.`);
+									} else {
+										new Notice(`Archived '${activeFile.name}'.`); // Optional success notice
+									}
+								} else {
+									new Notice(`Previous note '${activeFile.name}' not archived because it lacks a chat separator.`);
+								}
+							} catch (archiveError) {
+								console.error(`Error during pre-nn archive attempt for ${activeFile.name}:`, archiveError);
+								new Notice(`Error trying to archive previous note '${activeFile.name}'. Continuing to create new note.`);
+							}
+						}
+						// If no active file, do nothing regarding archiving.
+					}
+					// --- End Optional Archive ---
+
+					// --- Create New Note (Original Logic) ---
 					const parentPath = this.app.fileManager.getNewFileParent(this.app.workspace.getActiveFile()?.path || '').path;
 					const title = moment().format(DEFAULT_NN_TITLE_FORMAT);
 					// Ensure parentPath ends with a slash if it's not the root

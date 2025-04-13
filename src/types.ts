@@ -10,6 +10,7 @@ export interface PluginSettings {
   enableNnCommandPhrase: boolean;
   enableNnRibbonButton: boolean;
   enableNnKeyboardShortcut: boolean;
+  archivePreviousNoteOnNn: boolean;
 }
 
 // Define the default settings
@@ -21,7 +22,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	enableDeleteCommand: false,
 	enableNnCommandPhrase: true,
 	enableNnRibbonButton: false,
-	enableNnKeyboardShortcut: false
+	enableNnKeyboardShortcut: false,
+	archivePreviousNoteOnNn: false
 };
 // Defines the structure for a chat message
 export interface ChatMessage {
