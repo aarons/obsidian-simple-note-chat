@@ -2,6 +2,7 @@
 import { requestUrl, Notice } from 'obsidian';
 // Assuming constants.ts is now in src/
 import { OPENROUTER_API_URL } from './constants';
+import { PluginSettings, ChatMessage } from './types'; // Import necessary types
 
 // Define and EXPORT the structure of a model from the OpenRouter API
 export interface OpenRouterModel {
@@ -119,5 +120,175 @@ export class OpenRouterService {
 
             return sortOrder === 'desc' ? comparison * -1 : comparison;
         });
+    }
+
+    /**
+     * Performs a streaming chat completion request to the OpenRouter API.
+     * Handles SSE parsing and yields content chunks.
+     * @param messages The chat history messages.
+     * @param settings Plugin settings containing API key and model.
+     * @param signal AbortSignal to allow cancellation.
+     * @returns An async generator yielding content chunks (strings).
+     * @throws Error if the API request fails or the stream cannot be processed.
+     */
+    async * streamChatCompletion(
+        messages: ChatMessage[],
+        settings: PluginSettings,
+        signal: AbortSignal
+    ): AsyncGenerator<string> {
+        const { apiKey, defaultModel } = settings;
+
+        if (!apiKey || !defaultModel) {
+            throw new Error("API key or default model is not configured.");
+        }
+
+        const requestBody = {
+            model: defaultModel,
+            messages: messages,
+            stream: true,
+        };
+
+        console.log('OpenRouterService: Sending stream request:', JSON.stringify(requestBody, null, 2));
+
+        let response: Response;
+        try {
+            response = await fetch(`${OPENROUTER_API_URL}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                    // Optional headers from docs:
+                    // 'HTTP-Referer': 'YOUR_SITE_URL', // e.g., 'app://obsidian.md'
+                    // 'X-Title': 'Obsidian Simple Note Chat',
+                },
+                body: JSON.stringify(requestBody),
+                signal: signal, // Pass the abort signal
+            });
+
+            console.log('OpenRouterService: Response status:', response.status);
+
+        } catch (error: any) {
+             // Catch fetch errors (network issues, DNS errors, etc.)
+             console.error('OpenRouterService: Fetch error:', error);
+             if (error.name === 'AbortError') {
+                 // Don't throw for abort, let ChatService handle the notice
+                 console.log('OpenRouterService: Fetch aborted.');
+                 return; // Exit generator cleanly
+             }
+             throw new Error(`Network error calling OpenRouter: ${error.message}`);
+        }
+
+        if (!response.ok) {
+            const errorBody = await response.text().catch(() => 'Failed to read error body');
+            console.error('OpenRouterService: API Error:', response.status, errorBody);
+            let specificError = `API request failed with status ${response.status}`;
+            try {
+                const errorJson = JSON.parse(errorBody);
+                specificError += `: ${errorJson.error?.message || errorBody}`;
+            } catch {
+                specificError += `: ${errorBody || response.statusText}`;
+            }
+            throw new Error(specificError);
+        }
+
+        if (!response.body) {
+            throw new Error('Response body is null.');
+        }
+
+        // Process the stream
+        const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+        let buffer = '';
+        let done = false;
+
+        try {
+            while (!done) {
+                 // Check for abort signal before reading
+                 if (signal.aborted) {
+                    console.log('OpenRouterService: Abort signal detected during stream read.');
+                    // Ensure the reader is cancelled if we break early
+                    await reader.cancel('Aborted by signal');
+                    // Throwing here ensures the calling ChatService knows it was aborted
+                    throw new DOMException(signal.reason || 'Chat cancelled', 'AbortError');
+                 }
+
+                let readResult: ReadableStreamReadResult<string>;
+                try {
+                    readResult = await reader.read();
+                    done = readResult.done; // Update done status
+                } catch (readError: any) {
+                     // Catch errors during reader.read() itself
+                     console.error('OpenRouterService: Error reading stream chunk:', readError);
+                     // Check if it's an abort error triggered by reader.cancel()
+                     if (readError.name === 'AbortError') {
+                         // Already handled by the signal check or cancellation logic
+                         return; // Exit cleanly
+                     }
+                     throw new Error(`Error reading stream: ${readError.message}`);
+                }
+
+
+                if (readResult.value) {
+                    buffer += readResult.value;
+                    // console.log("Buffer:", buffer); // Debugging
+
+                    let endOfMessageIndex;
+                    // Use '\n\n' as the delimiter for SSE messages
+                    while ((endOfMessageIndex = buffer.indexOf('\n\n')) >= 0) {
+                        const message = buffer.substring(0, endOfMessageIndex);
+                        buffer = buffer.substring(endOfMessageIndex + 2); // Consume message + delimiter
+
+                        // console.log("Processing SSE Message:", message); // Debugging
+
+                        if (message.startsWith('data: ')) {
+                            const dataContent = message.substring(6).trim();
+                            if (dataContent === '[DONE]') {
+                                console.log('OpenRouterService: Received [DONE] signal.');
+                                // Don't break here, let the reader naturally finish
+                                continue;
+                            }
+                            try {
+                                const jsonData = JSON.parse(dataContent);
+                                const chunk = jsonData.choices?.[0]?.delta?.content;
+                                if (chunk) {
+                                    // console.log("Yielding chunk:", chunk); // Debugging
+                                    yield chunk;
+                                } else {
+                                     // Log if data received but no content (e.g., role change message)
+                                     // console.log("SSE data received without content:", jsonData);
+                                }
+                            } catch (e) {
+                                console.error('OpenRouterService: Error parsing SSE JSON:', e, 'Data:', dataContent);
+                                // Optionally yield an error marker or throw? For now, just log.
+                            }
+                        } else if (message.startsWith(':')) {
+                             console.log("OpenRouterService: Received SSE comment:", message);
+                             // Ignore comments as per SSE spec
+                        } else if (message.trim()) {
+                             console.warn("OpenRouterService: Received unexpected non-empty line:", message);
+                        }
+                    }
+                }
+            } // end while(!done)
+            console.log('OpenRouterService: Stream finished.');
+
+        } catch (error) {
+             // Re-throw errors (including AbortError) to be handled by ChatService
+             console.error("OpenRouterService: Error during stream processing loop:", error);
+             throw error;
+        } finally {
+            // Ensure the reader is released/cancelled if the loop exits unexpectedly
+            // (though reader.cancel might already be called on abort)
+            if (!done) {
+                 console.log("OpenRouterService: Stream loop exited unexpectedly, ensuring reader cancellation.");
+                 try {
+                     await reader.cancel('Stream processing finished or errored.');
+                 } catch (cancelError) {
+                     // Ignore errors during cancellation itself, as the primary error is more important
+                     console.warn("OpenRouterService: Error during final reader cancellation:", cancelError);
+                 }
+            }
+             reader.releaseLock(); // Release lock if not already released by cancel/completion
+             console.log("OpenRouterService: Stream reader lock released.");
+        }
     }
 }
