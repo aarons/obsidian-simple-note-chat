@@ -5,6 +5,7 @@ It has a simplified interface, to support mobile platforms (no buttons or key ch
 `gg` to archive the note
 
 More advanced options:
+`nn` to create a new chat note
 `dd` to delete the note (disabled by default)
 `escape` key to interrupt the process
 `stop` or literally type this sequence while streaming is in process to stop it
@@ -126,8 +127,6 @@ Configuration Options:
 		- default the same model
 		- optional select a different model for titles
 
-
-
 **dd**
 
 This will delete the current chat instead of archiving it.
@@ -153,8 +152,4 @@ Typed sequence: `stop`
 Configuration Options:
 - change the stop shortcut key
 - change the stop typed sequence
-
-## More Developer Context
-
-Some of the setting changes likely require reloading the plugin, so if one of those settings is changed we should inform the user they need to reload the plugin (can provide a button I believe).
 
