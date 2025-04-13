@@ -36,10 +36,12 @@ The plugin will follow a modular structure:
     *   [ ] Create `SettingsTab.ts` extending `PluginSettingTab`. Register it in `main.ts`.
     *   [ ] Add settings UI component for OpenRouter API Key input (`addText`). *Consider security implications; OAuth is preferred long-term, but API key is acceptable for MVP.*
     *   [ ] Add settings UI component for Default Chat Model selection (`addDropdown`).
-    *   [ ] Implement `OpenRouterService.ts` (or integrate into `ChatService.ts`).
+    *   [ ] Implement simplified version of `OpenRouterService.ts` for fetching models
     *   [ ] Add button in settings to fetch/refresh model list from OpenRouter using `OpenRouterService.ts`. Handle potential API errors.
     *   [ ] Populate the Default Chat Model dropdown with fetched models.
+    *   [ ] Implement model sorting and display; use sample OpenRouterService.ts in documentation for reference on how it should be done.
     *   [ ] Ensure API key and selected model are saved correctly.
+    *   [ ] Ensure API key is obfuscated when saved
 *   **Core Chat Implementation (`cc`):**
     *   [ ] Implement `ChatService.ts`.
     *   [ ] Add function in `ChatService.ts` to parse active note content based on separator (from `constants.ts` initially), alternating roles. Filter out command phrases.
