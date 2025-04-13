@@ -1,28 +1,33 @@
-import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { SimpleNoteChatSettingsTab } from './SettingsTab'; // Import the new settings tab
+import { ChatService } from './ChatService'; // Import ChatService
+import { EditorHandler } from './EditorHandler'; // Import EditorHandler
+import { PluginSettings, DEFAULT_SETTINGS } from './types'; // Import settings types
 
-// Define the settings interface
-interface PluginSettings {
-	apiKey: string;
-	defaultModel: string;
-}
-
-// Define the default settings
-const DEFAULT_SETTINGS: PluginSettings = {
-	apiKey: '',
-	defaultModel: ''
-}
+// Settings interface and defaults are now imported from './types'
 
 export default class SimpleNoteChatPlugin extends Plugin {
 	settings: PluginSettings;
-
+	chatService: ChatService; // Add ChatService instance
+	editorHandler: EditorHandler; // Add EditorHandler instance
 	async onload() {
 		console.log('Loading Simple Note Chat plugin');
 		await this.loadSettings();
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SimpleNoteChatSettingTab(this.app, this));
+		// Instantiate services
+		this.chatService = new ChatService(this);
+		this.editorHandler = new EditorHandler(this.app, this);
 
-		// Add plugin commands or other initialization logic here
+		// This adds a settings tab so the user can configure various aspects of the plugin
+		this.addSettingTab(new SimpleNoteChatSettingsTab(this.app, this));
+
+		// Register the editor change listener
+		this.registerEvent(
+			this.app.workspace.on('editor-change', this.editorHandler.handleEditorChange)
+		);
+
+		// Add other initialization logic here if needed
 	}
 
 	onunload() {
@@ -38,42 +43,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	}
 }
 
-// Basic Setting Tab (can be expanded later)
-class SimpleNoteChatSettingTab extends PluginSettingTab {
-	plugin: SimpleNoteChatPlugin;
-
-	constructor(app: App, plugin: SimpleNoteChatPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		containerEl.createEl('h2', {text: 'Simple Note Chat Settings'});
-
-		new Setting(containerEl)
-			.setName('API Key')
-			.setDesc('Your API Key for the LLM service (e.g., OpenRouter)')
-			.addText(text => text
-				.setPlaceholder('Enter your API key')
-				.setValue(this.plugin.settings.apiKey)
-				.onChange(async (value) => {
-					this.plugin.settings.apiKey = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Default Model')
-			.setDesc('The default LLM model to use for chats')
-			.addText(text => text
-				.setPlaceholder('Enter default model ID')
-				.setValue(this.plugin.settings.defaultModel)
-				.onChange(async (value) => {
-					this.plugin.settings.defaultModel = value;
-					await this.plugin.saveSettings();
-				}));
-	}
-}
+// The SimpleNoteChatSettingTab class has been moved to src/SettingsTab.ts
+// The import statement at the top of the file now brings it in.
+// The this.addSettingTab call in onload() will now use the imported class.

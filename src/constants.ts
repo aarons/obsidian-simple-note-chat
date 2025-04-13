@@ -4,8 +4,16 @@ export const GG_COMMAND = 'gg';
 export const DD_COMMAND = 'dd';
 export const NN_COMMAND = 'nn';
 
+// Array of all command phrases (lowercase)
+export const COMMAND_PHRASES = [
+    CC_COMMAND,
+    GG_COMMAND,
+    DD_COMMAND,
+    NN_COMMAND,
+];
+
 // Separator for chat blocks within notes
 export const CHAT_SEPARATOR = '<hr>';
 
-// API Endpoint for the LLM service
-export const OPENROUTER_API_ENDPOINT = 'https://openrouter.ai/api/v1';
+// Base URL for the OpenRouter API service
+export const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1'; // Renamed from ENDPOINT
