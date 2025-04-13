@@ -2,7 +2,7 @@
 import { App, PluginSettingTab, Setting, Notice, DropdownComponent } from 'obsidian';
 import SimpleNoteChatPlugin from './main';
 import { OpenRouterService, OpenRouterModel } from './OpenRouterService';
-import { PluginSettings } from './types'; // Import PluginSettings
+import { PluginSettings } from './types';
 import {
 	DEFAULT_STOP_SEQUENCE,
 	DEFAULT_ARCHIVE_FOLDER,
@@ -12,21 +12,19 @@ import {
 	DD_COMMAND_DEFAULT,
 	NN_COMMAND_DEFAULT,
 	CHAT_SEPARATOR_DEFAULT
-} from './constants'; // Import constants
+} from './constants';
 
 export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	plugin: SimpleNoteChatPlugin;
 	openRouterService: OpenRouterService;
-	private availableModels: OpenRouterModel[] = []; // Store fetched models
-	private modelDropdown: DropdownComponent | null = null; // Default chat model dropdown
-	private llmModelDropdown: DropdownComponent | null = null; // LLM title model dropdown
-	private sortDropdown: DropdownComponent | null = null; // Model sort dropdown
+	private availableModels: OpenRouterModel[] = [];
+	private modelDropdown: DropdownComponent | null = null;
+	private llmModelDropdown: DropdownComponent | null = null;
+	private sortDropdown: DropdownComponent | null = null;
 
 	constructor(app: App, plugin: SimpleNoteChatPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
-		// Use the plugin's instance of OpenRouterService if available, otherwise create new
-		// This assumes OpenRouterService doesn't hold state specific to the settings tab instance
 		this.openRouterService = plugin.openRouterService || new OpenRouterService();
 	}
 
@@ -35,7 +33,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.createEl('h2', { text: 'Simple Note Chat - Settings' });
 
-		// --- API Key Setting ---
 		new Setting(containerEl)
 			.setName('OpenRouter API Key')
 			.setDesc('Enter your OpenRouter API key. Get one from openrouter.ai')
@@ -58,7 +55,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				text.inputEl.setAttribute('type', 'password');
 			});
 
-		// --- Refresh Models Button ---
 		new Setting(containerEl)
 			.setName('Refresh Model List')
 			.setDesc('Fetch the latest available models from OpenRouter using your API key.')
@@ -66,15 +62,14 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				.setButtonText('Refresh Models')
 				.setCta()
 				.onClick(async () => {
-					await this.fetchAndStoreModels(true); // Use the updated method
+					await this.fetchAndStoreModels(true);
 				}));
 
-		// --- Sort Model Lists Setting --- ADDED HERE ---
 		new Setting(containerEl)
 			.setName('Sort Model Lists By')
 			.setDesc('Choose how to sort the OpenRouter model lists in the dropdowns below.')
 			.addDropdown(dropdown => {
-				this.sortDropdown = dropdown; // Store reference
+				this.sortDropdown = dropdown;
 				dropdown
 					.addOption('alphabetical', 'Alphabetical (A-Z)')
 					.addOption('price_asc', 'Price: Prompt + Completion (Ascending)')
@@ -89,24 +84,21 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					});
 			});
 
-		// --- Default Model Setting ---
 		const modelSetting = new Setting(containerEl)
 			.setName('Default Chat Model')
 			.setDesc('Select the default model to use for new chats.');
 
 		modelSetting.addDropdown(dropdown => {
-			this.modelDropdown = dropdown; // Store reference
-			dropdown.addOption('', '-- Select a model --'); // Initial placeholder
+			this.modelDropdown = dropdown;
+			dropdown.addOption('', '-- Select a model --');
 			dropdown.setValue(this.plugin.settings.defaultModel);
 			dropdown.onChange(async (value) => {
 				this.plugin.settings.defaultModel = value;
 				await this.plugin.saveSettings();
 			});
-			// Dropdown will be populated by initial load or refresh button
 		});
 
 
-		// --- Stop Sequence Setting ---
 		new Setting(containerEl)
 			.setName('Stop Sequence')
 			.setDesc('Type this sequence anywhere in the note while a response is streaming to stop it.')
@@ -114,8 +106,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				.setPlaceholder(DEFAULT_STOP_SEQUENCE)
 				.setValue(this.plugin.settings.stopCommandSequence)
 				.onChange(async (value) => {
-					const trimmedValue = value.trim(); // Trim whitespace
-					if (trimmedValue) { // Ensure it's not empty
+					const trimmedValue = value.trim();
+					if (trimmedValue) {
 						this.plugin.settings.stopCommandSequence = trimmedValue;
 						await this.plugin.saveSettings();
 						new Notice('Stop sequence saved.');
@@ -125,7 +117,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
-		// --- Viewport Scrolling Setting ---
 		new Setting(containerEl)
 			.setName('Enable Viewport Scrolling')
 			.setDesc('Automatically scroll the note to the bottom as the chat response streams in.')
@@ -137,7 +128,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					new Notice(`Viewport scrolling ${value ? 'enabled' : 'disabled'}.`);
 				}));
 
-		// --- Archive Folder Setting ---
 		new Setting(containerEl)
 			.setName('Archive Folder')
 			.setDesc('Folder where notes will be moved when using the archive command (relative to vault root).')
@@ -156,7 +146,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
-		// --- Enable Delete Command (dd) Setting ---
 		new Setting(containerEl)
 			.setName('Enable Delete Command (`dd`)')
 			.setDesc('Allow deleting notes using the \'dd\' command. Notes are moved to system trash. USE WITH CAUTION!')
@@ -168,7 +157,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					new Notice(`Delete command ('dd') ${value ? 'enabled' : 'disabled'}.`);
 				}));
 
-		// --- dd Bypass Separator Check Setting ---
 		new Setting(containerEl)
 			.setName('Bypass Separator Check for `dd`')
 			.setDesc('Allow the \'dd\' command to work even if the note doesn\'t contain a chat separator. USE WITH EXTREME CAUTION!')
@@ -180,7 +168,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					new Notice(`'dd' separator bypass ${value ? 'enabled' : 'disabled'}.`);
 				}));
 
-		// --- Custom Phrases & Separator Settings ---
 		containerEl.createEl('h3', { text: 'Custom Phrases & Separator' });
 
 		new Setting(containerEl)
@@ -201,7 +188,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
-		// --- Enable cc Shortcut Setting ---
 		new Setting(containerEl)
 			.setName('Enable `cc` Keyboard Shortcut')
 			.setDesc('Make the \'Trigger Chat Completion (cc)\' command available for assigning a keyboard shortcut in Obsidian\'s hotkey settings.')
@@ -286,7 +272,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			.setName('Note on Custom Phrases & Separator')
 			.setDesc('Changing command phrases or the separator may require Obsidian to be reloaded for the changes to take full effect in the editor detection.');
 
-		// --- Archive Chat (gg) Command Settings ---
 		containerEl.createEl('h3', { text: 'Archive Chat (`gg`) Command Settings' });
 
 		new Setting(containerEl)
@@ -318,7 +303,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
-		// --- LLM Title Renaming Settings (within gg section) ---
 		const llmSettingsContainer = containerEl.createDiv('llm-archive-rename-settings');
 
 		new Setting(containerEl)
@@ -375,20 +359,18 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			.setDesc('Model to use for generating the title. Uses default chat model if left blank.');
 
 		llmModelSetting.addDropdown(dropdown => {
-			this.llmModelDropdown = dropdown; // Store reference
-			dropdown.addOption('', 'Use Default Chat Model'); // Specific placeholder
+			this.llmModelDropdown = dropdown;
+			dropdown.addOption('', 'Use Default Chat Model');
 			dropdown.setValue(this.plugin.settings.llmRenameModel);
 			dropdown.onChange(async (value) => {
 				this.plugin.settings.llmRenameModel = value;
 				await this.plugin.saveSettings();
 			});
-			// Dropdown will be populated by initial load or refresh button
 		});
 
 		llmSettingsContainer.style.display = this.plugin.settings.enableArchiveRenameLlm ? 'block' : 'none';
 
 
-		// --- New Chat (nn) Command Settings ---
 		containerEl.createEl('h3', { text: 'New Chat (`nn`) Command Triggers' });
 
 		new Setting(containerEl)
@@ -424,7 +406,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					new Notice(`Keyboard shortcut availability ${value ? 'enabled' : 'disabled'}. Configure the shortcut in Obsidian Hotkeys.`);
 				}));
 
-		// --- Archive Previous Note on nn Setting ---
 		new Setting(containerEl)
 			.setName('Archive Current Note on `nn`')
 			.setDesc('Automatically archive the current note (like using \'gg\') before creating the new one when using the \'nn\' command/phrase/button.')
@@ -436,11 +417,10 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					new Notice(`Archive on 'nn' ${value ? 'enabled' : 'disabled'}.`);
 				}));
 
-		// --- Initial Model Load ---
 		if (this.plugin.settings.apiKey) {
-			this.fetchAndStoreModels(false); // Use updated method
+			this.fetchAndStoreModels(false);
 		} else {
-			this.populateModelDropdowns(); // Ensure dropdowns show "Enter API Key..."
+			this.populateModelDropdowns();
 		}
 	}
 
@@ -464,17 +444,17 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			return; // Exit if dropdown doesn't exist
 		}
 
-		const currentSelectedValue = dropdown.getValue(); // Store current selection before clearing
-		dropdown.selectEl.empty(); // Clear existing options first
+		const currentSelectedValue = dropdown.getValue();
+		dropdown.selectEl.empty();
 
 		if (!this.plugin.settings.apiKey) {
 			dropdown.addOption('', noApiKeyText);
 			dropdown.setDisabled(true);
-			dropdown.setValue(''); // Ensure placeholder is selected
+			dropdown.setValue('');
 			return;
 		}
 
-		dropdown.setDisabled(false); // Ensure dropdown is enabled if API key exists
+		dropdown.setDisabled(false);
 
 		if (models.length === 0) {
 			// Handles API errors, empty model list, or models not yet loaded
@@ -483,17 +463,13 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			return; // Don't add the regular placeholder if no models
 		}
 
-		// Add the specific placeholder text first
 		dropdown.addOption('', placeholderText);
 
-		// Add each model to the dropdown
 		models.forEach(model => {
-			// Display format: "Model Name (model/id)" - Consider adding price later if needed
 			const displayName = model.name ? `${model.name} (${model.id})` : model.id;
 			dropdown.addOption(model.id, displayName);
 		});
 
-		// Try to re-select the previously selected model OR the currently saved setting
 		// @ts-ignore - Accessing setting dynamically
 		const savedModel = this.plugin.settings[settingKey] as string;
 		const valueToSelect = models.some(m => m.id === currentSelectedValue) ? currentSelectedValue : savedModel;
@@ -501,7 +477,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		if (valueToSelect && models.some(m => m.id === valueToSelect)) {
 			dropdown.setValue(valueToSelect);
 		} else {
-			// If saved/previous model isn't in the list, ensure placeholder is selected
 			dropdown.setValue('');
 		}
 	}
@@ -513,24 +488,18 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		let sortedModels: OpenRouterModel[] = [];
 		if (this.plugin.settings.apiKey && this.availableModels.length > 0) {
 			try {
-				// Pass the sort criteria string directly
 				sortedModels = this.openRouterService.sortModels(
 					this.availableModels,
-					this.plugin.settings.modelSortOrder // Pass 'alphabetical', 'price_asc', or 'price_desc'
+					this.plugin.settings.modelSortOrder
 				);
 			} catch (error) {
 				console.error("SettingsTab: Error sorting models:", error);
 				new Notice("Error sorting models. Check console.");
-				// Use unsorted models as a fallback? Or leave dropdowns empty?
-				// Let's populate with unsorted for now.
 				sortedModels = this.availableModels;
 			}
 		} else {
-			// If no API key or no models fetched yet, sortedModels remains empty
-			// populateModelDropdown handles the "Enter API Key" or "No models" message.
 		}
 
-		// Populate both dropdowns with the (potentially sorted) models
 		this.populateModelDropdown(
 			this.modelDropdown,
 			sortedModels,
@@ -558,52 +527,45 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			if (showNotices) {
 				new Notice('Please enter your OpenRouter API key first.');
 			}
-			this.availableModels = []; // Clear stored models
-			this.populateModelDropdowns(); // Update dropdowns to show "Enter API Key..."
+			this.availableModels = [];
+			this.populateModelDropdowns();
 			return;
 		}
 
 		let loadingNotice;
 		if (showNotices) {
-			loadingNotice = new Notice('Fetching models from OpenRouter...', 0); // Persistent notice
+			loadingNotice = new Notice('Fetching models from OpenRouter...', 0);
 		}
 
 		try {
 			const models = await this.openRouterService.fetchModels(this.plugin.settings.apiKey);
-			this.availableModels = models; // Store fetched models
+			this.availableModels = models;
 
-			// fetchModels now returns [] on error and shows its own Notice for API errors.
-			// So, we just need to check the length.
-
-			this.populateModelDropdowns(); // Populate dropdowns using the stored models and current sort order
+			this.populateModelDropdowns();
 
 			if (showNotices) {
 				if (this.availableModels.length > 0) {
 					new Notice('Model list updated successfully.');
-				} else {
-					// Notice handled by populateModelDropdowns -> populateModelDropdown
+				}
 				}
 			}
 
 		} catch (error) {
-			// Catch unexpected errors during fetching or storing (less likely now)
 			console.error("SettingsTab: Error fetching or storing models:", error);
 			if (showNotices) {
 				new Notice('An unexpected error occurred while updating model list.');
 			}
-			this.availableModels = []; // Clear potentially partial data
-			this.populateModelDropdowns(); // Update dropdowns to show error/empty state
+			this.availableModels = [];
+			this.populateModelDropdowns();
 		} finally {
-			loadingNotice?.hide(); // Hide the persistent "Fetching..." notice
+			loadingNotice?.hide();
 		}
 	}
 
 	/**
 	 * Public method called by the refresh button's onClick handler.
-	 * Kept for clarity, just calls fetchAndStoreModels.
 	 */
 	public async refreshModels(): Promise<void> {
-		// Always show notices when the button is clicked manually
 		await this.fetchAndStoreModels(true);
 	}
 }

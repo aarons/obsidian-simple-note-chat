@@ -1,6 +1,5 @@
 import { App, Editor, MarkdownView, TFile, EditorPosition, Notice } from 'obsidian';
 import SimpleNoteChat from './main';
-// Command constants and separator are now fetched from settings
 import { PluginSettings } from './types';
 
 export class EditorHandler {
@@ -22,7 +21,6 @@ export class EditorHandler {
     	}
     	const filePath = file.path;
 
-    	// --- Stop Sequence Check ---
     	if (this.plugin.chatService.isStreamActive(filePath)) {
     		const content = editor.getValue();
     		const stopSequence = settings.stopCommandSequence;
@@ -56,10 +54,9 @@ export class EditorHandler {
     		}
     	}
 
-    	// --- CC Command Check (Existing Logic) ---
     	const content = editor.getValue(); // Re-get content in case it was modified by stop sequence logic
     	const trimmedContent = content.trimEnd();
-    	const ccCommandPhrase = `\n${settings.ccCommandPhrase}\n`; // Get from settings
+    	const ccCommandPhrase = `\n${settings.ccCommandPhrase}\n`;
 
     	if (trimmedContent.endsWith(ccCommandPhrase)) {
     		// Calculate the range of the command phrase to replace
@@ -92,14 +89,12 @@ export class EditorHandler {
     		return; // Return after handling cc
     	}
 
-    	// --- GG Command Check (Archive Note) ---
-    	const ggCommandPhrase = `\n${settings.ggCommandPhrase}\n`; // Get from settings
+    	const ggCommandPhrase = `\n${settings.ggCommandPhrase}\n`;
     	if (trimmedContent.endsWith(ggCommandPhrase)) {
-    		const settings = this.plugin.settings; // Get settings
+    		const settings = this.plugin.settings;
     		const noteContent = editor.getValue(); // Get full content for separator check
 
-    		// Separator Check
-    		const chatSeparator = settings.chatSeparator; // Get from settings
+    		const chatSeparator = settings.chatSeparator;
     		if (!noteContent.includes(chatSeparator)) {
     			new Notice(`Archive command ('gg') requires at least one chat separator ('${chatSeparator}') in the note.`);
     			return; // Stop processing if separator is missing
@@ -115,9 +110,8 @@ export class EditorHandler {
     		// Use an async IIFE to handle the promise from moveFileToArchive
     		(async () => {
     			try {
-    				// Pass the whole settings object now
     				const newPath = await this.plugin.fileSystemService.moveFileToArchive(
-    					markdownView.file!, // Assert non-null based on the check above
+    					markdownView.file!,
     					settings.archiveFolderName,
     					settings // Pass the entire settings object
     				);
@@ -136,25 +130,19 @@ export class EditorHandler {
     			}
     		})();
 
-    		// Do not remove 'gg' text as per current requirements.
     		return; // Return after handling gg
     		}
 
-    		// --- DD Command Check (Delete Note) ---
-    		const ddCommandPhrase = `\n${settings.ddCommandPhrase}\n`; // Get from settings
+    		const ddCommandPhrase = `\n${settings.ddCommandPhrase}\n`;
     		if (trimmedContent.endsWith(ddCommandPhrase)) {
-    			const settings = this.plugin.settings; // Get settings
-
-    			// 1. Check if Enabled (Line 103)
+    			const settings = this.plugin.settings;
     			if (!settings.enableDeleteCommand) {
     				return; // Do nothing if the command is not enabled
     			}
 
     			const noteContent = editor.getValue(); // Get full content for separator check
 
-    			// 2. Separator Check (Line 105)
-    			const chatSeparator = settings.chatSeparator; // Get from settings (already fetched for gg, but get again for clarity/safety)
-    			// Only check for separator if bypass is NOT enabled
+    			const chatSeparator = settings.chatSeparator;
     			if (!settings.ddBypassSeparatorCheck) {
     				if (!noteContent.includes(chatSeparator)) {
     					new Notice(`Delete command ('dd') requires at least one chat separator ('${chatSeparator}') in the note for safety.`);
@@ -169,12 +157,11 @@ export class EditorHandler {
     				return;
     			}
 
-    			// 3. Confirmation Prompt (Line 107)
     			if (confirm("Are you sure you want to move this note to the trash?")) {
     				// Use an async IIFE to handle the promise from deleteFile
     				(async () => {
     					try {
-    						await this.plugin.fileSystemService.deleteFile(markdownView.file!); // Assert non-null based on the check above
+    						await this.plugin.fileSystemService.deleteFile(markdownView.file!);
     						new Notice("Note moved to trash.");
     						// The view might close automatically upon deletion by Obsidian.
     					} catch (error) {
@@ -185,39 +172,30 @@ export class EditorHandler {
     			} else {
     				// User cancelled the deletion
     				new Notice("Note deletion cancelled.");
-    				// Optionally remove the 'dd' command text here if desired, but plan says not to
     			}
 
-    			// Do not remove 'dd' text as per current requirements.
     			return; // Return after handling dd
     		}
 
-   // --- NN Command Check (New Note) ---
-   const nnCommandPhrase = `\n${settings.nnCommandPhrase}\n`; // Get from settings
-   // Re-check trimmedContent as it might have changed if other handlers modified it, though unlikely with current returns
+   const nnCommandPhrase = `\n${settings.nnCommandPhrase}\n`;
    const currentTrimmedContent = editor.getValue().trimEnd();
 
    if (currentTrimmedContent.endsWith(nnCommandPhrase)) {
-    // 1. Check if Enabled
     if (!settings.enableNnCommandPhrase) {
     	return; // Do nothing if the command phrase trigger is not enabled
     }
 
-    // 2. Remove the command phrase
     const commandStartIndex = currentTrimmedContent.length - nnCommandPhrase.length;
     const startPos = editor.offsetToPos(commandStartIndex);
     const endPos = editor.offsetToPos(currentTrimmedContent.length); // Use trimmed length for end position
     editor.replaceRange('', startPos, endPos);
 
-    // 3. Execute the command
-    // Ensure the command ID matches the one registered in main.ts
     // @ts-ignore - Assuming 'commands' exists on app, potentially a typing issue
     this.app.commands.executeCommandById('simple-note-chat:create-new-chat-note');
-    new Notice("Creating new chat note..."); // Optional feedback
+    new Notice("Creating new chat note...");
 
     return; // Return after handling nn
    }
 
-    		// --- Future command checks could go here ---
     	}
  }

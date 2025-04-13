@@ -1,14 +1,14 @@
 import { App, TFile, normalizePath, moment, Notice } from 'obsidian';
-import { PluginSettings, ChatMessage } from './types'; // Import PluginSettings and ChatMessage
-import { OpenRouterService } from './OpenRouterService'; // Import OpenRouterService
+import { PluginSettings, ChatMessage } from './types';
+import { OpenRouterService } from './OpenRouterService';
 
 export class FileSystemService {
     private app: App;
-    private openRouterService: OpenRouterService; // Add OpenRouterService instance
+    private openRouterService: OpenRouterService;
 
-    constructor(app: App, openRouterService: OpenRouterService) { // Inject OpenRouterService
+    constructor(app: App, openRouterService: OpenRouterService) {
         this.app = app;
-        this.openRouterService = openRouterService; // Store the instance
+        this.openRouterService = openRouterService;
     }
 
     /**
@@ -37,16 +37,15 @@ export class FileSystemService {
 
             // Determine the base filename based on settings
             let baseFilename: string;
-            const originalExtension = file.extension ? `.${file.extension}` : ''; // Store original extension
+            const originalExtension = file.extension ? `.${file.extension}` : '';
 
             if (settings.enableArchiveRenameDate && settings.archiveRenameDateFormat) {
                 const formattedDate = moment().format(settings.archiveRenameDateFormat);
                 baseFilename = `${formattedDate}${originalExtension}`;
             } else {
-                baseFilename = file.name; // Use original name if date rename is off
+                baseFilename = file.name;
             }
 
-            // --- LLM Title Generation ---
             if (settings.enableArchiveRenameLlm) {
                 const content = await this.app.vault.read(file);
                 const titleModel = settings.llmRenameModel || settings.defaultModel;
@@ -59,7 +58,7 @@ export class FileSystemService {
                     console.warn("LLM Title generation skipped: Note content is empty.");
                 }
                 else {
-                    const wordLimit = settings.llmRenameWordLimit > 0 ? settings.llmRenameWordLimit : 10; // Default/fallback word limit
+                    const wordLimit = settings.llmRenameWordLimit > 0 ? settings.llmRenameWordLimit : 10;
                     const prompt = `Generate a concise filename-friendly title for the following note content, under ${wordLimit} words.${settings.llmRenameIncludeEmojis ? ' You can include relevant emojis.' : ''} Respond ONLY with the title itself, no explanations or quotation marks. Content:\n\n---\n\n${content}`;
                     const messages: ChatMessage[] = [{ role: 'user', content: prompt }];
 
@@ -73,21 +72,17 @@ export class FileSystemService {
 
                     if (llmTitle) {
                         console.log(`FileSystemService: Received LLM title: "${llmTitle}"`);
-                        // Sanitize Title: Remove invalid chars, replace whitespace with '_', trim, limit length
                         const sanitizedTitle = llmTitle
-                            .replace(/[\\/:*?"<>|\n\r]+/g, '') // Remove invalid filename chars
-                            .replace(/\s+/g, '_') // Replace whitespace sequences with single underscore
-                            .replace(/^_|_$/g, '') // Trim leading/trailing underscores
-                            .substring(0, 100); // Limit length
+                            .replace(/[\\/:*?"<>|\n\r]+/g, '')
+                            .replace(/\s+/g, '_')
+                            .replace(/^_|_$/g, '')
+                            .substring(0, 100);
 
                         if (sanitizedTitle) {
                             const filenameWithoutExt = baseFilename.substring(0, baseFilename.lastIndexOf('.'));
-                            // Combine based on whether date rename was enabled
                             if (settings.enableArchiveRenameDate) {
-                                // Append LLM title to date-based name
                                 baseFilename = `${filenameWithoutExt}_${sanitizedTitle}${originalExtension}`;
                             } else {
-                                // Use LLM title as the primary name
                                 baseFilename = `${sanitizedTitle}${originalExtension}`;
                             }
                             console.log(`FileSystemService: Updated baseFilename with LLM title: ${baseFilename}`);
@@ -96,23 +91,19 @@ export class FileSystemService {
                              new Notice("LLM title was empty after sanitization. Archiving with current name.");
                         }
                     } else {
-                        // Fallback (Line 146)
                         console.warn("FileSystemService: LLM title generation failed.");
                         new Notice("LLM title generation failed. Archiving with current name.");
                     }
                 }
             }
-            // --- End LLM Title Generation ---
 
             let targetPath = normalizePath(`${normalizedArchivePath}/${baseFilename}`);
             let counter = 0;
 
-            // Extract base name and extension from the *potentially new* filename for conflict resolution
-            const targetBaseNameMatch = baseFilename.match(/^(.*?)(?:\.([^\.]+))?$/); // Match base name and optional extension
-            const targetBaseName = targetBaseNameMatch ? targetBaseNameMatch[1] : baseFilename; // Base part (e.g., "2025-01-01-12-00" or "My Note")
-            const targetExtension = targetBaseNameMatch && targetBaseNameMatch[2] ? `.${targetBaseNameMatch[2]}` : ''; // Extension part (e.g., ".md")
+            const targetBaseNameMatch = baseFilename.match(/^(.*?)(?:\.([^\.]+))?$/);
+            const targetBaseName = targetBaseNameMatch ? targetBaseNameMatch[1] : baseFilename;
+            const targetExtension = targetBaseNameMatch && targetBaseNameMatch[2] ? `.${targetBaseNameMatch[2]}` : '';
 
-            // Handle name conflicts by appending -1, -2, etc.
             while (await this.app.vault.adapter.exists(targetPath)) {
                 counter++;
                 targetPath = normalizePath(`${normalizedArchivePath}/${targetBaseName}-${counter}${targetExtension}`);

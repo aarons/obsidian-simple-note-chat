@@ -1,10 +1,7 @@
 // src/OpenRouterService.ts
 import { requestUrl, Notice } from 'obsidian';
-// Assuming constants.ts is now in src/
 import { OPENROUTER_API_URL } from './constants';
-import { PluginSettings, ChatMessage } from './types'; // Import necessary types
-
-// Define and EXPORT the structure of a model from the OpenRouter API
+import { PluginSettings, ChatMessage } from './types';
 export interface OpenRouterModel {
     id: string;
     name: string;
@@ -55,7 +52,6 @@ export class OpenRouterService {
 
             if (response.status === 200) {
                 const data = response.json;
-                // Ensure data.data exists and is an array before returning
                 if (data && Array.isArray(data.data)) {
                     return data.data as OpenRouterModel[];
                 } else {
@@ -86,7 +82,6 @@ export class OpenRouterService {
      * @returns The sorted array of models.
      */
     sortModels(models: OpenRouterModel[], sortCriteria: string = 'alphabetical'): OpenRouterModel[] {
-        // Create a copy to avoid modifying the original array passed from SettingsTab
         const modelsToSort = [...models];
 
         modelsToSort.sort((a, b) => {
@@ -95,18 +90,14 @@ export class OpenRouterService {
             switch (sortCriteria) {
                 case 'price_asc':
                 case 'price_desc':
-                    // Calculate combined price, treating missing values as Infinity
                     const priceA = (parseFloat(a.pricing?.prompt ?? 'Infinity') || Infinity) + (parseFloat(a.pricing?.completion ?? 'Infinity') || Infinity);
                     const priceB = (parseFloat(b.pricing?.prompt ?? 'Infinity') || Infinity) + (parseFloat(b.pricing?.completion ?? 'Infinity') || Infinity);
-
-                    // Handle cases where both are Infinity (treat as equal)
                     if (priceA === Infinity && priceB === Infinity) {
                         comparison = 0;
                     } else {
                         comparison = priceA - priceB;
                     }
 
-                    // Reverse comparison for descending order
                     if (sortCriteria === 'price_desc') {
                         comparison *= -1;
                     }
@@ -114,7 +105,7 @@ export class OpenRouterService {
 
                 case 'alphabetical':
                 default:
-                    const nameA = a.name?.toLowerCase() ?? a.id?.toLowerCase() ?? ''; // Fallback to ID if name is missing
+                    const nameA = a.name?.toLowerCase() ?? a.id?.toLowerCase() ?? '';
                     const nameB = b.name?.toLowerCase() ?? b.id?.toLowerCase() ?? '';
                     comparison = nameA.localeCompare(nameB);
                     break;
@@ -128,7 +119,6 @@ export class OpenRouterService {
 
     /**
      * Performs a streaming chat completion request to the OpenRouter API.
-     * Handles SSE parsing and yields content chunks.
      * @param messages The chat history messages.
      * @param settings Plugin settings containing API key and model.
      * @param signal AbortSignal to allow cancellation.
@@ -161,9 +151,6 @@ export class OpenRouterService {
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json',
-                    // Optional headers from docs:
-                    // 'HTTP-Referer': 'YOUR_SITE_URL', // e.g., 'app://obsidian.md'
-                    // 'X-Title': 'Obsidian Simple Note Chat',
                 },
                 body: JSON.stringify(requestBody),
                 signal: signal,
@@ -172,10 +159,8 @@ export class OpenRouterService {
             console.log('OpenRouterService: Response status:', response.status);
 
         } catch (error: any) {
-             // Catch fetch errors (network issues, DNS errors, etc.)
              console.error('OpenRouterService: Fetch error:', error);
              if (error.name === 'AbortError') {
-                 // Don't throw for abort, let ChatService handle the notice
                  console.log('OpenRouterService: Fetch aborted.');
                  return;
              }
@@ -199,7 +184,6 @@ export class OpenRouterService {
             throw new Error('Response body is null.');
         }
 
-        // Process the stream
         const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
         let buffer = '';
         let done = false;
@@ -233,7 +217,6 @@ export class OpenRouterService {
                     buffer += readResult.value;
 
                     let endOfMessageIndex;
-                    // Use '\n\n' as the delimiter for SSE messages
                     while ((endOfMessageIndex = buffer.indexOf('\n\n')) >= 0) {
                         const message = buffer.substring(0, endOfMessageIndex);
                         buffer = buffer.substring(endOfMessageIndex + 2);
@@ -242,7 +225,6 @@ export class OpenRouterService {
                             const dataContent = message.substring(6).trim();
                             if (dataContent === '[DONE]') {
                                 console.log('OpenRouterService: Received [DONE] signal.');
-                                // Don't break here, let the reader naturally finish
                                 continue;
                             }
                             try {
@@ -250,8 +232,6 @@ export class OpenRouterService {
                                 const chunk = jsonData.choices?.[0]?.delta?.content;
                                 if (chunk) {
                                     yield chunk;
-                                } else {
-                                     // Log if data received but no content (e.g., role change message)
                                 }
                             } catch (e) {
                                 console.error('OpenRouterService: Error parsing SSE JSON:', e, 'Data:', dataContent);
@@ -259,7 +239,6 @@ export class OpenRouterService {
                             }
                         } else if (message.startsWith(':')) {
                              console.log("OpenRouterService: Received SSE comment:", message);
-                             // Ignore comments as per SSE spec
                         } else if (message.trim()) {
                              console.warn("OpenRouterService: Received unexpected non-empty line:", message);
                         }
@@ -269,18 +248,14 @@ export class OpenRouterService {
             console.log('OpenRouterService: Stream finished.');
 
         } catch (error) {
-             // Re-throw errors (including AbortError) to be handled by ChatService
              console.error("OpenRouterService: Error during stream processing loop:", error);
              throw error;
         } finally {
-            // Ensure the reader is released/cancelled if the loop exits unexpectedly
-            // (though reader.cancel might already be called on abort)
             if (!done) {
                  console.log("OpenRouterService: Stream loop exited unexpectedly, ensuring reader cancellation.");
                  try {
                      await reader.cancel('Stream processing finished or errored.');
                  } catch (cancelError) {
-                     // Ignore errors during cancellation itself, as the primary error is more important
                      console.warn("OpenRouterService: Error during final reader cancellation:", cancelError);
                  }
             }
@@ -305,14 +280,13 @@ export class OpenRouterService {
     ): Promise<string | null> {
         if (!apiKey || !model) {
             console.error('OpenRouterService: API key or model is missing for getChatCompletion.');
-            // Avoid Notice here, let the caller decide based on context (e.g., FileSystemService)
             return null;
         }
 
         const requestBody: any = {
             model: model,
             messages: messages,
-            stream: false, // Explicitly non-streaming
+            stream: false,
         };
 
         if (maxTokens !== undefined && maxTokens > 0) {

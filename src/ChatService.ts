@@ -1,7 +1,5 @@
 import { Notice, Plugin, Editor, TFile, EditorPosition } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
-// CHAT_SEPARATOR is now passed via settings/arguments
-// COMMAND_PHRASES are checked in EditorHandler before calling startChat
 import { OpenRouterService } from './OpenRouterService';
 
 export class ChatService {
@@ -33,8 +31,6 @@ export class ChatService {
                 console.log(`Skipping potential status message during parsing: "${part}"`);
                 continue;
             }
-            // Command phrase check is removed as EditorHandler should prevent them from reaching here
-            // If they do, they'll be treated as user/assistant content based on position.
 
             messages.push({ role: currentRole, content: part });
             currentRole = currentRole === 'user' ? 'assistant' : 'user';
@@ -77,7 +73,7 @@ export class ChatService {
         const statusMessageBase = `Calling ${settings.defaultModel || 'default model'}...`;
         const { contentForApi } = this.getContentBeforeStatus(currentFullContent, statusMessageBase);
 
-        const messages = this.parseNoteContent(contentForApi.trim(), settings.chatSeparator); // Use setting
+        const messages = this.parseNoteContent(contentForApi.trim(), settings.chatSeparator);
 
         if (messages.length === 0) {
             new Notice('No valid chat content found to send.');
@@ -98,7 +94,7 @@ export class ChatService {
                 initialInsertPos = statusInfo.startPos;
                 console.log("Removed status message, initial insertion point:", initialInsertPos);
                 const contentBeforeStatus = editor.getRange({line: 0, ch: 0}, initialInsertPos).trim();
-                const initialSeparator = contentBeforeStatus.length > 0 ? `\n\n${settings.chatSeparator}\n\n` : `${settings.chatSeparator}\n\n`; // Use setting
+                const initialSeparator = contentBeforeStatus.length > 0 ? `\n\n${settings.chatSeparator}\n\n` : `${settings.chatSeparator}\n\n`;
 
                 editor.replaceRange(initialSeparator, initialInsertPos, initialInsertPos);
 
@@ -117,15 +113,13 @@ export class ChatService {
                         const to = lastPosition;
                         editor.replaceRange(chunk, from, to);
                         lastPosition = editor.offsetToPos(editor.posToOffset(from) + chunk.length);
-                        // --- Viewport Scrolling ---
                         if (settings.enableViewportScrolling) {
                             editor.scrollIntoView({ from: lastPosition, to: lastPosition }, true);
                         }
-                        // --------------------------
                     }
                 }
                  if (editor.posToOffset(currentInsertPos) !== editor.posToOffset(lastPosition)) {
-                    const finalSeparator = `\n\n${settings.chatSeparator}\n\n`; // Use setting
+                    const finalSeparator = `\n\n${settings.chatSeparator}\n\n`;
                     editor.replaceRange(finalSeparator, lastPosition, lastPosition);
                     const finalCursorPos = editor.offsetToPos(editor.posToOffset(lastPosition) + finalSeparator.length);
                     editor.setCursor(finalCursorPos);
@@ -283,7 +277,6 @@ export class ChatService {
             return true;
         } else {
             console.log(`No active chat stream found to cancel for note: ${filePath}`);
-            // Optional: new Notice(`No active chat found for ${filePath}.`); - Decided against notice here, let caller handle UI
             return false;
         }
     }
