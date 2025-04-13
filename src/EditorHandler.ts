@@ -1,6 +1,6 @@
 import { App, Editor, MarkdownView, TFile, EditorPosition, Notice } from 'obsidian';
 import SimpleNoteChat from './main';
-import { CC_COMMAND } from './constants';
+import { CC_COMMAND, GG_COMMAND, CHAT_SEPARATOR } from './constants';
 import { PluginSettings } from './types';
 
 export class EditorHandler {
@@ -89,6 +89,54 @@ export class EditorHandler {
     			console.error("Error starting chat:", error);
     			// Optionally revert the status message or show an error in the editor
     		});
+    		return; // Return after handling cc
     	}
+
+    	// --- GG Command Check (Archive Note) ---
+    	const ggCommandPhrase = `\n${GG_COMMAND}\n`;
+    	if (trimmedContent.endsWith(ggCommandPhrase)) {
+    		const settings = this.plugin.settings; // Get settings
+    		const noteContent = editor.getValue(); // Get full content for separator check
+
+    		// Separator Check
+    		if (!noteContent.includes(CHAT_SEPARATOR)) {
+    			new Notice(`Archive command ('gg') requires at least one chat separator ('${CHAT_SEPARATOR}') in the note.`);
+    			return; // Stop processing if separator is missing
+    		}
+
+    		// Ensure file exists before attempting archive
+    		if (!markdownView.file) {
+    			console.error("Cannot archive note: markdownView.file is null.");
+    			new Notice("Failed to archive note: No active file.");
+    			return;
+    		}
+
+    		// Use an async IIFE to handle the promise from moveFileToArchive
+    		(async () => {
+    			try {
+    				const newPath = await this.plugin.fileSystemService.moveFileToArchive(
+    					markdownView.file!, // Assert non-null based on the check above
+    					settings.archiveFolderName
+    				);
+
+    				if (newPath) {
+    					new Notice(`Note archived to: ${newPath}`);
+    					// The view might close automatically upon rename by Obsidian.
+    				} else {
+    					// moveFileToArchive returns null on handled errors (e.g., folder creation failure)
+    					new Notice("Failed to archive note.");
+    					console.warn("FileSystemService.moveFileToArchive returned null.");
+    				}
+    			} catch (error) {
+    				console.error("Error during note archive:", error);
+    				new Notice("Failed to archive note. Check console for details.");
+    			}
+    		})();
+
+    		// Do not remove 'gg' text as per current requirements.
+    		return; // Return after handling gg
+    	}
+
+    	// --- Future command checks (e.g., dd, nn) could go here ---
     }
 }
