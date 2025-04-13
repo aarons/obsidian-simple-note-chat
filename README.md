@@ -87,9 +87,9 @@ AI's second response.
 
 This is configurable in settings.
 
-The `<hr>` html tag was chosen as it's rarely used in an actual markdown note, and makes it easy to see where each message starts and ends. The other horizontal lines (`---`, `___`, or `***`) could be part of a message or response, so the plugin would parse it incorrectly.
+A horizontal rule is used because it makes it easy to see where each message starts and ends. But you can configure any text sequence to be used as the separator.
 
-If you are using an LLM to write html code and it writes a horizontal rule, then the parsing would probably break. An option could be added to not parse anything in codeblocks, but for now the parsing code is kept simple.
+The `<hr>` html tag was chosen because it is rarely used in markdown notes. The other horizontal rules (`---`, `___`, or `***`) also work just fine, but they are more likely to be part of an AI response or content, which the plugin would then parse incorrectly when attributing messages.
 
 
 ### Archiving a Chat (`gg`)
@@ -167,30 +167,79 @@ The default command phrases (`cc`, `gg`, `dd`, `nn`) and the stop sequence (`sto
 
 Configure the plugin via the Obsidian settings panel (`Settings` -> `Community Plugins` -> `Simple Note Chat`):
 
-*   **OpenRouter Authentication:** Enter your OpenRouter API key. Using OpenRouter's application authentication pathway is recommended for better security and usage tracking if applicable.
-*   **Default Chat Model:** Choose the default LLM to use for chats. Includes a button to refresh the list of available models from OpenRouter.
-*   **Archived Chats Directory:** Specify the folder path (relative to your vault root) where chats moved using the archive command (`gg`) should be stored. Archiving is disabled if this field is left blank.
-*   **Chat Separator:** Customize the markdown used to separate messages (default: `<hr>`). *Warning:* Using common markdown like `---` might interfere with parsing if the LLM includes it in its response. `<hr>` is generally safer.
-*   **New Chat Note Creation:** Enable one or more methods for quickly creating new chat notes:
-    *   `Ribbon Button`: Adds an icon to the Obsidian ribbon.
-    *   `Keyboard Shortcut`: Allows you to set a custom hotkey.
-    *   `Phrase Command`: Enables a text command (`nn` by default) placed on its own line.
-*   **Call Chat Phrase:** Customize the phrase to trigger the LLM call (default: `cc`).
-*   **Scroll Viewport:** Choose whether the note view automatically scrolls down as the response streams (`true` by default). Set to `false` to allow scrolling manually or navigating away while the response generates in the background.
-*   **Archive Chat Phrase:** Customize the phrase to archive the chat (default: `gg`).
-*   **Archive Title Generation:**
-    *   `Enable Title Generation`: Checkbox to enable/disable automatic title generation for archived notes (default: `false`).
-    *   `Title Word Limit`: Maximum number of words for the generated title (default: 3).
-    *   `Include Emojis in Title`: Allow emojis in the generated title (default: `false`).
-    *   `Title Generation Model`: Select the LLM used specifically for titling (defaults to the main chat model if not set).
-*   **Delete Chat Phrase:**
-    *   `Enable Delete Command`: Checkbox to enable/disable the delete command (default: `false`). **Requires restart/reload.**
-    *   `Delete Phrase`: Customize the phrase for deletion (default: `dd`).
-    *   `Bypass Separator Check`: Disable the safety check that requires chat separators for deletion (default: `false`). **Use with extreme caution.**
-*   **Stop Streaming:**
-    *   `Stop Shortcut Key`: Customize the keyboard shortcut to stop streaming (default: `Escape`).
-    *   `Stop Typed Sequence`: Customize the typed sequence to stop streaming (default: `stop`).
+**OpenRouter Authentication**
+
+OpenRouter is used as the default model provider. More providers can be added if needed.
+
+**Default Chat Model**
+
+Choose the default LLM to use for chats. Includes a button to refresh the list of available models from OpenRouter.
+
+**Initiate Chat**
+
+Configuration Options:
+- the phrase to use to initiate a chat, default: cc
+- optional keyboard shortcut to initiate chat (shift-control-c for example)
+
+**Scroll Viewport**
+
+Choose whether the note view automatically scrolls down as the response streams. This is turned off by default.
+
+- whether to scroll the viewport when receiving a response
+    - yes: will move the view to the bottom of the note
+    - no: will not move the viewport; the file is updated in the background
+    	- allows user to scroll down at their own pace, or to navigate away to another file until this one is updated
+
+**Chat Separator**
+
+Customize the markdown used to separate messages (default: `<hr>`).
+
+Using common markdown like `---` might interfere with parsing the note when sending it for a chat, but it is easier to type if you frequently modify existing chats.
+
+**Archive Chat**
+
+Configuration Options:
+- The phrase used to initiate a note archival, default: gg
+- The folder where chats are moved using the archive command, default: archived/
+- Whether to change the note title when archiving (default: off)
+    - when turned on, default name is: year-month-day-hour-min
+    - optionally can use custom date strings
+    - optionally can use LLM to append a subject title
+        - limit to X words (default 3)
+        - include emojies (default false)
+        - model to use for titling the note
+            - default the same model
+            - optional select a different model for titles
+
+**New Chat**
+
+This is a shortcut for creating a new blank note in Obsidian and giving it the current date and time. There is no requirement of creating a blank note, you can chat from any note in your vault using the `cc` phrase.
+
+Enable one or more methods for quickly creating new chat notes:
+- The phrase to use, default: nn
+- Whether to add a ribbon button
+- Whether to enable a keyboard shortcut
+
+
+**Delete Chat**
+
+Configure the note deletion command:
+
+- Enable Deleting Chats: Checkbox to enable/disable the delete command (default: `false`).
+- Delete Phrase: Customize the phrase for deletion (default: `dd`).
+- Bypass Separator Check: Disable the safety check that requires chat separators in a note for deletion to occur (default: `false`)
+
+**Stop Streaming**
+
+Configure methods to stop an LLM response mid-stream:
+
+- Stop Shortcut Key: Customize the keyboard shortcut (default: `Escape`).
+- Stop Typed Sequence: Customize the typed sequence (default: `stop`).
 
 ## Contributing
 
-Developers interested in contributing can find a `test-vault` directory within the codebase. This vault contains sample notes and configurations to facilitate testing and development of the plugin. Please refer to Obsidian's official documentation for general plugin development guidelines.
+Developers interested in contributing can find a `test-vault` directory within the codebase. This vault contains sample notes and configurations to facilitate testing and development of the plugin.
+
+Please open a PR with a clear explanation of the feature.
+
+Contributions that add third party dependencies will likely not be accepted, due to the various risks that can be introduced.
