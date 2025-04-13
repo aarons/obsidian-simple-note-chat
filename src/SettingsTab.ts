@@ -544,7 +544,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				if (this.availableModels.length > 0) {
 					new Notice('Model list updated successfully.');
 				}
-				}
 			}
 
 		} catch (error) {

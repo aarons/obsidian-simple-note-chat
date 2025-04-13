@@ -2,200 +2,232 @@ import { App, Editor, MarkdownView, TFile, EditorPosition, Notice } from 'obsidi
 import SimpleNoteChat from './main';
 import { PluginSettings } from './types';
 
+interface CommandInfo {
+	phrase: string;
+	type: 'cc' | 'gg' | 'dd' | 'nn';
+}
+
 export class EditorHandler {
-    private app: App;
-    private plugin: SimpleNoteChat;
+	private app: App;
+	private plugin: SimpleNoteChat;
 
-    constructor(app: App, plugin: SimpleNoteChat) {
-        this.app = app;
-        this.plugin = plugin;
-    }
+	constructor(app: App, plugin: SimpleNoteChat) {
+		this.app = app;
+		this.plugin = plugin;
+	}
 
-    public handleEditorChange = (editor: Editor, markdownView: MarkdownView): void => {
-    	const settings = this.plugin.settings;
-    	const file = markdownView.file;
+	public handleEditorChange = (editor: Editor, markdownView: MarkdownView): void => {
+		const settings = this.plugin.settings;
+		const file = markdownView.file;
 
-    	if (!file) {
-    		console.warn("Editor change detected but no active file.");
-    		return;
-    	}
-    	const filePath = file.path;
+		if (!file) {
+			console.warn("Editor change detected but no active file.");
+			return;
+		}
+		const filePath = file.path;
 
-    	if (this.plugin.chatService.isStreamActive(filePath)) {
-    		const content = editor.getValue();
-    		const stopSequence = settings.stopCommandSequence;
+		// --- Handle Stop Sequence during Active Stream ---
+		if (this.plugin.chatService.isStreamActive(filePath)) {
+			const content = editor.getValue();
+			const stopSequence = settings.stopCommandSequence;
 
-    		if (stopSequence && content.includes(stopSequence)) {
-    			console.log(`Stop sequence "${stopSequence}" detected in active stream file: ${filePath}`);
-    			if (this.plugin.chatService.cancelStream(filePath)) {
-    				// Find and remove the stop sequence
-    				const sequenceIndex = content.lastIndexOf(stopSequence); // Find last occurrence
-    				if (sequenceIndex !== -1) {
-    					const startPos = editor.offsetToPos(sequenceIndex);
-    					const endPos = editor.offsetToPos(sequenceIndex + stopSequence.length);
-    					editor.replaceRange('', startPos, endPos);
-    					console.log(`Removed stop sequence "${stopSequence}" from editor.`);
+			if (stopSequence && content.includes(stopSequence)) {
+				console.log(`Stop sequence "${stopSequence}" detected in active stream file: ${filePath}`);
+				if (this.plugin.chatService.cancelStream(filePath)) {
+					const sequenceIndex = content.lastIndexOf(stopSequence);
+					if (sequenceIndex !== -1) {
+						const startPos = editor.offsetToPos(sequenceIndex);
+						const endPos = editor.offsetToPos(sequenceIndex + stopSequence.length);
+						editor.replaceRange('', startPos, endPos);
+						console.log(`Removed stop sequence "${stopSequence}" from editor.`);
 
-    					// Append interruption message - Append at the end for simplicity
-    					const endOfDoc = editor.offsetToPos(editor.getValue().length);
-    					const interruptionMessage = "\n\n[Response Interrupted]\n\n";
-    					editor.replaceRange(interruptionMessage, endOfDoc, endOfDoc);
-    					// Move cursor after the appended message
-    					const finalCursorPos = editor.offsetToPos(editor.posToOffset(endOfDoc) + interruptionMessage.length);
-    					editor.setCursor(finalCursorPos);
+						const endOfDoc = editor.offsetToPos(editor.getValue().length);
+						const interruptionMessage = "\n\n[Response Interrupted]\n\n";
+						editor.replaceRange(interruptionMessage, endOfDoc, endOfDoc);
+						const finalCursorPos = editor.offsetToPos(editor.posToOffset(endOfDoc) + interruptionMessage.length);
+						editor.setCursor(finalCursorPos);
 
+						new Notice("Stream stopped by sequence.");
+						return; // Stop further processing
+					} else {
+						console.warn("Stop sequence detected but could not find its index to remove.");
+					}
+				}
+			}
+			// Don't process command phrases if a stream is active but stop sequence wasn't found/handled
+			return;
+		}
 
-    					new Notice("Stream stopped by sequence.");
-    					return; // Stop further processing in this handler call
-    				} else {
-    					console.warn("Stop sequence detected but could not find its index to remove.");
-    				}
-    			}
-    		}
-    	}
+		// --- Detect Command Phrases ---
+		const editorContent = editor.getValue();
+		const lines = editorContent.split('\n');
 
-    	const content = editor.getValue(); // Re-get content in case it was modified by stop sequence logic
-    	const trimmedContent = content.trimEnd();
-    	const ccCommandPhrase = `\n${settings.ccCommandPhrase}\n`;
+		let lastLineIndex = -1;
+		let lastLineTrimmedContent = '';
+		for (let i = lines.length - 1; i >= 0; i--) {
+			const trimmedLine = lines[i].trim();
+			if (trimmedLine.length > 0) {
+				lastLineIndex = i;
+				lastLineTrimmedContent = trimmedLine;
+				break;
+			}
+		}
 
-    	if (trimmedContent.endsWith(ccCommandPhrase)) {
-    		// Calculate the range of the command phrase to replace
-    		const commandStartIndex = trimmedContent.length - ccCommandPhrase.length;
-    		const startPos = editor.offsetToPos(commandStartIndex);
-    		const endPos = editor.offsetToPos(trimmedContent.length); // Use trimmed length for end position
+		if (lastLineIndex === -1) {
+			return; // No command found
+		}
 
-    		const modelName = settings.defaultModel || 'default model';
-    		const statusMessage = `Calling ${modelName}...`;
+		// Build list of active commands based on settings
+		const activeCommands: CommandInfo[] = [];
+		if (settings.ccCommandPhrase) activeCommands.push({ phrase: settings.ccCommandPhrase, type: 'cc' });
+		if (settings.ggCommandPhrase) activeCommands.push({ phrase: settings.ggCommandPhrase, type: 'gg' });
+		if (settings.ddCommandPhrase && settings.enableDeleteCommand) activeCommands.push({ phrase: settings.ddCommandPhrase, type: 'dd' });
+		if (settings.nnCommandPhrase && settings.enableNnCommandPhrase) activeCommands.push({ phrase: settings.nnCommandPhrase, type: 'nn' });
 
-    		editor.replaceRange(statusMessage + '\n', startPos, endPos);
+		// Find matching command
+		const matchedCommand = activeCommands.find(cmd => cmd.phrase === lastLineTrimmedContent);
 
-    		// Get the content *before* the command phrase was added for parsing
-    		const contentForChat = trimmedContent.substring(0, commandStartIndex);
+		if (matchedCommand) {
+			console.log(`Detected command phrase: ${matchedCommand.phrase} (type: ${matchedCommand.type})`);
 
-    		if (!markdownView.file) {
-    			console.error("Cannot start chat: markdownView.file is null.");
-    			return;
-    		}
+			const lineStartPos: EditorPosition = { line: lastLineIndex, ch: 0 };
+			const lineEndPos: EditorPosition = { line: lastLineIndex, ch: lines[lastLineIndex].length };
 
-    		this.plugin.chatService.startChat(
-    			contentForChat,
-    			editor,
-    			markdownView.file,
-    			settings
-    		).catch(error => {
-    			console.error("Error starting chat:", error);
-    			// Optionally revert the status message or show an error in the editor
-    		});
-    		return; // Return after handling cc
-    	}
+			// Extract content *before* the command line
+			let contentBeforeCommand = lines.slice(0, lastLineIndex).join('\n').trimEnd();
+			// Add a newline if there was content before the command
+			if (contentBeforeCommand.length > 0) {
+				contentBeforeCommand += '\n';
+			}
 
-    	const ggCommandPhrase = `\n${settings.ggCommandPhrase}\n`;
-    	if (trimmedContent.endsWith(ggCommandPhrase)) {
-    		const settings = this.plugin.settings;
-    		const noteContent = editor.getValue(); // Get full content for separator check
+			this._executeCommandAction(
+				matchedCommand.type,
+				editor,
+				markdownView,
+				settings,
+				lineStartPos,
+				lineEndPos,
+				contentBeforeCommand,
+				lines // Pass original lines for context if needed
+			);
+		}
+	}
 
-    		const chatSeparator = settings.chatSeparator;
-    		if (!noteContent.includes(chatSeparator)) {
-    			new Notice(`Archive command ('gg') requires at least one chat separator ('${chatSeparator}') in the note.`);
-    			return; // Stop processing if separator is missing
-    		}
+	private _executeCommandAction(
+		commandType: 'cc' | 'gg' | 'dd' | 'nn',
+		editor: Editor,
+		markdownView: MarkdownView,
+		settings: PluginSettings,
+		lineStartPos: EditorPosition,
+		lineEndPos: EditorPosition,
+		contentBeforeCommand: string,
+		lines: string[] // Original lines array
+	): void {
 
-    		// Ensure file exists before attempting archive
-    		if (!markdownView.file) {
-    			console.error("Cannot archive note: markdownView.file is null.");
-    			new Notice("Failed to archive note: No active file.");
-    			return;
-    		}
+		const file = markdownView.file; // Re-check file existence
+		if (!file && commandType !== 'nn') { // 'nn' doesn't strictly need the current file
+			console.error(`Cannot execute command '${commandType}': markdownView.file is null.`);
+			new Notice(`Failed to execute command '${commandType}': No active file.`);
+			return;
+		}
 
-    		// Use an async IIFE to handle the promise from moveFileToArchive
-    		(async () => {
-    			try {
-    				const newPath = await this.plugin.fileSystemService.moveFileToArchive(
-    					markdownView.file!,
-    					settings.archiveFolderName,
-    					settings // Pass the entire settings object
-    				);
+		// Helper to set cursor position after removing/replacing the command line
+		const setCursorAfterAction = () => {
+			const lineIndex = lineStartPos.line;
+			if (lineIndex > 0) {
+				const prevLine = lineIndex - 1;
+				editor.setCursor({ line: prevLine, ch: lines[prevLine].length });
+			} else {
+				editor.setCursor({ line: 0, ch: 0 }); // Move to start if it was the only line or first line
+			}
+		};
 
-    				if (newPath) {
-    					new Notice(`Note archived to: ${newPath}`);
-    					// The view might close automatically upon rename by Obsidian.
-    				} else {
-    					// moveFileToArchive returns null on handled errors (e.g., folder creation failure)
-    					new Notice("Failed to archive note.");
-    					console.warn("FileSystemService.moveFileToArchive returned null.");
-    				}
-    			} catch (error) {
-    				console.error("Error during note archive:", error);
-    				new Notice("Failed to archive note. Check console for details.");
-    			}
-    		})();
+		switch (commandType) {
+			case 'cc':
+				const modelName = settings.defaultModel || 'default model';
+				const statusMessage = `Calling ${modelName}...`;
+				editor.replaceRange(statusMessage, lineStartPos, lineEndPos);
+				editor.setCursor(lineStartPos); // Cursor at start of status message
 
-    		return; // Return after handling gg
-    		}
+				this.plugin.chatService.startChat(
+					contentBeforeCommand,
+					editor,
+					file!, // We checked file existence above
+					settings
+				).catch(error => {
+					console.error("Error starting chat:", error);
+					const currentLineEndPos: EditorPosition = { line: lineStartPos.line, ch: statusMessage.length };
+					const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+					editor.replaceRange(`Error: ${errorMessage}`, lineStartPos, currentLineEndPos);
+				});
+				break;
 
-    		const ddCommandPhrase = `\n${settings.ddCommandPhrase}\n`;
-    		if (trimmedContent.endsWith(ddCommandPhrase)) {
-    			const settings = this.plugin.settings;
-    			if (!settings.enableDeleteCommand) {
-    				return; // Do nothing if the command is not enabled
-    			}
+			case 'gg':
+				editor.replaceRange('', lineStartPos, lineEndPos); // Remove command line first
+				setCursorAfterAction();
 
-    			const noteContent = editor.getValue(); // Get full content for separator check
+				const noteContentGg = editor.getValue(); // Get content *after* removing command line
+				const chatSeparatorGg = settings.chatSeparator;
+				if (!noteContentGg.includes(chatSeparatorGg)) {
+					new Notice(`Archive command ('gg') requires at least one chat separator ('${chatSeparatorGg}') in the note.`);
+					// Consider adding the command back here if desired, but it complicates flow.
+					return;
+				}
 
-    			const chatSeparator = settings.chatSeparator;
-    			if (!settings.ddBypassSeparatorCheck) {
-    				if (!noteContent.includes(chatSeparator)) {
-    					new Notice(`Delete command ('dd') requires at least one chat separator ('${chatSeparator}') in the note for safety.`);
-    					return; // Stop processing if separator is missing and bypass is off
-    				}
-    			}
+				(async () => {
+					try {
+						const newPath = await this.plugin.fileSystemService.moveFileToArchive(
+							file!, // Checked above
+							settings.archiveFolderName,
+							settings
+						);
+						if (newPath) { new Notice(`Note archived to: ${newPath}`); }
+						else {
+							new Notice("Failed to archive note.");
+							console.warn("FileSystemService.moveFileToArchive returned null.");
+						}
+					} catch (error) {
+						console.error("Error during note archive:", error);
+						new Notice("Failed to archive note. Check console for details.");
+					}
+				})();
+				break;
 
-    			// Ensure file exists before attempting delete
-    			if (!markdownView.file) {
-    				console.error("Cannot delete note: markdownView.file is null.");
-    				new Notice("Failed to delete note: No active file.");
-    				return;
-    			}
+			case 'dd':
+				const noteContentDd = editor.getValue(); // Check content *before* removing the line
+				const chatSeparatorDd = settings.chatSeparator;
+				if (!settings.ddBypassSeparatorCheck && !noteContentDd.includes(chatSeparatorDd)) {
+					new Notice(`Delete command ('dd') requires a chat separator ('${chatSeparatorDd}') or bypass enabled.`);
+					return;
+				}
 
-    			if (confirm("Are you sure you want to move this note to the trash?")) {
-    				// Use an async IIFE to handle the promise from deleteFile
-    				(async () => {
-    					try {
-    						await this.plugin.fileSystemService.deleteFile(markdownView.file!);
-    						new Notice("Note moved to trash.");
-    						// The view might close automatically upon deletion by Obsidian.
-    					} catch (error) {
-    						console.error("Error during note deletion:", error);
-    						new Notice("Failed to move note to trash. Check console for details.");
-    					}
-    				})();
-    			} else {
-    				// User cancelled the deletion
-    				new Notice("Note deletion cancelled.");
-    			}
+				if (confirm("Are you sure you want to move this note to the trash?")) {
+					editor.replaceRange('', lineStartPos, lineEndPos); // Remove command line *before* deleting
+					setCursorAfterAction();
 
-    			return; // Return after handling dd
-    		}
+					(async () => {
+						try {
+							await this.plugin.fileSystemService.deleteFile(file!); // Checked above
+							new Notice("Note moved to trash.");
+						} catch (error) {
+							console.error("Error during note deletion:", error);
+							new Notice("Failed to move note to trash. Check console for details.");
+						}
+					})();
+				} else {
+					new Notice("Note deletion cancelled.");
+					// Command line remains as user cancelled before removal.
+				}
+				break;
 
-   const nnCommandPhrase = `\n${settings.nnCommandPhrase}\n`;
-   const currentTrimmedContent = editor.getValue().trimEnd();
+			case 'nn':
+				editor.replaceRange('', lineStartPos, lineEndPos); // Remove command line *before* executing
+				setCursorAfterAction();
 
-   if (currentTrimmedContent.endsWith(nnCommandPhrase)) {
-    if (!settings.enableNnCommandPhrase) {
-    	return; // Do nothing if the command phrase trigger is not enabled
-    }
-
-    const commandStartIndex = currentTrimmedContent.length - nnCommandPhrase.length;
-    const startPos = editor.offsetToPos(commandStartIndex);
-    const endPos = editor.offsetToPos(currentTrimmedContent.length); // Use trimmed length for end position
-    editor.replaceRange('', startPos, endPos);
-
-    // @ts-ignore - Assuming 'commands' exists on app, potentially a typing issue
-    this.app.commands.executeCommandById('simple-note-chat:create-new-chat-note');
-    new Notice("Creating new chat note...");
-
-    return; // Return after handling nn
-   }
-
-    	}
- }
+				// @ts-ignore - Assuming 'commands' exists on app
+				this.app.commands.executeCommandById('simple-note-chat:create-new-chat-note');
+				new Notice("Creating new chat note...");
+				break;
+		}
+	}
+}
