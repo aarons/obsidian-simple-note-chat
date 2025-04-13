@@ -236,10 +236,10 @@ Configure methods to stop an LLM response mid-stream:
 - Stop Shortcut Key: Customize the keyboard shortcut (default: `Escape`).
 - Stop Typed Sequence: Customize the typed sequence (default: `stop`).
 
+## License
+
+This project is licensed under the **Affero General Public License (AGPL) v3.0 or later**. See the `CONTRIBUTING.md` file for more details.
+
 ## Contributing
 
-Developers interested in contributing can find a `test-vault` directory within the codebase. This vault contains sample notes and configurations to facilitate testing and development of the plugin.
-
-Please open a PR with a clear explanation of the feature.
-
-Contributions that add third party dependencies will likely not be accepted, due to the various risks that can be introduced.
+Contributions are welcome! Please see the [contributing.md](contributing.md) file for development setup instructions and contribution guidelines.
