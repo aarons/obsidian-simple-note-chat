@@ -13,6 +13,10 @@ export interface PluginSettings {
   archivePreviousNoteOnNn: boolean;
   enableArchiveRenameDate: boolean;
   archiveRenameDateFormat: string;
+  enableArchiveRenameLlm: boolean;
+  llmRenameWordLimit: number;
+  llmRenameIncludeEmojis: boolean;
+  llmRenameModel: string; // Stores the ID of the model to use for titling
 }
 
 // Define the default settings
@@ -27,7 +31,11 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	enableNnKeyboardShortcut: false,
 	archivePreviousNoteOnNn: false,
 	enableArchiveRenameDate: false,
-	archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT
+	archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT,
+	enableArchiveRenameLlm: false,
+	llmRenameWordLimit: 5, // Default word limit
+	llmRenameIncludeEmojis: false,
+	llmRenameModel: '' // Default to empty, maybe use `defaultModel` later if empty?
 };
 // Defines the structure for a chat message
 export interface ChatMessage {

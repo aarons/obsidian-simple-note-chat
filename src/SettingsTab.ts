@@ -2,12 +2,14 @@
 import { App, PluginSettingTab, Setting, Notice, DropdownComponent } from 'obsidian';
 import SimpleNoteChatPlugin from './main';
 import { OpenRouterService, OpenRouterModel } from './OpenRouterService';
+import { PluginSettings } from './types'; // Import PluginSettings
 import { DEFAULT_STOP_SEQUENCE, DEFAULT_ARCHIVE_FOLDER, DEFAULT_NN_TITLE_FORMAT } from './constants'; // Import constants
 
 export class SimpleNoteChatSettingsTab extends PluginSettingTab {
     plugin: SimpleNoteChatPlugin;
     openRouterService: OpenRouterService;
-    modelDropdown: DropdownComponent | null = null; // To hold reference for updates
+    modelDropdown: DropdownComponent | null = null; // Default chat model dropdown
+    llmModelDropdown: DropdownComponent | null = null; // LLM title model dropdown
 
     constructor(app: App, plugin: SimpleNoteChatPlugin) {
         super(app, plugin);
@@ -39,7 +41,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
                             // Auto-refresh models or prompt user? Let's keep it manual for now via the button.
                             // If the key is cleared, disable/clear the dropdown
                              if (!trimmedValue && this.modelDropdown) {
-                                 this.populateModelDropdown(this.modelDropdown, []);
+                                 // Clear/disable dropdowns if API key is removed
+                                 this.populateModelDropdown(this.modelDropdown, [], 'defaultModel', 'Enter API Key to load models', '-- Select a model --');
+                                 if (this.llmModelDropdown) {
+                                     this.populateModelDropdown(this.llmModelDropdown, [], 'llmRenameModel', 'Enter API Key to load models', 'Use Default Chat Model');
+                                 }
                              } else if (trimmedValue && this.modelDropdown) {
                                  // Re-enable dropdown if it was disabled
                                  this.modelDropdown.setDisabled(false);
@@ -167,6 +173,82 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
                    }
                   }));
 
+                // --- LLM Title Renaming Settings (within gg section) ---
+                const llmSettingsContainer = containerEl.createDiv('llm-archive-rename-settings'); // Container for dynamic visibility
+
+                new Setting(containerEl)
+                 .setName('Rename Note on Archive (LLM Title)')
+                 .setDesc('Use an LLM to generate a title based on note content when archiving. This happens *after* date renaming if both are enabled.')
+                 .addToggle(toggle => toggle
+                  .setValue(this.plugin.settings.enableArchiveRenameLlm)
+                  .onChange(async (value) => {
+                   this.plugin.settings.enableArchiveRenameLlm = value;
+                   await this.plugin.saveSettings();
+                   new Notice(`LLM title renaming ${value ? 'enabled' : 'disabled'}.`);
+                   // Show/hide the container
+                   llmSettingsContainer.style.display = value ? 'block' : 'none';
+                  }));
+
+                // Settings within the container
+                new Setting(llmSettingsContainer)
+                    .setName('LLM Title Word Limit')
+                    .setDesc('Approximate maximum words for the generated title.')
+                    .addText(text => text
+                        .setPlaceholder('5')
+                        .setValue(String(this.plugin.settings.llmRenameWordLimit)) // Convert number to string for input
+                        .onChange(async (value) => {
+                            const numValue = parseInt(value, 10);
+                            if (!isNaN(numValue) && numValue >= 1) {
+                                this.plugin.settings.llmRenameWordLimit = numValue;
+                                await this.plugin.saveSettings();
+                                new Notice('LLM title word limit saved.');
+                            } else {
+                                new Notice('Please enter a valid number (1 or greater).');
+                                // Optionally revert the input value if invalid
+                                text.setValue(String(this.plugin.settings.llmRenameWordLimit));
+                            }
+                        }))
+                    // Set input type to number for better UX (though validation is still needed)
+                    .then(setting => {
+                        // Access the input element after it's added
+                        const inputEl = setting.controlEl.querySelector('input');
+                        if (inputEl) {
+                            inputEl.setAttribute('type', 'number');
+                            inputEl.setAttribute('min', '1'); // Set minimum value for browser validation
+                        }
+                    });
+
+
+                new Setting(llmSettingsContainer)
+                    .setName('Include Emojis in LLM Title')
+                    .setDesc('Allow the LLM to include relevant emojis in the title.')
+                    .addToggle(toggle => toggle
+                        .setValue(this.plugin.settings.llmRenameIncludeEmojis)
+                        .onChange(async (value) => {
+                            this.plugin.settings.llmRenameIncludeEmojis = value;
+                            await this.plugin.saveSettings();
+                            new Notice(`LLM title emoji inclusion ${value ? 'enabled' : 'disabled'}.`);
+                        }));
+
+                const llmModelSetting = new Setting(llmSettingsContainer)
+                    .setName('LLM Title Model')
+                    .setDesc('Model to use for generating the title. Uses default chat model if left blank.');
+
+                llmModelSetting.addDropdown(dropdown => {
+                    this.llmModelDropdown = dropdown; // Store reference
+                    dropdown.addOption('', 'Use Default Chat Model'); // Specific placeholder
+                    dropdown.setValue(this.plugin.settings.llmRenameModel);
+                    dropdown.onChange(async (value) => {
+                        this.plugin.settings.llmRenameModel = value;
+                        await this.plugin.saveSettings();
+                    });
+                    // Dropdown will be populated by initial load or refresh button
+                });
+
+                // Set initial visibility of the container
+                llmSettingsContainer.style.display = this.plugin.settings.enableArchiveRenameLlm ? 'block' : 'none';
+
+
                 // --- New Chat (nn) Command Settings ---
                 containerEl.createEl('h3', { text: 'New Chat (`nn`) Command Triggers' });
 
@@ -221,9 +303,12 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
             // Load models silently in the background on initial display
             this.loadAndPopulateModels(false); // false = don't show explicit notices unless error
         } else {
-             // Ensure dropdown is cleared and shows appropriate message if no key
+             // Ensure dropdowns are cleared and show appropriate message if no key
              if (this.modelDropdown) {
-                this.populateModelDropdown(this.modelDropdown, []);
+                 this.populateModelDropdown(this.modelDropdown, [], 'defaultModel', 'Enter API Key to load models', '-- Select a model --');
+             }
+             if (this.llmModelDropdown) {
+                 this.populateModelDropdown(this.llmModelDropdown, [], 'llmRenameModel', 'Enter API Key to load models', 'Use Default Chat Model');
              }
         }
     }
@@ -231,27 +316,41 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
     /**
      * Helper function to populate the model dropdown menu.
      * @param dropdown The DropdownComponent instance.
+     * @param dropdown The DropdownComponent instance.
      * @param models Array of models (OpenRouterModel) to populate with.
+     * @param settingKey The key in PluginSettings that this dropdown controls.
+     * @param noApiKeyText Text to display when API key is missing.
+     * @param placeholderText Default placeholder text when models are loaded.
      */
-    private populateModelDropdown(dropdown: DropdownComponent, models: OpenRouterModel[]): void {
+    private populateModelDropdown(
+        dropdown: DropdownComponent,
+        models: OpenRouterModel[],
+        settingKey: keyof PluginSettings, // Use keyof for type safety
+        noApiKeyText: string,
+        placeholderText: string
+    ): void {
         dropdown.selectEl.empty(); // Clear existing options first
 
         if (!this.plugin.settings.apiKey) {
-             dropdown.addOption('', 'Enter API Key to load models');
+             dropdown.addOption('', noApiKeyText);
              dropdown.setDisabled(true);
              return;
         }
 
         if (models.length === 0) {
-            // This case handles API errors or if the key is valid but returns no models
+            // Handles API errors or empty model list
             dropdown.addOption('', 'No models found or API key invalid');
-            dropdown.setDisabled(true); // Disable if no models to select
-            return;
+            // Keep dropdown enabled but show placeholder, maybe disable? Let's keep enabled for now.
+            // dropdown.setDisabled(true);
+            // Set value to empty to ensure placeholder is selected
+            dropdown.setValue('');
+            // We don't return here, allow the placeholder to be added below
         }
 
         // If we have models, enable the dropdown and add the placeholder first
+        // Enable dropdown and add the specific placeholder text
         dropdown.setDisabled(false);
-        dropdown.addOption('', '-- Select a model --');
+        dropdown.addOption('', placeholderText);
 
         // Add each model to the dropdown
         models.forEach(model => {
@@ -260,12 +359,13 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
             dropdown.addOption(model.id, displayName);
         });
 
-        // Try to re-select the currently saved model
-        const savedModel = this.plugin.settings.defaultModel;
+        // Try to re-select the currently saved model for this specific setting
+        // @ts-ignore - Accessing setting dynamically, TS might complain but it's valid here
+        const savedModel = this.plugin.settings[settingKey] as string;
         if (savedModel && models.some(m => m.id === savedModel)) {
             dropdown.setValue(savedModel);
         } else {
-            // If saved model isn't in the list (or no model saved), keep placeholder selected
+            // If saved model isn't in the list (or no model saved), ensure placeholder is selected
             dropdown.setValue('');
         }
     }
@@ -281,7 +381,10 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
                 new Notice('Please enter your OpenRouter API key first.');
             }
              if (this.modelDropdown) {
-                 this.populateModelDropdown(this.modelDropdown, []); // Clear/disable dropdown
+                 this.populateModelDropdown(this.modelDropdown, [], 'defaultModel', 'Enter API Key to load models', '-- Select a model --');
+             }
+             if (this.llmModelDropdown) {
+                 this.populateModelDropdown(this.llmModelDropdown, [], 'llmRenameModel', 'Enter API Key to load models', 'Use Default Chat Model');
              }
             return;
         }
@@ -299,16 +402,28 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
             // So, we just need to check the length.
             const sortedModels = this.openRouterService.sortModels(models, 'name', 'asc'); // Default sort by name
 
+            let populatedCount = 0;
             if (this.modelDropdown) {
-                this.populateModelDropdown(this.modelDropdown, sortedModels);
-                if (showNotices && models.length > 0) {
-                    new Notice('Model list updated successfully.');
-                } else if (showNotices && models.length === 0) {
-                    // Notice for empty list was already shown by fetchModels or populateDropdown handles it
-                }
+                this.populateModelDropdown(this.modelDropdown, sortedModels, 'defaultModel', 'Enter API Key to load models', '-- Select a model --');
+                populatedCount++;
             } else {
-                 console.error("SettingsTab: Model dropdown reference is null. Cannot populate.");
-                 if (showNotices) new Notice('Error: Could not update model dropdown UI element.');
+                 console.warn("SettingsTab: Default model dropdown reference is null.");
+            }
+            if (this.llmModelDropdown) {
+                this.populateModelDropdown(this.llmModelDropdown, sortedModels, 'llmRenameModel', 'Enter API Key to load models', 'Use Default Chat Model');
+                populatedCount++;
+            } else {
+                 console.warn("SettingsTab: LLM title model dropdown reference is null.");
+            }
+
+            if (showNotices) {
+                if (models.length > 0 && populatedCount > 0) {
+                    new Notice('Model list updated successfully.');
+                } else if (models.length === 0 && populatedCount > 0) {
+                    // Notice handled by populateModelDropdown
+                } else if (populatedCount === 0) {
+                     new Notice('Error: Could not update model dropdown UI elements.');
+                }
             }
 
         } catch (error) {
@@ -318,7 +433,10 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
                 new Notice('An unexpected error occurred while updating model list.');
             }
              if (this.modelDropdown) {
-                 this.populateModelDropdown(this.modelDropdown, []); // Clear dropdown on error
+                 this.populateModelDropdown(this.modelDropdown, [], 'defaultModel', 'Enter API Key to load models', '-- Select a model --');
+             }
+              if (this.llmModelDropdown) {
+                 this.populateModelDropdown(this.llmModelDropdown, [], 'llmRenameModel', 'Enter API Key to load models', 'Use Default Chat Model');
              }
         } finally {
             // Hide the persistent "Fetching..." notice
