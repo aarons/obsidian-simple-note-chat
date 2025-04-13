@@ -162,7 +162,7 @@ export class OpenRouterService {
                     // 'X-Title': 'Obsidian Simple Note Chat',
                 },
                 body: JSON.stringify(requestBody),
-                signal: signal, // Pass the abort signal
+                signal: signal,
             });
 
             console.log('OpenRouterService: Response status:', response.status);
@@ -280,7 +280,7 @@ export class OpenRouterService {
                      console.warn("OpenRouterService: Error during final reader cancellation:", cancelError);
                  }
             }
-             reader.releaseLock(); // Release lock if not already released by cancel/completion
+             reader.releaseLock();
              console.log("OpenRouterService: Stream reader lock released.");
         }
     }
