@@ -76,7 +76,29 @@ Check all the methods you would like to use:
 
 There is a test-vault available in the code base to make testing easier
 It has a couple sample notes that can be tested
-more instructions needed on how to do development of an obsidian plugin
+### Basic Setup
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/aarons/obsidian-simple-chat.git
+    cd obsidian-simple-chat
+    ```
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+3.  **Build the plugin (and watch for changes):**
+    ```bash
+    npm run dev
+    ```
+4.  **Copy plugin files to your Obsidian vault:**
+    *   Create a folder named `simple-note-chat` inside your vault's `.obsidian/plugins/` directory.
+    *   Copy the generated `main.js` and the `manifest.json` file into the `.obsidian/plugins/simple-note-chat/` directory. (Note: `styles.css` will be added later if needed).
+5.  **Enable the plugin in Obsidian:**
+    *   Open Obsidian settings.
+    *   Go to "Community plugins".
+    *   Make sure "Restricted mode" is off.
+    *   Find "Simple Note Chat" in the list of installed plugins and toggle it on.
 
 
 ## Implementation Notes
