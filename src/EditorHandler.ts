@@ -1,6 +1,6 @@
 import { App, Editor, MarkdownView, TFile, EditorPosition, Notice } from 'obsidian';
 import SimpleNoteChat from './main';
-import { CC_COMMAND, GG_COMMAND, DD_COMMAND, CHAT_SEPARATOR } from './constants';
+import { CC_COMMAND, GG_COMMAND, DD_COMMAND, NN_COMMAND, CHAT_SEPARATOR } from './constants';
 import { PluginSettings } from './types';
 
 export class EditorHandler {
@@ -185,6 +185,32 @@ export class EditorHandler {
     			return; // Return after handling dd
     		}
 
-    		// --- Future command checks (e.g., nn) could go here ---
+   // --- NN Command Check (New Note) ---
+   const nnCommandPhrase = `\n${NN_COMMAND}\n`;
+   // Re-check trimmedContent as it might have changed if other handlers modified it, though unlikely with current returns
+   const currentTrimmedContent = editor.getValue().trimEnd();
+
+   if (currentTrimmedContent.endsWith(nnCommandPhrase)) {
+    // 1. Check if Enabled
+    if (!settings.enableNnCommandPhrase) {
+    	return; // Do nothing if the command phrase trigger is not enabled
+    }
+
+    // 2. Remove the command phrase
+    const commandStartIndex = currentTrimmedContent.length - nnCommandPhrase.length;
+    const startPos = editor.offsetToPos(commandStartIndex);
+    const endPos = editor.offsetToPos(currentTrimmedContent.length); // Use trimmed length for end position
+    editor.replaceRange('', startPos, endPos);
+
+    // 3. Execute the command
+    // Ensure the command ID matches the one registered in main.ts
+    // @ts-ignore - Assuming 'commands' exists on app, potentially a typing issue
+    this.app.commands.executeCommandById('simple-note-chat:create-new-chat-note');
+    new Notice("Creating new chat note..."); // Optional feedback
+
+    return; // Return after handling nn
+   }
+
+    		// --- Future command checks could go here ---
     	}
  }

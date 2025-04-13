@@ -56,6 +56,15 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			}
 		});
 		// --- End New Chat Command ---
+
+		// --- Conditionally Add Ribbon Icon for New Chat ---
+		if (this.settings.enableNnRibbonButton) {
+			this.addRibbonIcon('message-square-plus', 'Create New Chat Note', () => {
+				// @ts-ignore - Assuming 'commands' exists on app, potentially a typing issue
+				this.app.commands.executeCommandById('simple-note-chat:create-new-chat-note');
+			});
+		}
+		// --- End Ribbon Icon ---
 	}
 
 	onunload() {
