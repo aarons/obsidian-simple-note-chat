@@ -1,7 +1,7 @@
 // src/SettingsTab.ts
 import { App, PluginSettingTab, Setting, Notice, DropdownComponent } from 'obsidian';
-import SimpleNoteChatPlugin from './main'; // Assumes default export from main.ts
-import { OpenRouterService, OpenRouterModel } from './OpenRouterService'; // Import service and type
+import SimpleNoteChatPlugin from './main';
+import { OpenRouterService, OpenRouterModel } from './OpenRouterService';
 
 export class SimpleNoteChatSettingsTab extends PluginSettingTab {
     plugin: SimpleNoteChatPlugin;
@@ -43,7 +43,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
                                  // Re-enable dropdown if it was disabled
                                  this.modelDropdown.setDisabled(false);
                                  // Maybe trigger a silent refresh?
-                                 // this.loadAndPopulateModels(false);
                              }
                         }
                     });
@@ -61,7 +60,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
         modelSetting.addDropdown(dropdown => {
             this.modelDropdown = dropdown; // Store reference
             dropdown.addOption('', '-- Select a model --'); // Initial placeholder
-            dropdown.setValue(this.plugin.settings.defaultModel); // Set initial value from settings
+            dropdown.setValue(this.plugin.settings.defaultModel);
             dropdown.onChange(async (value) => {
                 this.plugin.settings.defaultModel = value;
                 await this.plugin.saveSettings();

@@ -1,33 +1,29 @@
 import { App, Editor, MarkdownView, Plugin, PluginSettingTab, Setting } from 'obsidian';
-import { SimpleNoteChatSettingsTab } from './SettingsTab'; // Import the new settings tab
-import { ChatService } from './ChatService'; // Import ChatService
-import { EditorHandler } from './EditorHandler'; // Import EditorHandler
-import { PluginSettings, DEFAULT_SETTINGS } from './types'; // Import settings types
+import { SimpleNoteChatSettingsTab } from './SettingsTab';
+import { ChatService } from './ChatService';
+import { EditorHandler } from './EditorHandler';
+import { PluginSettings, DEFAULT_SETTINGS } from './types';
 
 // Settings interface and defaults are now imported from './types'
 
 export default class SimpleNoteChatPlugin extends Plugin {
 	settings: PluginSettings;
-	chatService: ChatService; // Add ChatService instance
-	editorHandler: EditorHandler; // Add EditorHandler instance
+	chatService: ChatService;
+	editorHandler: EditorHandler;
+
 	async onload() {
 		console.log('Loading Simple Note Chat plugin');
 		await this.loadSettings();
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
 		// Instantiate services
 		this.chatService = new ChatService(this);
 		this.editorHandler = new EditorHandler(this.app, this);
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SimpleNoteChatSettingsTab(this.app, this));
 
-		// Register the editor change listener
 		this.registerEvent(
 			this.app.workspace.on('editor-change', this.editorHandler.handleEditorChange)
 		);
-
-		// Add other initialization logic here if needed
 	}
 
 	onunload() {
