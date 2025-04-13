@@ -22,7 +22,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		this.openRouterService = new OpenRouterService();
 		this.chatService = new ChatService(this, this.openRouterService);
-		this.fileSystemService = new FileSystemService(this.app);
+		this.fileSystemService = new FileSystemService(this.app, this.openRouterService); // Pass OpenRouterService
 		this.editorHandler = new EditorHandler(this.app, this);
 
 		this.addSettingTab(new SimpleNoteChatSettingsTab(this.app, this));
@@ -47,7 +47,8 @@ export default class SimpleNoteChatPlugin extends Plugin {
 							try {
 								const content = await this.app.vault.read(activeFile);
 								if (content.includes(CHAT_SEPARATOR)) {
-									const archiveResult = await this.fileSystemService.moveFileToArchive(activeFile, this.settings.archiveFolderName, false, this.settings.archiveRenameDateFormat); // Pass false for enableRename here
+									// Pass the whole settings object now
+									const archiveResult = await this.fileSystemService.moveFileToArchive(activeFile, this.settings.archiveFolderName, this.settings);
 									if (archiveResult === null) {
 										new Notice(`Failed to archive previous note '${activeFile.name}'. Continuing to create new note.`);
 									} else {

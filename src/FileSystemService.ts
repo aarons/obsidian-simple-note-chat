@@ -1,21 +1,24 @@
-import { App, TFile, normalizePath, moment } from 'obsidian';
+import { App, TFile, normalizePath, moment, Notice } from 'obsidian';
+import { PluginSettings, ChatMessage } from './types'; // Import PluginSettings and ChatMessage
+import { OpenRouterService } from './OpenRouterService'; // Import OpenRouterService
 
 export class FileSystemService {
     private app: App;
+    private openRouterService: OpenRouterService; // Add OpenRouterService instance
 
-    constructor(app: App) {
+    constructor(app: App, openRouterService: OpenRouterService) { // Inject OpenRouterService
         this.app = app;
+        this.openRouterService = openRouterService; // Store the instance
     }
 
     /**
      * Moves a file to the specified archive folder, handling name conflicts.
      * @param file The file to move.
      * @param archiveFolderName The relative path of the archive folder from the vault root.
-     * @param enableRename Whether to rename the file using the date format.
-     * @param renameFormat The moment.js format string for renaming.
+     * @param settings The plugin settings containing archive and LLM options.
      * @returns The new path of the archived file, or null if an error occurred.
      */
-    async moveFileToArchive(file: TFile, archiveFolderName: string, enableRename: boolean, renameFormat: string): Promise<string | null> {
+    async moveFileToArchive(file: TFile, archiveFolderName: string, settings: PluginSettings): Promise<string | null> {
         try {
             const normalizedArchivePath = normalizePath(archiveFolderName);
 
@@ -36,12 +39,70 @@ export class FileSystemService {
             let baseFilename: string;
             const originalExtension = file.extension ? `.${file.extension}` : ''; // Store original extension
 
-            if (enableRename && renameFormat) {
-                const formattedDate = moment().format(renameFormat);
+            if (settings.enableArchiveRenameDate && settings.archiveRenameDateFormat) {
+                const formattedDate = moment().format(settings.archiveRenameDateFormat);
                 baseFilename = `${formattedDate}${originalExtension}`;
             } else {
-                baseFilename = file.name;
+                baseFilename = file.name; // Use original name if date rename is off
             }
+
+            // --- LLM Title Generation ---
+            if (settings.enableArchiveRenameLlm) {
+                const content = await this.app.vault.read(file);
+                const titleModel = settings.llmRenameModel || settings.defaultModel;
+
+                if (!titleModel || !settings.apiKey) {
+                    new Notice("LLM Title generation skipped: API Key or Title/Default Model not set.");
+                    console.warn("LLM Title generation skipped: API Key or Title/Default Model not set.");
+                } else if (!content.trim()) {
+                    new Notice("LLM Title generation skipped: Note content is empty.");
+                    console.warn("LLM Title generation skipped: Note content is empty.");
+                }
+                else {
+                    const wordLimit = settings.llmRenameWordLimit > 0 ? settings.llmRenameWordLimit : 10; // Default/fallback word limit
+                    const prompt = `Generate a concise filename-friendly title for the following note content, under ${wordLimit} words.${settings.llmRenameIncludeEmojis ? ' You can include relevant emojis.' : ''} Respond ONLY with the title itself, no explanations or quotation marks. Content:\n\n---\n\n${content}`;
+                    const messages: ChatMessage[] = [{ role: 'user', content: prompt }];
+
+                    console.log(`FileSystemService: Requesting LLM title with model ${titleModel}`);
+                    const llmTitle = await this.openRouterService.getChatCompletion(
+                        settings.apiKey,
+                        titleModel,
+                        messages,
+                        wordLimit * 5 // Estimate max tokens based on word limit
+                    );
+
+                    if (llmTitle) {
+                        console.log(`FileSystemService: Received LLM title: "${llmTitle}"`);
+                        // Sanitize Title: Remove invalid chars, replace whitespace with '_', trim, limit length
+                        const sanitizedTitle = llmTitle
+                            .replace(/[\\/:*?"<>|\n\r]+/g, '') // Remove invalid filename chars
+                            .replace(/\s+/g, '_') // Replace whitespace sequences with single underscore
+                            .replace(/^_|_$/g, '') // Trim leading/trailing underscores
+                            .substring(0, 100); // Limit length
+
+                        if (sanitizedTitle) {
+                            const filenameWithoutExt = baseFilename.substring(0, baseFilename.lastIndexOf('.'));
+                            // Combine based on whether date rename was enabled
+                            if (settings.enableArchiveRenameDate) {
+                                // Append LLM title to date-based name
+                                baseFilename = `${filenameWithoutExt}_${sanitizedTitle}${originalExtension}`;
+                            } else {
+                                // Use LLM title as the primary name
+                                baseFilename = `${sanitizedTitle}${originalExtension}`;
+                            }
+                            console.log(`FileSystemService: Updated baseFilename with LLM title: ${baseFilename}`);
+                        } else {
+                             console.warn(`FileSystemService: LLM title "${llmTitle}" became empty after sanitization.`);
+                             new Notice("LLM title was empty after sanitization. Archiving with current name.");
+                        }
+                    } else {
+                        // Fallback (Line 146)
+                        console.warn("FileSystemService: LLM title generation failed.");
+                        new Notice("LLM title generation failed. Archiving with current name.");
+                    }
+                }
+            }
+            // --- End LLM Title Generation ---
 
             let targetPath = normalizePath(`${normalizedArchivePath}/${baseFilename}`);
             let counter = 0;

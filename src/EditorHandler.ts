@@ -114,11 +114,11 @@ export class EditorHandler {
     		// Use an async IIFE to handle the promise from moveFileToArchive
     		(async () => {
     			try {
+    				// Pass the whole settings object now
     				const newPath = await this.plugin.fileSystemService.moveFileToArchive(
     					markdownView.file!, // Assert non-null based on the check above
     					settings.archiveFolderName,
-    					settings.enableArchiveRenameDate, // Pass rename setting
-    					settings.archiveRenameDateFormat // Pass format setting
+    					settings // Pass the entire settings object
     				);
 
     				if (newPath) {

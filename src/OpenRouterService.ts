@@ -284,4 +284,81 @@ export class OpenRouterService {
              console.log("OpenRouterService: Stream reader lock released.");
         }
     }
+
+    /**
+     * Performs a non-streaming chat completion request to the OpenRouter API.
+     * @param apiKey The OpenRouter API key.
+     * @param model The model ID to use for completion.
+     * @param messages The chat history messages.
+     * @param maxTokens Optional maximum number of tokens for the completion.
+     * @returns A promise that resolves to the completion content string or null in case of error.
+     */
+    async getChatCompletion(
+        apiKey: string,
+        model: string,
+        messages: ChatMessage[],
+        maxTokens?: number
+    ): Promise<string | null> {
+        if (!apiKey || !model) {
+            console.error('OpenRouterService: API key or model is missing for getChatCompletion.');
+            // Avoid Notice here, let the caller decide based on context (e.g., FileSystemService)
+            return null;
+        }
+
+        const requestBody: any = {
+            model: model,
+            messages: messages,
+            stream: false, // Explicitly non-streaming
+        };
+
+        if (maxTokens !== undefined && maxTokens > 0) {
+            requestBody.max_tokens = maxTokens;
+        }
+
+        console.log('OpenRouterService: Sending non-stream request:', JSON.stringify(requestBody, null, 2));
+
+        try {
+            const response = await requestUrl({
+                url: `${OPENROUTER_API_URL}/chat/completions`,
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody),
+                throw: false, // Prevent requestUrl from throwing on non-200 status
+            });
+
+            console.log('OpenRouterService: Non-stream response status:', response.status);
+
+            if (response.status === 200) {
+                const data = response.json;
+                const content = data?.choices?.[0]?.message?.content;
+
+                if (content) {
+                    console.log('OpenRouterService: Received non-stream completion.');
+                    return content.trim();
+                } else {
+                    console.error('OpenRouterService: Could not extract content from non-stream response:', data);
+                    new Notice('Failed to parse LLM response from OpenRouter.');
+                    return null;
+                }
+            } else {
+                console.error(`OpenRouterService: Error fetching non-stream completion: ${response.status}`, response.text);
+                let errorMessage = `LLM request failed. Status: ${response.status}.`;
+                 try {
+                    const errorJson = response.json; // Try parsing error JSON
+                    errorMessage += ` ${errorJson?.error?.message || response.text || ''}`;
+                 } catch {
+                    errorMessage += ` ${response.text || 'Could not read error body.'}`;
+                 }
+                new Notice(errorMessage.substring(0, 200)); // Limit notice length
+                return null;
+            }
+        } catch (error) {
+            console.error('OpenRouterService: Network or other error during non-stream completion:', error);
+            new Notice('Error connecting to OpenRouter for title generation. Check network or API.');
+            return null;
+        }
+    }
 }
