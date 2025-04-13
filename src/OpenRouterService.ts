@@ -173,7 +173,7 @@ export class OpenRouterService {
              if (error.name === 'AbortError') {
                  // Don't throw for abort, let ChatService handle the notice
                  console.log('OpenRouterService: Fetch aborted.');
-                 return; // Exit generator cleanly
+                 return;
              }
              throw new Error(`Network error calling OpenRouter: ${error.message}`);
         }
@@ -202,7 +202,6 @@ export class OpenRouterService {
 
         try {
             while (!done) {
-                 // Check for abort signal before reading
                  if (signal.aborted) {
                     console.log('OpenRouterService: Abort signal detected during stream read.');
                     // Ensure the reader is cancelled if we break early
@@ -214,30 +213,26 @@ export class OpenRouterService {
                 let readResult: ReadableStreamReadResult<string>;
                 try {
                     readResult = await reader.read();
-                    done = readResult.done; // Update done status
+                    done = readResult.done;
                 } catch (readError: any) {
                      // Catch errors during reader.read() itself
                      console.error('OpenRouterService: Error reading stream chunk:', readError);
                      // Check if it's an abort error triggered by reader.cancel()
                      if (readError.name === 'AbortError') {
                          // Already handled by the signal check or cancellation logic
-                         return; // Exit cleanly
+                         return;
                      }
                      throw new Error(`Error reading stream: ${readError.message}`);
                 }
 
-
                 if (readResult.value) {
                     buffer += readResult.value;
-                    // console.log("Buffer:", buffer); // Debugging
 
                     let endOfMessageIndex;
                     // Use '\n\n' as the delimiter for SSE messages
                     while ((endOfMessageIndex = buffer.indexOf('\n\n')) >= 0) {
                         const message = buffer.substring(0, endOfMessageIndex);
-                        buffer = buffer.substring(endOfMessageIndex + 2); // Consume message + delimiter
-
-                        // console.log("Processing SSE Message:", message); // Debugging
+                        buffer = buffer.substring(endOfMessageIndex + 2);
 
                         if (message.startsWith('data: ')) {
                             const dataContent = message.substring(6).trim();
@@ -250,11 +245,9 @@ export class OpenRouterService {
                                 const jsonData = JSON.parse(dataContent);
                                 const chunk = jsonData.choices?.[0]?.delta?.content;
                                 if (chunk) {
-                                    // console.log("Yielding chunk:", chunk); // Debugging
                                     yield chunk;
                                 } else {
                                      // Log if data received but no content (e.g., role change message)
-                                     // console.log("SSE data received without content:", jsonData);
                                 }
                             } catch (e) {
                                 console.error('OpenRouterService: Error parsing SSE JSON:', e, 'Data:', dataContent);
@@ -268,7 +261,7 @@ export class OpenRouterService {
                         }
                     }
                 }
-            } // end while(!done)
+            }
             console.log('OpenRouterService: Stream finished.');
 
         } catch (error) {
