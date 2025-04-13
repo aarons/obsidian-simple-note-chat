@@ -1,0 +1,10 @@
+{
+  "simple-note-chat:trigger-chat-completion-cc": [
+    {
+      "modifiers": [
+        "Alt"
+      ],
+      "key": "C"
+    }
+  ]
+}
