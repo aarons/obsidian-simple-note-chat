@@ -154,9 +154,12 @@ export class EditorHandler {
 
     			// 2. Separator Check (Line 105)
     			const chatSeparator = settings.chatSeparator; // Get from settings (already fetched for gg, but get again for clarity/safety)
-    			if (!noteContent.includes(chatSeparator)) {
-    				new Notice(`Delete command ('dd') requires at least one chat separator ('${chatSeparator}') in the note for safety.`);
-    				return; // Stop processing if separator is missing
+    			// Only check for separator if bypass is NOT enabled
+    			if (!settings.ddBypassSeparatorCheck) {
+    				if (!noteContent.includes(chatSeparator)) {
+    					new Notice(`Delete command ('dd') requires at least one chat separator ('${chatSeparator}') in the note for safety.`);
+    					return; // Stop processing if separator is missing and bypass is off
+    				}
     			}
 
     			// Ensure file exists before attempting delete

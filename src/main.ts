@@ -97,6 +97,45 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		});
 		// --- End New Chat Command ---
 
+		// --- Add CC Shortcut Command ---
+		this.addCommand({
+			id: 'trigger-chat-completion-cc',
+			name: 'Trigger Chat Completion (cc)',
+			checkCallback: (checking: boolean) => {
+				// 1. Check if the setting is enabled
+				if (!this.settings.enableCcShortcut) {
+					return false; // Command is disabled if setting is off
+				}
+
+				// 2. Check if there's an active Markdown view
+				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (!activeView) {
+					return false; // No active markdown view
+				}
+
+				// 3. If just checking, return true (command is available)
+				if (checking) {
+					return true;
+				}
+
+				// 4. If executing, simulate typing 'cc' at the end
+				const editor = activeView.editor;
+				const docEnd = editor.offsetToPos(editor.getValue().length);
+				const currentContent = editor.getValue();
+				// Ensure there's a newline before adding cc, if needed, and add the phrase + newline
+				const textToInsert = (currentContent.endsWith('\n') ? '' : '\n') + this.settings.ccCommandPhrase + '\n';
+				editor.replaceRange(textToInsert, docEnd, docEnd);
+				// Move cursor to the end after insertion
+				const newEndPos = editor.offsetToPos(editor.posToOffset(docEnd) + textToInsert.length);
+				editor.setCursor(newEndPos);
+
+				// EditorHandler will detect the change and trigger the chat
+				console.log("Executed 'cc' shortcut command, inserted phrase.");
+				return true; // Indicate successful execution (though the real work is done by EditorHandler)
+			}
+		});
+		// --- End CC Shortcut Command ---
+
 		// --- Conditionally Add Ribbon Icon for New Chat ---
 		if (this.settings.enableNnRibbonButton) {
 			this.addRibbonIcon('message-square-plus', 'Create New Chat Note', () => {

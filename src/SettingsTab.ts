@@ -116,6 +116,18 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
                     }
                    }));
 
+                 // --- Viewport Scrolling Setting ---
+                 new Setting(containerEl)
+                  .setName('Enable Viewport Scrolling')
+                  .setDesc('Automatically scroll the note to the bottom as the chat response streams in.')
+                  .addToggle(toggle => toggle
+                   .setValue(this.plugin.settings.enableViewportScrolling)
+                   .onChange(async (value) => {
+                    this.plugin.settings.enableViewportScrolling = value;
+                    await this.plugin.saveSettings();
+                    new Notice(`Viewport scrolling ${value ? 'enabled' : 'disabled'}.`);
+                   }));
+
                  // --- Archive Folder Setting ---
                  new Setting(containerEl)
                   .setName('Archive Folder')
@@ -149,6 +161,18 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
                     new Notice(`Delete command ('dd') ${value ? 'enabled' : 'disabled'}.`);
                    }));
 
+                // --- dd Bypass Separator Check Setting ---
+                new Setting(containerEl)
+                 .setName('Bypass Separator Check for `dd`')
+                 .setDesc('Allow the \'dd\' command to work even if the note doesn\'t contain a chat separator. USE WITH EXTREME CAUTION!')
+                 .addToggle(toggle => toggle
+                  .setValue(this.plugin.settings.ddBypassSeparatorCheck)
+                  .onChange(async (value) => {
+                   this.plugin.settings.ddBypassSeparatorCheck = value;
+                   await this.plugin.saveSettings();
+                   new Notice(`'dd' separator bypass ${value ? 'enabled' : 'disabled'}.`);
+                  }));
+
                 // --- Custom Phrases & Separator Settings ---
                 containerEl.createEl('h3', { text: 'Custom Phrases & Separator' });
 
@@ -168,6 +192,19 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
                                 new Notice('Command phrase cannot be empty.');
                                 text.setValue(this.plugin.settings.ccCommandPhrase); // Revert if empty
                             }
+                        }));
+
+                // --- Enable cc Shortcut Setting ---
+                new Setting(containerEl)
+                    .setName('Enable `cc` Keyboard Shortcut')
+                    .setDesc('Make the \'Trigger Chat Completion (cc)\' command available for assigning a keyboard shortcut in Obsidian\'s hotkey settings.')
+                    .addToggle(toggle => toggle
+                        .setValue(this.plugin.settings.enableCcShortcut)
+                        .onChange(async (value) => {
+                            this.plugin.settings.enableCcShortcut = value;
+                            await this.plugin.saveSettings();
+                            new Notice(`'cc' keyboard shortcut command ${value ? 'enabled' : 'disabled'}. Configure in Obsidian Hotkeys.`);
+                            // Note: The command's availability is handled by checkCallback in main.ts
                         }));
 
                 new Setting(containerEl)

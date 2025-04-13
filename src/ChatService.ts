@@ -117,6 +117,11 @@ export class ChatService {
                         const to = lastPosition;
                         editor.replaceRange(chunk, from, to);
                         lastPosition = editor.offsetToPos(editor.posToOffset(from) + chunk.length);
+                        // --- Viewport Scrolling ---
+                        if (settings.enableViewportScrolling) {
+                            editor.scrollIntoView({ from: lastPosition, to: lastPosition }, true);
+                        }
+                        // --------------------------
                     }
                 }
                  if (editor.posToOffset(currentInsertPos) !== editor.posToOffset(lastPosition)) {

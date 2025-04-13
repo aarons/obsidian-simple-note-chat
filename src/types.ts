@@ -17,6 +17,9 @@ export interface PluginSettings {
   llmRenameWordLimit: number;
   llmRenameIncludeEmojis: boolean;
   llmRenameModel: string; // Stores the ID of the model to use for titling
+  enableViewportScrolling: boolean;
+  ddBypassSeparatorCheck: boolean;
+  enableCcShortcut: boolean;
   ccCommandPhrase: string;
   ggCommandPhrase: string;
   ddCommandPhrase: string;
@@ -41,6 +44,9 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	llmRenameWordLimit: 5, // Default word limit
 	llmRenameIncludeEmojis: false,
 	llmRenameModel: '', // Default to empty, maybe use `defaultModel` later if empty?
+	enableViewportScrolling: false,
+	ddBypassSeparatorCheck: false,
+	enableCcShortcut: false,
 	ccCommandPhrase: '', // Will be set from constants in main.ts
 	ggCommandPhrase: '', // Will be set from constants in main.ts
 	ddCommandPhrase: '', // Will be set from constants in main.ts
