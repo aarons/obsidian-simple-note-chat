@@ -82,44 +82,48 @@ export class OpenRouterService {
     /**
      * Sorts an array of models based on specified criteria.
      * @param models The array of models to sort.
-     * @param sortBy The field to sort by ('name', 'promptPrice', 'completionPrice'). Defaults to 'name'.
-     * @param sortOrder The sort order ('asc' or 'desc'). Defaults to 'asc'.
+     * @param sortCriteria The sorting criteria ('alphabetical', 'price_asc', 'price_desc'). Defaults to 'alphabetical'.
      * @returns The sorted array of models.
      */
-    sortModels(models: OpenRouterModel[], sortBy: string = 'name', sortOrder: string = 'asc'): OpenRouterModel[] {
-        return models.sort((a, b) => {
+    sortModels(models: OpenRouterModel[], sortCriteria: string = 'alphabetical'): OpenRouterModel[] {
+        // Create a copy to avoid modifying the original array passed from SettingsTab
+        const modelsToSort = [...models];
+
+        modelsToSort.sort((a, b) => {
             let comparison = 0;
-            let valA: string | number | undefined;
-            let valB: string | number | undefined;
 
-            switch (sortBy) {
-                case 'promptPrice':
-                    // Convert price strings to numbers for comparison
-                    valA = parseFloat(a.pricing?.prompt ?? 'Infinity');
-                    valB = parseFloat(b.pricing?.prompt ?? 'Infinity');
+            switch (sortCriteria) {
+                case 'price_asc':
+                case 'price_desc':
+                    // Calculate combined price, treating missing values as Infinity
+                    const priceA = (parseFloat(a.pricing?.prompt ?? 'Infinity') || Infinity) + (parseFloat(a.pricing?.completion ?? 'Infinity') || Infinity);
+                    const priceB = (parseFloat(b.pricing?.prompt ?? 'Infinity') || Infinity) + (parseFloat(b.pricing?.completion ?? 'Infinity') || Infinity);
+
+                    // Handle cases where both are Infinity (treat as equal)
+                    if (priceA === Infinity && priceB === Infinity) {
+                        comparison = 0;
+                    } else {
+                        comparison = priceA - priceB;
+                    }
+
+                    // Reverse comparison for descending order
+                    if (sortCriteria === 'price_desc') {
+                        comparison *= -1;
+                    }
                     break;
-                case 'completionPrice':
-                    valA = parseFloat(a.pricing?.completion ?? 'Infinity');
-                    valB = parseFloat(b.pricing?.completion ?? 'Infinity');
-                    break;
-                case 'name':
+
+                case 'alphabetical':
                 default:
-                    valA = a.name?.toLowerCase() ?? '';
-                    valB = b.name?.toLowerCase() ?? '';
+                    const nameA = a.name?.toLowerCase() ?? a.id?.toLowerCase() ?? ''; // Fallback to ID if name is missing
+                    const nameB = b.name?.toLowerCase() ?? b.id?.toLowerCase() ?? '';
+                    comparison = nameA.localeCompare(nameB);
                     break;
             }
 
-            if (valA === undefined || valB === undefined) {
-                comparison = 0; // Treat undefined values as equal or handle as needed
-            } else if (typeof valA === 'string' && typeof valB === 'string') {
-                comparison = valA.localeCompare(valB);
-            } else if (typeof valA === 'number' && typeof valB === 'number') {
-                comparison = valA - valB;
-            }
-
-
-            return sortOrder === 'desc' ? comparison * -1 : comparison;
+            return comparison;
         });
+
+        return modelsToSort;
     }
 
     /**

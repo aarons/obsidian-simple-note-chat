@@ -18,6 +18,7 @@ export interface PluginSettings {
   llmRenameIncludeEmojis: boolean;
   llmRenameModel: string; // Stores the ID of the model to use for titling
   enableViewportScrolling: boolean;
+  modelSortOrder: string; // Added for model sorting
   ddBypassSeparatorCheck: boolean;
   enableCcShortcut: boolean;
   ccCommandPhrase: string;
@@ -45,6 +46,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	llmRenameIncludeEmojis: false,
 	llmRenameModel: '', // Default to empty, maybe use `defaultModel` later if empty?
 	enableViewportScrolling: false,
+	modelSortOrder: 'alphabetical', // Default sort order
 	ddBypassSeparatorCheck: false,
 	enableCcShortcut: false,
 	ccCommandPhrase: '', // Will be set from constants in main.ts
