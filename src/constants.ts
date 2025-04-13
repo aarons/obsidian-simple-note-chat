@@ -16,6 +16,7 @@ export const COMMAND_PHRASES = [
 // Separator for chat blocks within notes
 export const CHAT_SEPARATOR = '<hr>';
 export const DEFAULT_ARCHIVE_FOLDER = 'archive/';
+export const DEFAULT_NN_TITLE_FORMAT = 'YYYY-MM-DD-HH-mm';
 
 
 // Base URL for the OpenRouter API service

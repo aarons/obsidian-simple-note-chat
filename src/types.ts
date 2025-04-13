@@ -7,6 +7,9 @@ export interface PluginSettings {
   stopCommandSequence: string;
   archiveFolderName: string;
   enableDeleteCommand: boolean;
+  enableNnCommandPhrase: boolean;
+  enableNnRibbonButton: boolean;
+  enableNnKeyboardShortcut: boolean;
 }
 
 // Define the default settings
@@ -15,7 +18,10 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	defaultModel: '',
 	stopCommandSequence: DEFAULT_STOP_SEQUENCE,
 	archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
-	enableDeleteCommand: false
+	enableDeleteCommand: false,
+	enableNnCommandPhrase: true,
+	enableNnRibbonButton: false,
+	enableNnKeyboardShortcut: false
 };
 // Defines the structure for a chat message
 export interface ChatMessage {

@@ -134,6 +134,42 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
                     new Notice(`Delete command ('dd') ${value ? 'enabled' : 'disabled'}.`);
                    }));
 
+                // --- New Chat (nn) Command Settings ---
+                containerEl.createEl('h3', { text: 'New Chat (`nn`) Command Triggers' });
+
+                new Setting(containerEl)
+                 .setName('Enable `nn` Phrase Trigger')
+                 .setDesc('Type \'nn\' at the end of any note to trigger the \'Create New Chat Note\' command.')
+                 .addToggle(toggle => toggle
+                  .setValue(this.plugin.settings.enableNnCommandPhrase)
+                  .onChange(async (value) => {
+                   this.plugin.settings.enableNnCommandPhrase = value;
+                   await this.plugin.saveSettings();
+                   new Notice(`'nn' phrase trigger ${value ? 'enabled' : 'disabled'}.`);
+                  }));
+
+                new Setting(containerEl)
+                 .setName('Enable Ribbon Button Trigger')
+                 .setDesc('Add a button to the left ribbon bar to trigger the \'Create New Chat Note\' command.')
+                 .addToggle(toggle => toggle
+                  .setValue(this.plugin.settings.enableNnRibbonButton)
+                  .onChange(async (value) => {
+                   this.plugin.settings.enableNnRibbonButton = value;
+                   await this.plugin.saveSettings();
+                   new Notice(`Ribbon button trigger ${value ? 'enabled' : 'disabled'}. Reload Obsidian for the change to take full effect.`);
+                  }));
+
+                new Setting(containerEl)
+                 .setName('Enable Keyboard Shortcut Trigger')
+                 .setDesc('Allow assigning a keyboard shortcut in Obsidian\'s hotkey settings for the \'Create New Chat Note\' command.')
+                 .addToggle(toggle => toggle
+                  .setValue(this.plugin.settings.enableNnKeyboardShortcut)
+                  .onChange(async (value) => {
+                   this.plugin.settings.enableNnKeyboardShortcut = value;
+                   await this.plugin.saveSettings();
+                   new Notice(`Keyboard shortcut availability ${value ? 'enabled' : 'disabled'}. Configure the shortcut in Obsidian Hotkeys.`);
+                  }));
+
                  // --- Initial Model Load ---
         // Attempt to load models when the tab is displayed if an API key exists
         if (this.plugin.settings.apiKey) {

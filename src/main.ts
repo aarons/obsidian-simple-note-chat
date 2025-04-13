@@ -1,10 +1,11 @@
-import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, moment } from 'obsidian';
 import { SimpleNoteChatSettingsTab } from './SettingsTab';
 import { ChatService } from './ChatService';
 import { OpenRouterService } from './OpenRouterService';
 import { EditorHandler } from './EditorHandler';
 import { FileSystemService } from './FileSystemService';
 import { PluginSettings, DEFAULT_SETTINGS } from './types';
+import { DEFAULT_NN_TITLE_FORMAT } from './constants';
 
 // Settings interface and defaults are now imported from './types'
 
@@ -32,6 +33,29 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		// Register Escape key listener for stopping streams
 		this.registerDomEvent(document, 'keydown', this.handleKeyDown.bind(this));
+
+		// --- Add New Chat Command ---
+		this.addCommand({
+			id: 'create-new-chat-note',
+			name: 'Create New Chat Note',
+			callback: async () => {
+				try {
+					const parentPath = this.app.fileManager.getNewFileParent(this.app.workspace.getActiveFile()?.path || '').path;
+					const title = moment().format(DEFAULT_NN_TITLE_FORMAT);
+					// Ensure parentPath ends with a slash if it's not the root
+					const separator = parentPath === '/' ? '' : '/';
+					const fullPath = `${parentPath}${separator}${title}.md`;
+
+					const newFile = await this.app.vault.create(fullPath, '');
+					this.app.workspace.openLinkText(newFile.path, '', false); // Open in current leaf
+					new Notice(`Created new chat note: ${title}.md`);
+				} catch (error) {
+					console.error("Error creating new chat note:", error);
+					new Notice("Error creating new chat note. Check console for details.");
+				}
+			}
+		});
+		// --- End New Chat Command ---
 	}
 
 	onunload() {
