@@ -256,17 +256,31 @@ export class ChatService {
      }
 
     /**
-     * Cancels an active chat stream for a given note.
-     * @param notePath The path of the note whose chat should be cancelled.
+     * Checks if a stream is currently active for the given file path.
+     * @param filePath The path of the file.
+     * @returns True if a stream is active, false otherwise.
      */
-    cancelChat(notePath: string): void {
-        const controller = this.activeStreams.get(notePath);
+    isStreamActive(filePath: string): boolean {
+        return this.activeStreams.has(filePath);
+    }
+
+    /**
+     * Cancels an active chat stream for a given note.
+     * @param filePath The path of the note whose chat should be cancelled.
+     * @returns True if a stream was found and cancelled, false otherwise.
+     */
+    cancelStream(filePath: string): boolean {
+        const controller = this.activeStreams.get(filePath);
         if (controller) {
-            console.log(`Attempting to cancel chat stream for note: ${notePath}`);
-            controller.abort("Chat cancelled by user action.");
+            console.log(`Attempting to cancel chat stream for note: ${filePath}`);
+            controller.abort("Chat cancelled by user action."); // Reason can be customized later if needed
+            this.activeStreams.delete(filePath); // Ensure removal even if finally block hasn't run
+            console.log(`Stream cancelled and removed from active streams for: ${filePath}`);
+            return true;
         } else {
-            console.log(`No active chat stream found to cancel for note: ${notePath}`);
-            new Notice(`No active chat found for ${notePath}.`);
+            console.log(`No active chat stream found to cancel for note: ${filePath}`);
+            // Optional: new Notice(`No active chat found for ${filePath}.`); - Decided against notice here, let caller handle UI
+            return false;
         }
     }
 }

@@ -1,7 +1,9 @@
-import { App, Editor, MarkdownView, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { SimpleNoteChatSettingsTab } from './SettingsTab';
 import { ChatService } from './ChatService';
+import { OpenRouterService } from './OpenRouterService'; // Import OpenRouterService
 import { EditorHandler } from './EditorHandler';
+import { FileSystemService } from './FileSystemService'; // Import FileSystemService
 import { PluginSettings, DEFAULT_SETTINGS } from './types';
 
 // Settings interface and defaults are now imported from './types'
@@ -9,14 +11,18 @@ import { PluginSettings, DEFAULT_SETTINGS } from './types';
 export default class SimpleNoteChatPlugin extends Plugin {
 	settings: PluginSettings;
 	chatService: ChatService;
+	openRouterService: OpenRouterService; // Add property for the service
 	editorHandler: EditorHandler;
+	fileSystemService: FileSystemService; // Add property for the file system service
 
 	async onload() {
 		console.log('Loading Simple Note Chat plugin');
 		await this.loadSettings();
 
 		// Instantiate services
-		this.chatService = new ChatService(this);
+		this.openRouterService = new OpenRouterService(); // Instantiate OpenRouterService
+		this.chatService = new ChatService(this, this.openRouterService); // Pass it to ChatService
+		this.fileSystemService = new FileSystemService(this.app); // Instantiate FileSystemService
 		this.editorHandler = new EditorHandler(this.app, this);
 
 		this.addSettingTab(new SimpleNoteChatSettingsTab(this.app, this));
@@ -24,6 +30,9 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on('editor-change', this.editorHandler.handleEditorChange)
 		);
+
+		// Register Escape key listener for stopping streams
+		this.registerDomEvent(document, 'keydown', this.handleKeyDown.bind(this));
 	}
 
 	onunload() {
@@ -36,6 +45,28 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	/**
+		* Handles keydown events globally to catch the Escape key for stream cancellation.
+		* @param evt The keyboard event.
+		*/
+	private handleKeyDown(evt: KeyboardEvent): void {
+		if (evt.key === 'Escape') {
+			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (activeView && activeView.file) {
+				const filePath = activeView.file.path;
+				if (this.chatService.isStreamActive(filePath)) {
+					console.log(`Escape key pressed, attempting to cancel stream for: ${filePath}`);
+					if (this.chatService.cancelStream(filePath)) {
+						new Notice("Chat stream cancelled.");
+						// Optionally prevent other Escape key handlers
+						// evt.preventDefault();
+						// evt.stopPropagation();
+					}
+				}
+			}
+		}
 	}
 }
 

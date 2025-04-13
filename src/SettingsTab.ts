@@ -2,6 +2,7 @@
 import { App, PluginSettingTab, Setting, Notice, DropdownComponent } from 'obsidian';
 import SimpleNoteChatPlugin from './main';
 import { OpenRouterService, OpenRouterModel } from './OpenRouterService';
+import { DEFAULT_STOP_SEQUENCE, DEFAULT_ARCHIVE_FOLDER } from './constants'; // Import constants
 
 export class SimpleNoteChatSettingsTab extends PluginSettingTab {
     plugin: SimpleNoteChatPlugin;
@@ -77,9 +78,51 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
                 .setCta() // Make button more prominent
                 .onClick(async () => {
                     await this.refreshModels();
-                }));
+                   }));
 
-        // --- Initial Model Load ---
+                 // --- Stop Sequence Setting ---
+                 new Setting(containerEl)
+                  .setName('Stop Sequence')
+                  .setDesc('Type this sequence anywhere in the note while a response is streaming to stop it.')
+                  .addText(text => text
+                   .setPlaceholder(DEFAULT_STOP_SEQUENCE)
+                   .setValue(this.plugin.settings.stopCommandSequence)
+                   .onChange(async (value) => {
+                    const trimmedValue = value.trim(); // Trim whitespace
+                    if (trimmedValue) { // Ensure it's not empty
+                    	this.plugin.settings.stopCommandSequence = trimmedValue;
+                    	await this.plugin.saveSettings();
+                    	new Notice('Stop sequence saved.');
+                    } else {
+                    	// Optionally revert to default or show error if empty
+                    	new Notice('Stop sequence cannot be empty.');
+                    	// Revert UI to current saved setting if user tries to clear it
+                    	text.setValue(this.plugin.settings.stopCommandSequence);
+                    }
+                   }));
+
+                 // --- Archive Folder Setting ---
+                 new Setting(containerEl)
+                  .setName('Archive Folder')
+                  .setDesc('Folder where notes will be moved when using the archive command (relative to vault root).')
+                  .addText(text => text
+                   .setPlaceholder(DEFAULT_ARCHIVE_FOLDER)
+                   .setValue(this.plugin.settings.archiveFolderName)
+                   .onChange(async (value) => {
+                    const trimmedValue = value.trim();
+                    // Ensure it ends with a slash if not empty, or is empty
+                    const normalizedValue = trimmedValue ? (trimmedValue.endsWith('/') ? trimmedValue : `${trimmedValue}/`) : '';
+
+                    if (this.plugin.settings.archiveFolderName !== normalizedValue) {
+                        this.plugin.settings.archiveFolderName = normalizedValue;
+                        await this.plugin.saveSettings();
+                        new Notice('Archive folder setting saved.');
+                        // Update the input field to show the normalized value (e.g., added slash)
+                        text.setValue(normalizedValue);
+                    }
+                   }));
+
+                 // --- Initial Model Load ---
         // Attempt to load models when the tab is displayed if an API key exists
         if (this.plugin.settings.apiKey) {
             // Load models silently in the background on initial display
