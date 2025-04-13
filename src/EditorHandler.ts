@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, TFile, EditorPosition } from 'obsidian'; // Added EditorPosition
+import { App, Editor, MarkdownView, TFile, EditorPosition } from 'obsidian';
 import SimpleNoteChat from './main';
 import { CC_COMMAND } from './constants';
 import { PluginSettings } from './types';
@@ -27,23 +27,19 @@ export class EditorHandler {
     		const startPos = editor.offsetToPos(commandStartIndex);
     		const endPos = editor.offsetToPos(trimmedContent.length); // Use trimmed length for end position
 
-    		// Prepare status message
     		const modelName = settings.defaultModel || 'default model';
     		const statusMessage = `Calling ${modelName}...`;
 
-    		// Replace the command phrase with the status message
     		editor.replaceRange(statusMessage + '\n', startPos, endPos);
 
     		// Get the content *before* the command phrase was added for parsing
     		const contentForChat = trimmedContent.substring(0, commandStartIndex);
 
-    		// Ensure file exists before proceeding
     		if (!markdownView.file) {
     			console.error("Cannot start chat: markdownView.file is null.");
-    			return; // Or handle appropriately
+    			return;
     		}
 
-    		// Call ChatService
     		this.plugin.chatService.startChat(
     			contentForChat,
     			editor,
