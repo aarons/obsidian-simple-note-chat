@@ -426,11 +426,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 	/**
 	 * Populates a single model dropdown menu.
-	 * @param dropdown The DropdownComponent instance.
-	 * @param models Array of models (OpenRouterModel) to populate with.
-	 * @param settingKey The key in PluginSettings that this dropdown controls.
-	 * @param noApiKeyText Text to display when API key is missing.
-	 * @param placeholderText Default placeholder text when models are loaded.
+	 * @param dropdown The DropdownComponent instance
+	 * @param models Array of models to populate with
+	 * @param settingKey The key in PluginSettings that this dropdown controls
+	 * @param noApiKeyText Text to display when API key is missing
+	 * @param placeholderText Default placeholder text when models are loaded
 	 */
 	private populateModelDropdown(
 		dropdown: DropdownComponent | null,
@@ -441,7 +441,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	): void {
 		if (!dropdown) {
 			console.warn(`SettingsTab: Dropdown for setting key "${String(settingKey)}" is null.`);
-			return; // Exit if dropdown doesn't exist
+			return;
 		}
 
 		const currentSelectedValue = dropdown.getValue();
@@ -469,7 +469,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			dropdown.addOption(model.id, displayName);
 		});
 
-		// @ts-ignore - Accessing setting dynamically
+		// @ts-ignore - Dynamic setting access
 		const savedModel = this.plugin.settings[settingKey] as string;
 		const valueToSelect = models.some(m => m.id === currentSelectedValue) ? currentSelectedValue : savedModel;
 
@@ -481,7 +481,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	}
 
 	/**
-	 * Sorts the available models based on the current setting and populates both dropdowns.
+	 * Sorts models based on current setting and populates dropdowns
 	 */
 	private populateModelDropdowns(): void {
 		let sortedModels: OpenRouterModel[] = [];
@@ -496,7 +496,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				new Notice("Error sorting models. Check console.");
 				sortedModels = this.availableModels;
 			}
-		} else {
 		}
 
 		this.populateModelDropdown(
@@ -517,9 +516,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 
 	/**
-	 * Fetches models from OpenRouter, stores them, and triggers dropdown population.
-	 * Handles showing notices to the user during the process.
-	 * @param showNotices If true, displays "Fetching..." and success/error notices.
+	 * Fetches models from OpenRouter and updates dropdowns
+	 * @param showNotices If true, displays loading and result notices
 	 */
 	private async fetchAndStoreModels(showNotices: boolean = true): Promise<void> {
 		if (!this.plugin.settings.apiKey) {
@@ -562,7 +560,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	}
 
 	/**
-	 * Public method called by the refresh button's onClick handler.
+	 * Called by the refresh button's onClick handler
 	 */
 	public async refreshModels(): Promise<void> {
 		await this.fetchAndStoreModels(true);
