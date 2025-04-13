@@ -457,10 +457,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		dropdown.setDisabled(false);
 
 		if (models.length === 0) {
-			// Handles API errors, empty model list, or models not yet loaded
 			dropdown.addOption('', 'No models found or API key invalid');
-			dropdown.setValue(''); // Ensure placeholder is selected
-			return; // Don't add the regular placeholder if no models
+			dropdown.setValue('');
+			return;
 		}
 
 		dropdown.addOption('', placeholderText);
