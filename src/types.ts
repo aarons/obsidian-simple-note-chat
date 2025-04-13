@@ -1,4 +1,4 @@
-import { DEFAULT_STOP_SEQUENCE, DEFAULT_ARCHIVE_FOLDER } from './constants';
+import { DEFAULT_STOP_SEQUENCE, DEFAULT_ARCHIVE_FOLDER, DEFAULT_NN_TITLE_FORMAT } from './constants';
 
 // Defines the structure for the plugin settings
 export interface PluginSettings {
@@ -11,6 +11,8 @@ export interface PluginSettings {
   enableNnRibbonButton: boolean;
   enableNnKeyboardShortcut: boolean;
   archivePreviousNoteOnNn: boolean;
+  enableArchiveRenameDate: boolean;
+  archiveRenameDateFormat: string;
 }
 
 // Define the default settings
@@ -23,7 +25,9 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	enableNnCommandPhrase: true,
 	enableNnRibbonButton: false,
 	enableNnKeyboardShortcut: false,
-	archivePreviousNoteOnNn: false
+	archivePreviousNoteOnNn: false,
+	enableArchiveRenameDate: false,
+	archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT
 };
 // Defines the structure for a chat message
 export interface ChatMessage {

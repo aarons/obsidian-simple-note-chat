@@ -2,7 +2,7 @@
 import { App, PluginSettingTab, Setting, Notice, DropdownComponent } from 'obsidian';
 import SimpleNoteChatPlugin from './main';
 import { OpenRouterService, OpenRouterModel } from './OpenRouterService';
-import { DEFAULT_STOP_SEQUENCE, DEFAULT_ARCHIVE_FOLDER } from './constants'; // Import constants
+import { DEFAULT_STOP_SEQUENCE, DEFAULT_ARCHIVE_FOLDER, DEFAULT_NN_TITLE_FORMAT } from './constants'; // Import constants
 
 export class SimpleNoteChatSettingsTab extends PluginSettingTab {
     plugin: SimpleNoteChatPlugin;
@@ -133,6 +133,39 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                     new Notice(`Delete command ('dd') ${value ? 'enabled' : 'disabled'}.`);
                    }));
+
+                // --- Archive Chat (gg) Command Settings ---
+                containerEl.createEl('h3', { text: 'Archive Chat (`gg`) Command Settings' });
+
+                new Setting(containerEl)
+                 .setName('Rename Note on Archive (Date/Time)')
+                 .setDesc('Rename the note using a date/time format when archiving.')
+                 .addToggle(toggle => toggle
+                  .setValue(this.plugin.settings.enableArchiveRenameDate)
+                  .onChange(async (value) => {
+                   this.plugin.settings.enableArchiveRenameDate = value;
+                   await this.plugin.saveSettings();
+                   new Notice(`Archive renaming ${value ? 'enabled' : 'disabled'}.`);
+                  }));
+
+                new Setting(containerEl)
+                 .setName('Date/Time Format')
+                 .setDesc('Moment.js format string for renaming archived notes (e.g., YYYY-MM-DD-HH-mm).')
+                 .addText(text => text
+                  .setPlaceholder(DEFAULT_NN_TITLE_FORMAT)
+                  .setValue(this.plugin.settings.archiveRenameDateFormat)
+                  .onChange(async (value) => {
+                   const trimmedValue = value.trim();
+                   if (trimmedValue) {
+                       this.plugin.settings.archiveRenameDateFormat = trimmedValue;
+                       await this.plugin.saveSettings();
+                       new Notice('Archive rename format saved.');
+                   } else {
+                       new Notice('Archive rename format cannot be empty.');
+                       // Revert UI to current saved setting if user tries to clear it
+                       text.setValue(this.plugin.settings.archiveRenameDateFormat);
+                   }
+                  }));
 
                 // --- New Chat (nn) Command Settings ---
                 containerEl.createEl('h3', { text: 'New Chat (`nn`) Command Triggers' });

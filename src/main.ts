@@ -47,7 +47,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 							try {
 								const content = await this.app.vault.read(activeFile);
 								if (content.includes(CHAT_SEPARATOR)) {
-									const archiveResult = await this.fileSystemService.moveFileToArchive(activeFile, this.settings.archiveFolderName);
+									const archiveResult = await this.fileSystemService.moveFileToArchive(activeFile, this.settings.archiveFolderName, false, this.settings.archiveRenameDateFormat); // Pass false for enableRename here
 									if (archiveResult === null) {
 										new Notice(`Failed to archive previous note '${activeFile.name}'. Continuing to create new note.`);
 									} else {

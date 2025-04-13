@@ -1,4 +1,4 @@
-import { App, TFile, normalizePath } from 'obsidian';
+import { App, TFile, normalizePath, moment } from 'obsidian';
 
 export class FileSystemService {
     private app: App;
@@ -11,9 +11,11 @@ export class FileSystemService {
      * Moves a file to the specified archive folder, handling name conflicts.
      * @param file The file to move.
      * @param archiveFolderName The relative path of the archive folder from the vault root.
+     * @param enableRename Whether to rename the file using the date format.
+     * @param renameFormat The moment.js format string for renaming.
      * @returns The new path of the archived file, or null if an error occurred.
      */
-    async moveFileToArchive(file: TFile, archiveFolderName: string): Promise<string | null> {
+    async moveFileToArchive(file: TFile, archiveFolderName: string, enableRename: boolean, renameFormat: string): Promise<string | null> {
         try {
             const normalizedArchivePath = normalizePath(archiveFolderName);
 
@@ -30,15 +32,29 @@ export class FileSystemService {
                 }
             }
 
-            let targetPath = normalizePath(`${normalizedArchivePath}/${file.name}`);
+            // Determine the base filename based on settings
+            let baseFilename: string;
+            const originalExtension = file.extension ? `.${file.extension}` : ''; // Store original extension
+
+            if (enableRename && renameFormat) {
+                const formattedDate = moment().format(renameFormat);
+                baseFilename = `${formattedDate}${originalExtension}`;
+            } else {
+                baseFilename = file.name;
+            }
+
+            let targetPath = normalizePath(`${normalizedArchivePath}/${baseFilename}`);
             let counter = 0;
-            const fileExtension = file.extension ? `.${file.extension}` : '';
-            const fileBaseName = file.basename;
+
+            // Extract base name and extension from the *potentially new* filename for conflict resolution
+            const targetBaseNameMatch = baseFilename.match(/^(.*?)(?:\.([^\.]+))?$/); // Match base name and optional extension
+            const targetBaseName = targetBaseNameMatch ? targetBaseNameMatch[1] : baseFilename; // Base part (e.g., "2025-01-01-12-00" or "My Note")
+            const targetExtension = targetBaseNameMatch && targetBaseNameMatch[2] ? `.${targetBaseNameMatch[2]}` : ''; // Extension part (e.g., ".md")
 
             // Handle name conflicts by appending -1, -2, etc.
             while (await this.app.vault.adapter.exists(targetPath)) {
                 counter++;
-                targetPath = normalizePath(`${normalizedArchivePath}/${fileBaseName}-${counter}${fileExtension}`);
+                targetPath = normalizePath(`${normalizedArchivePath}/${targetBaseName}-${counter}${targetExtension}`);
             }
 
             // Move/rename the file

@@ -116,7 +116,9 @@ export class EditorHandler {
     			try {
     				const newPath = await this.plugin.fileSystemService.moveFileToArchive(
     					markdownView.file!, // Assert non-null based on the check above
-    					settings.archiveFolderName
+    					settings.archiveFolderName,
+    					settings.enableArchiveRenameDate, // Pass rename setting
+    					settings.archiveRenameDateFormat // Pass format setting
     				);
 
     				if (newPath) {
