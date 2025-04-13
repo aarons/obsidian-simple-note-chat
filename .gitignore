@@ -135,3 +135,8 @@ dist
 .yarn/install-state.gz
 .pnp.*
 .aider*
+
+# obsidian
+test-vault/.obsidian/plugins/
+test-vault/.obsidian/workspace.json
+test-vault/.obsidian/data.json
