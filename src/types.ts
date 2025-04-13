@@ -6,6 +6,7 @@ export interface PluginSettings {
   defaultModel: string;
   stopCommandSequence: string;
   archiveFolderName: string;
+  enableDeleteCommand: boolean;
 }
 
 // Define the default settings
@@ -13,7 +14,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	apiKey: '',
 	defaultModel: '',
 	stopCommandSequence: DEFAULT_STOP_SEQUENCE,
-	archiveFolderName: DEFAULT_ARCHIVE_FOLDER
+	archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
+	enableDeleteCommand: false
 };
 // Defines the structure for a chat message
 export interface ChatMessage {

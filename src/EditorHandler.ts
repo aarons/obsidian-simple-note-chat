@@ -1,6 +1,6 @@
 import { App, Editor, MarkdownView, TFile, EditorPosition, Notice } from 'obsidian';
 import SimpleNoteChat from './main';
-import { CC_COMMAND, GG_COMMAND, CHAT_SEPARATOR } from './constants';
+import { CC_COMMAND, GG_COMMAND, DD_COMMAND, CHAT_SEPARATOR } from './constants';
 import { PluginSettings } from './types';
 
 export class EditorHandler {
@@ -135,8 +135,56 @@ export class EditorHandler {
 
     		// Do not remove 'gg' text as per current requirements.
     		return; // Return after handling gg
-    	}
+    		}
 
-    	// --- Future command checks (e.g., dd, nn) could go here ---
-    }
-}
+    		// --- DD Command Check (Delete Note) ---
+    		const ddCommandPhrase = `\n${DD_COMMAND}\n`;
+    		if (trimmedContent.endsWith(ddCommandPhrase)) {
+    			const settings = this.plugin.settings; // Get settings
+
+    			// 1. Check if Enabled (Line 103)
+    			if (!settings.enableDeleteCommand) {
+    				return; // Do nothing if the command is not enabled
+    			}
+
+    			const noteContent = editor.getValue(); // Get full content for separator check
+
+    			// 2. Separator Check (Line 105)
+    			if (!noteContent.includes(CHAT_SEPARATOR)) {
+    				new Notice(`Delete command ('dd') requires at least one chat separator ('${CHAT_SEPARATOR}') in the note for safety.`);
+    				return; // Stop processing if separator is missing
+    			}
+
+    			// Ensure file exists before attempting delete
+    			if (!markdownView.file) {
+    				console.error("Cannot delete note: markdownView.file is null.");
+    				new Notice("Failed to delete note: No active file.");
+    				return;
+    			}
+
+    			// 3. Confirmation Prompt (Line 107)
+    			if (confirm("Are you sure you want to move this note to the trash?")) {
+    				// Use an async IIFE to handle the promise from deleteFile
+    				(async () => {
+    					try {
+    						await this.plugin.fileSystemService.deleteFile(markdownView.file!); // Assert non-null based on the check above
+    						new Notice("Note moved to trash.");
+    						// The view might close automatically upon deletion by Obsidian.
+    					} catch (error) {
+    						console.error("Error during note deletion:", error);
+    						new Notice("Failed to move note to trash. Check console for details.");
+    					}
+    				})();
+    			} else {
+    				// User cancelled the deletion
+    				new Notice("Note deletion cancelled.");
+    				// Optionally remove the 'dd' command text here if desired, but plan says not to
+    			}
+
+    			// Do not remove 'dd' text as per current requirements.
+    			return; // Return after handling dd
+    		}
+
+    		// --- Future command checks (e.g., nn) could go here ---
+    	}
+ }

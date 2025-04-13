@@ -122,6 +122,18 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
                     }
                    }));
 
+                 // --- Enable Delete Command (dd) Setting ---
+                 new Setting(containerEl)
+                  .setName('Enable Delete Command (`dd`)')
+                  .setDesc('Allow deleting notes using the \'dd\' command. Notes are moved to system trash. USE WITH CAUTION!')
+                  .addToggle(toggle => toggle
+                   .setValue(this.plugin.settings.enableDeleteCommand)
+                   .onChange(async (value) => {
+                    this.plugin.settings.enableDeleteCommand = value;
+                    await this.plugin.saveSettings();
+                    new Notice(`Delete command ('dd') ${value ? 'enabled' : 'disabled'}.`);
+                   }));
+
                  // --- Initial Model Load ---
         // Attempt to load models when the tab is displayed if an API key exists
         if (this.plugin.settings.apiKey) {
