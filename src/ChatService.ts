@@ -66,7 +66,7 @@ export class ChatService {
         const messages = this.parseNoteContent(contentForApi.trim(), settings.chatSeparator);
 
         if (messages.length === 0) {
-            new Notice('No valid chat content found to send.');
+            new Notice('No content was found in the note.');
             return this.removeCallingStatus(editor, settings, 'No content found.');
         }
 
