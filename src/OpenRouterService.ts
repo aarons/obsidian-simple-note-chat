@@ -137,6 +137,45 @@ export class OpenRouterService {
     }
 
     /**
+     * Formats a list of OpenRouter models for display purposes.
+     * @param models The array of models fetched from the API.
+     * @returns An array of FormattedModelInfo objects.
+     */
+    getFormattedModels(models: OpenRouterModel[]): FormattedModelInfo[] {
+        return models.map(model => {
+            const modelName = model.name || model.id; // Fallback to ID if name is missing
+
+            // Handle special cases like free models or auto-routing
+            if (model.id === 'openrouter/auto') {
+                return {
+                    id: model.id,
+                    displayName: `${modelName} | variable pricing`
+                };
+            }
+
+            // Check if pricing info exists and format it
+            const promptPriceStr = this.formatPricePerMillion(model.pricing?.prompt);
+            const completionPriceStr = this.formatPricePerMillion(model.pricing?.completion);
+
+            // Construct the display name
+            // Use 'free' explicitly if the ID indicates it, otherwise use formatted prices
+            if (model.id.includes(':free')) {
+                 // Use the name but indicate free pricing clearly
+                 return {
+                     id: model.id,
+                     displayName: `${modelName} | free | free`
+                 };
+            } else {
+                 return {
+                     id: model.id,
+                     displayName: `${modelName} | ${promptPriceStr} in | ${completionPriceStr} out`
+                 };
+            }
+        });
+    }
+
+
+    /**
      * Performs a streaming chat completion request to the OpenRouter API.
      * @param messages The chat history messages.
      * @param settings Plugin settings containing API key and model.
