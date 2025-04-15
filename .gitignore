@@ -141,3 +141,4 @@ test-vault/.obsidian/plugins/
 test-vault/.obsidian/workspace.json
 test-vault/.obsidian/data.json
 test-vault/Welcome.md
+test-vault/*.md

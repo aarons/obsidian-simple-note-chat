@@ -1,1 +1,0 @@
-Could you tell me a story about a boy with only ten words?
