@@ -1,7 +1,7 @@
 // src/SettingsTab.ts
 import { App, PluginSettingTab, Setting, Notice, DropdownComponent } from 'obsidian';
 import SimpleNoteChatPlugin from './main';
-import { OpenRouterService, OpenRouterModel } from './OpenRouterService';
+import { OpenRouterService, OpenRouterModel, FormattedModelInfo } from './OpenRouterService'; // Import FormattedModelInfo
 import { PluginSettings } from './types';
 import { log } from './utils/logger';
 import {
@@ -427,14 +427,14 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	/**
 	 * Populates a single model dropdown menu.
 	 * @param dropdown The DropdownComponent instance
-	 * @param models Array of models to populate with
+	 * @param formattedModels Array of formatted models to populate with
 	 * @param settingKey The key in PluginSettings that this dropdown controls
 	 * @param noApiKeyText Text to display when API key is missing
 	 * @param placeholderText Default placeholder text when models are loaded
 	 */
 	private populateModelDropdown(
 		dropdown: DropdownComponent | null,
-		models: OpenRouterModel[],
+		formattedModels: FormattedModelInfo[],
 		settingKey: keyof PluginSettings,
 		noApiKeyText: string,
 		placeholderText: string
@@ -456,7 +456,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		dropdown.setDisabled(false);
 
-		if (models.length === 0) {
+		if (formattedModels.length === 0) {
 			dropdown.addOption('', 'No models found or API key invalid');
 			dropdown.setValue('');
 			return;
@@ -464,50 +464,63 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		dropdown.addOption('', placeholderText);
 
-		models.forEach(model => {
-			const displayName = model.name ? `${model.name} (${model.id})` : model.id;
-			dropdown.addOption(model.id, displayName);
+		formattedModels.forEach(model => {
+			// Use the pre-formatted displayName directly
+			dropdown.addOption(model.id, model.displayName);
 		});
 
 		// @ts-ignore - Dynamic setting access
 		const savedModel = this.plugin.settings[settingKey] as string;
-		const valueToSelect = models.some(m => m.id === currentSelectedValue) ? currentSelectedValue : savedModel;
+		// Check if the current or saved model ID exists in the formatted list
+		const valueToSelect = formattedModels.some(m => m.id === currentSelectedValue) ? currentSelectedValue : savedModel;
 
-		if (valueToSelect && models.some(m => m.id === valueToSelect)) {
+		if (valueToSelect && formattedModels.some(m => m.id === valueToSelect)) {
 			dropdown.setValue(valueToSelect);
 		} else {
+			// If the saved model is no longer valid or wasn't set, default to empty/placeholder
 			dropdown.setValue('');
 		}
 	}
 
 	/**
-	 * Sorts models based on current setting and populates dropdowns
+	 * Sorts models, formats them, and populates dropdowns
 	 */
 	private populateModelDropdowns(): void {
-		let sortedModels: OpenRouterModel[] = [];
+		let formattedModels: FormattedModelInfo[] = [];
 		if (this.plugin.settings.apiKey && this.availableModels.length > 0) {
 			try {
-				sortedModels = this.openRouterService.sortModels(
+				// 1. Sort the raw models
+				const sortedModels = this.openRouterService.sortModels(
 					this.availableModels,
 					this.plugin.settings.modelSortOrder
 				);
+				// 2. Format the sorted models for display
+				formattedModels = this.openRouterService.getFormattedModels(sortedModels);
+
 			} catch (error) {
-				log.error("SettingsTab: Error sorting models:", error);
-				new Notice("Error sorting models. Check console.");
-				sortedModels = this.availableModels;
+				log.error("SettingsTab: Error sorting or formatting models:", error);
+				new Notice("Error preparing model list. Check console.");
+				// Attempt to format unsorted models as a fallback
+				try {
+					formattedModels = this.openRouterService.getFormattedModels(this.availableModels);
+				} catch (formatError) {
+					log.error("SettingsTab: Fallback formatting failed:", formatError);
+					formattedModels = []; // Ensure it's an empty array on complete failure
+				}
 			}
 		}
 
+		// Pass the formatted models to the dropdown population function
 		this.populateModelDropdown(
 			this.modelDropdown,
-			sortedModels,
+			formattedModels,
 			'defaultModel',
 			'Enter API Key to load models',
 			'-- Select a model --'
 		);
 		this.populateModelDropdown(
 			this.llmModelDropdown,
-			sortedModels,
+			formattedModels,
 			'llmRenameModel',
 			'Enter API Key to load models',
 			'Use Default Chat Model'
