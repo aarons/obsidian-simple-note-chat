@@ -146,56 +146,54 @@ export class OpenRouterService {
     sortModels(models: OpenRouterModel[], sortCriteria: ModelSortOption = ModelSortOption.ALPHABETICAL): OpenRouterModel[] {
         const modelsToSort = [...models];
 
+        // Helper to get a consistent name for sorting
+        const getModelName = (model: OpenRouterModel): string =>
+            model.name?.toLowerCase() ?? model.id?.toLowerCase() ?? '';
+
+        // Helper to parse price, handling 0, null/undefined, and invalid strings
+        const parsePrice = (price: string | undefined | null): number => {
+            if (price === undefined || price === null) return Infinity;
+            const numPrice = parseFloat(price);
+            // Treat NaN or negative prices (shouldn't happen) as Infinity for sorting
+            return isNaN(numPrice) || numPrice < 0 ? Infinity : numPrice;
+        };
+
         modelsToSort.sort((a, b) => {
+            const nameA = getModelName(a);
+            const nameB = getModelName(b);
             let comparison = 0;
 
+            // Primary sort based on criteria
             switch (sortCriteria) {
                 case ModelSortOption.PROMPT_PRICE_ASC:
-                case ModelSortOption.PROMPT_PRICE_DESC:
-                    const promptPriceA = parseFloat(a.pricing?.prompt ?? 'Infinity') || Infinity;
-                    const promptPriceB = parseFloat(b.pricing?.prompt ?? 'Infinity') || Infinity;
-
-                    if (promptPriceA === Infinity && promptPriceB === Infinity) {
-                        comparison = 0; // Treat two unknowns as equal
-                    } else if (promptPriceA === Infinity) {
-                        comparison = 1; // Put unknown price after known price
-                    } else if (promptPriceB === Infinity) {
-                        comparison = -1; // Put known price before unknown price
-                    } else {
-                        comparison = promptPriceA - promptPriceB;
-                    }
-
+                case ModelSortOption.PROMPT_PRICE_DESC: {
+                    const priceA = parsePrice(a.pricing?.prompt);
+                    const priceB = parsePrice(b.pricing?.prompt);
+                    comparison = priceA - priceB;
                     if (sortCriteria === ModelSortOption.PROMPT_PRICE_DESC) {
                         comparison *= -1;
                     }
                     break;
-
+                }
                 case ModelSortOption.COMPLETION_PRICE_ASC:
-                case ModelSortOption.COMPLETION_PRICE_DESC:
-                    const completionPriceA = parseFloat(a.pricing?.completion ?? 'Infinity') || Infinity;
-                    const completionPriceB = parseFloat(b.pricing?.completion ?? 'Infinity') || Infinity;
-
-                    if (completionPriceA === Infinity && completionPriceB === Infinity) {
-                        comparison = 0;
-                    } else if (completionPriceA === Infinity) {
-                        comparison = 1;
-                    } else if (completionPriceB === Infinity) {
-                        comparison = -1;
-                    } else {
-                        comparison = completionPriceA - completionPriceB;
-                    }
-
+                case ModelSortOption.COMPLETION_PRICE_DESC: {
+                    const priceA = parsePrice(a.pricing?.completion);
+                    const priceB = parsePrice(b.pricing?.completion);
+                    comparison = priceA - priceB;
                     if (sortCriteria === ModelSortOption.COMPLETION_PRICE_DESC) {
                         comparison *= -1;
                     }
                     break;
-
+                }
                 case ModelSortOption.ALPHABETICAL:
                 default:
-                    const nameA = a.name?.toLowerCase() ?? a.id?.toLowerCase() ?? '';
-                    const nameB = b.name?.toLowerCase() ?? b.id?.toLowerCase() ?? '';
                     comparison = nameA.localeCompare(nameB);
                     break;
+            }
+
+            // Secondary sort: if primary comparison is equal, sort alphabetically
+            if (comparison === 0 && sortCriteria !== ModelSortOption.ALPHABETICAL) {
+                comparison = nameA.localeCompare(nameB);
             }
 
             return comparison;
