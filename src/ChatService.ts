@@ -117,22 +117,18 @@ export class ChatService {
                         }
 
                         // 2. Determine prefix for separator
-                        const contentBeforeStatus = editor.getRange({ line: 0, ch: 0 }, statusMessageStartPos); // Re-get in case of edits
+                        const contentBeforeStatus = editor.getRange({ line: 0, ch: 0 }, statusMessageStartPos);
                         let prefix = '';
-                        if (contentBeforeStatus.endsWith('\n\n')) {
-                            prefix = ''; // Already has blank line
-                        } else if (contentBeforeStatus.endsWith('\n')) {
-                            prefix = '\n'; // Needs one more newline
+                        if (contentBeforeStatus.endsWith('\n')) {
+                            prefix = '\n';
                         } else if (contentBeforeStatus.length > 0) {
-                            prefix = '\n\n'; // Needs two newlines
+                            prefix = '\n\n';
                         }
-                        // Else: Start of file, no prefix needed
 
                         // 3. Insert separator
                         const initialSeparatorInsertion = `${prefix}${settings.chatSeparator}\n\n`;
                         editor.replaceRange(initialSeparatorInsertion, statusMessageStartPos, statusMessageStartPos); // Insert at original start pos
                         currentInsertPos = editor.offsetToPos(editor.posToOffset(statusMessageStartPos) + initialSeparatorInsertion.length);
-                        console.log(`Inserted initial separator: ${JSON.stringify(initialSeparatorInsertion)}. First chunk insert pos:`, currentInsertPos);
 
                         // 4. Insert the first chunk
                         editor.replaceRange(chunk, currentInsertPos, currentInsertPos);
@@ -140,9 +136,7 @@ export class ChatService {
                         isFirstChunk = false; // Mark first chunk as processed
 
                     } else {
-                        // --- Subsequent Chunk Handling ---
                         if (!lastPosition) {
-                             console.error("CRITICAL: lastPosition is null during subsequent chunk processing. Aborting.");
                              throw new Error("Internal state error: lastPosition not set after first chunk.");
                         }
                         const from = lastPosition;
@@ -165,11 +159,8 @@ export class ChatService {
                  editor.replaceRange(finalSuffix, lastPosition, lastPosition);
                  const finalCursorPos = editor.offsetToPos(editor.posToOffset(lastPosition) + finalSuffix.length);
                  editor.setCursor(finalCursorPos);
-                 console.log("Stream finished with content. Added final suffix and set cursor:", finalCursorPos);
-
             } else if (isFirstChunk) {
                  // Stream finished, but no chunks were received. Status message might still be there.
-                 console.log("Stream finished, but no content was received.");
                  this.removeStatusMessageAtPos(editor, settings, statusMessageStartPos, statusMessageEndPos, 'Stream ended with no content.');
                  editor.setCursor(statusMessageStartPos); // Place cursor where status message was
             } else if (lastPosition && currentInsertPos) {
@@ -242,8 +233,6 @@ export class ChatService {
                 console.log(`Removed status message "${expectedStatusMessage.replace('\n', '\\n')}" at [${startPos.line}, ${startPos.ch}]. Reason: ${reason || 'N/A'}`);
                 removed = true;
             } else {
-                console.warn(`Text at [${startPos.line}, ${startPos.ch}] to [${endPos.line}, ${endPos.ch}] did not match expected status message "${expectedStatusMessage.replace('\n', '\\n')}". Found: "${currentText.replace('\n', '\\n')}". Reason: ${reason || 'N/A'}`);
-                // Optionally, try removing without newline if that fails? For robustness.
                 const expectedStatusBase = `Calling ${modelName}...`;
                 if (currentText === expectedStatusBase) {
                      editor.replaceRange('', startPos, endPos);
