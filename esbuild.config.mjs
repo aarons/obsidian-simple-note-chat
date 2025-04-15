@@ -1,7 +1,7 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from 'builtin-modules';
-import fs from 'fs-extra'; // Using fs-extra for easier copying
+import fs from 'fs-extra';
 import path from 'path';
 
 const banner =
@@ -17,18 +17,18 @@ const pluginId = 'simple-note-chat';
 // Determine the target vault path from environment variable or default
 const targetVaultPath = process.env.TARGET_VAULT_PATH || 'test-vault';
 
-const outDir = prod ? '.' : path.join(targetVaultPath, '.obsidian', 'plugins', pluginId); // Output to target vault for dev
+const outDir = prod ? '.' : path.join(targetVaultPath, '.obsidian', 'plugins', pluginId);
 const outFile = path.join(outDir, 'main.js');
 const manifestFile = 'manifest.json';
 const hotreloadFile = path.join(outDir, '.hotreload');
 
-// Function to copy manifest and touch hotreload
+// Copy manifest and create hotreload file for development
 const copyManifestAndHotreload = async () => {
   try {
-    if (!prod) { // Only copy/hotreload in dev mode
-      await fs.ensureDir(outDir); // Ensure the target directory exists
+    if (!prod) { // Only in dev mode
+      await fs.ensureDir(outDir);
       await fs.copy(manifestFile, path.join(outDir, manifestFile));
-      await fs.ensureFile(hotreloadFile); // Touch the .hotreload file
+      await fs.ensureFile(hotreloadFile);
       console.log('Manifest copied and .hotreload touched.');
     }
   } catch (err) {
@@ -67,7 +67,6 @@ const context = await esbuild.context({
   plugins: [{
     name: 'on-rebuild-plugin',
     setup(build) {
-      // Run initially after the first build
       build.onEnd(async (result) => {
         if (result.errors.length === 0) {
           console.log('Initial build successful.');
@@ -81,7 +80,7 @@ const context = await esbuild.context({
 });
 
 if (prod) {
-  await context.rebuild(); // Perform a single build for production
+  await context.rebuild();
   console.log('Production build complete.');
   await context.dispose();
 } else {
@@ -89,13 +88,8 @@ if (prod) {
   await context.watch();
   console.log(`Watching for changes... Outputting to ${outDir}`);
 
-  // Setup rebuild hook specifically for watch mode
-  // This requires re-creating context slightly differently or managing state
-  // Simpler approach: The onEnd in the plugin will trigger on each rebuild in watch mode.
-  // We just need to ensure copyManifestAndHotreload runs on subsequent builds too.
-
-  // Let's refine the plugin to handle rebuilds correctly in watch mode
-  await context.dispose(); // Dispose the previous context
+  // Need to recreate context to handle rebuilds correctly in watch mode
+  await context.dispose();
 
   const watchContext = await esbuild.context({
     banner: { js: banner },
@@ -119,7 +113,7 @@ if (prod) {
         build.onEnd(async (result) => {
           if (result.errors.length === 0) {
             console.log('Build successful.');
-            await copyManifestAndHotreload(); // Run on every successful rebuild
+            await copyManifestAndHotreload();
           } else {
             console.error('Build failed:', result.errors);
           }
@@ -130,6 +124,4 @@ if (prod) {
 
   await watchContext.watch();
   console.log(`Watching for changes... Outputting to ${outDir}`);
-  // Keep the process running for watch mode
-  // process.stdin.resume(); // Not strictly needed if script is run directly
 }
