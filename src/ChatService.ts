@@ -217,22 +217,16 @@ export class ChatService {
      */
     private removeStatusMessageAtPos(editor: Editor, settings: PluginSettings, startPos: EditorPosition, endPos: EditorPosition, reason?: string): boolean {
         const modelName = settings.defaultModel || 'default model';
-        const expectedStatusBase = `Calling ${modelName}...`;
-        const expectedStatusWithNewline = `${expectedStatusBase}\n`;
+        const expectedStatus = `Calling ${modelName}...`;
         let removed = false;
 
         try {
             const currentText = editor.getRange(startPos, endPos);
-
-            // Check if the current text matches either the base message or the message with a newline
-            if (currentText === expectedStatusBase || currentText === expectedStatusWithNewline) {
+            if (currentText === expectedStatus || currentText === `${expectedStatus}\n`) {
                 editor.replaceRange('', startPos, endPos);
-                // Optional: Log removal success minimally if needed for debugging, but removed verbose logging.
-                // console.log(`Removed status message. Reason: ${reason || 'N/A'}`);
                 removed = true;
             }
         } catch (e) {
-            // Keep error logging for unexpected issues during range operations
             console.error("Error removing status message range:", e, { start: startPos, end: endPos, reason: reason });
         }
         return removed;
