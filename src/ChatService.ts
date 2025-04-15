@@ -217,26 +217,23 @@ export class ChatService {
      */
     private removeStatusMessageAtPos(editor: Editor, settings: PluginSettings, startPos: EditorPosition, endPos: EditorPosition, reason?: string): boolean {
         const modelName = settings.defaultModel || 'default model';
-        // Assume status message includes a newline, as inserted by the caller
-        const expectedStatusMessage = `Calling ${modelName}...\n`;
+        const expectedStatusBase = `Calling ${modelName}...`;
+        const expectedStatusWithNewline = `${expectedStatusBase}\n`;
         let removed = false;
 
         try {
             const currentText = editor.getRange(startPos, endPos);
-            if (currentText === expectedStatusMessage) {
+
+            // Check if the current text matches either the base message or the message with a newline
+            if (currentText === expectedStatusBase || currentText === expectedStatusWithNewline) {
                 editor.replaceRange('', startPos, endPos);
-                console.log(`Removed status message "${expectedStatusMessage.replace('\n', '\\n')}" at [${startPos.line}, ${startPos.ch}]. Reason: ${reason || 'N/A'}`);
+                // Optional: Log removal success minimally if needed for debugging, but removed verbose logging.
+                // console.log(`Removed status message. Reason: ${reason || 'N/A'}`);
                 removed = true;
-            } else {
-                const expectedStatusBase = `Calling ${modelName}...`;
-                if (currentText === expectedStatusBase) {
-                     editor.replaceRange('', startPos, endPos);
-                     console.log(`Removed status message (without newline) "${expectedStatusBase}" at [${startPos.line}, ${startPos.ch}]. Reason: ${reason || 'N/A'}`);
-                     removed = true;
-                }
             }
         } catch (e) {
-            console.error("Error removing status message range:", e, { start: startPos, end: endPos });
+            // Keep error logging for unexpected issues during range operations
+            console.error("Error removing status message range:", e, { start: startPos, end: endPos, reason: reason });
         }
         return removed;
     }
