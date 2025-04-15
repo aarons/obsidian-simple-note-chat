@@ -7,16 +7,16 @@ import { FileSystemService } from './FileSystemService';
 import { PluginSettings, DEFAULT_SETTINGS } from './types';
 import {
 	DEFAULT_NN_TITLE_FORMAT,
-	CC_COMMAND_DEFAULT,
-	GG_COMMAND_DEFAULT,
-	DD_COMMAND_DEFAULT,
-	NN_COMMAND_DEFAULT,
+	CHAT_COMMAND_DEFAULT,
+	ARCHIVE_COMMAND_DEFAULT,
+	DELETE_COMMAND_DEFAULT,
+	NEW_CHAT_COMMAND_DEFAULT,
 	CHAT_SEPARATOR_DEFAULT
 } from './constants';
-DEFAULT_SETTINGS.ccCommandPhrase = CC_COMMAND_DEFAULT;
-DEFAULT_SETTINGS.ggCommandPhrase = GG_COMMAND_DEFAULT;
-DEFAULT_SETTINGS.ddCommandPhrase = DD_COMMAND_DEFAULT;
-DEFAULT_SETTINGS.nnCommandPhrase = NN_COMMAND_DEFAULT;
+DEFAULT_SETTINGS.chatCommandPhrase = CHAT_COMMAND_DEFAULT;
+DEFAULT_SETTINGS.archiveCommandPhrase = ARCHIVE_COMMAND_DEFAULT;
+DEFAULT_SETTINGS.deleteCommandPhrase = DELETE_COMMAND_DEFAULT;
+DEFAULT_SETTINGS.newChatCommandPhrase = NEW_CHAT_COMMAND_DEFAULT;
 DEFAULT_SETTINGS.chatSeparator = CHAT_SEPARATOR_DEFAULT;
 
 export default class SimpleNoteChatPlugin extends Plugin {
@@ -103,7 +103,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 				const editor = activeView.editor;
 				const docEnd = editor.offsetToPos(editor.getValue().length);
 				const currentContent = editor.getValue();
-				const textToInsert = (currentContent.endsWith('\n') ? '' : '\n') + this.settings.ccCommandPhrase + '\n';
+				const textToInsert = (currentContent.endsWith('\n') ? '' : '\n') + this.settings.chatCommandPhrase + '\n';
 				editor.replaceRange(textToInsert, docEnd, docEnd);
 				const newEndPos = editor.offsetToPos(editor.posToOffset(docEnd) + textToInsert.length);
 				editor.setCursor(newEndPos);

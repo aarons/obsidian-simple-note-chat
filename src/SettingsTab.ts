@@ -7,10 +7,10 @@ import {
 	DEFAULT_STOP_SEQUENCE,
 	DEFAULT_ARCHIVE_FOLDER,
 	DEFAULT_NN_TITLE_FORMAT,
-	CC_COMMAND_DEFAULT,
-	GG_COMMAND_DEFAULT,
-	DD_COMMAND_DEFAULT,
-	NN_COMMAND_DEFAULT,
+	CHAT_COMMAND_DEFAULT,
+	ARCHIVE_COMMAND_DEFAULT,
+	DELETE_COMMAND_DEFAULT,
+	NEW_CHAT_COMMAND_DEFAULT,
 	CHAT_SEPARATOR_DEFAULT
 } from './constants';
 
@@ -170,85 +170,85 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		containerEl.createEl('h3', { text: 'Custom Phrases & Separator' });
 
 		new Setting(containerEl)
-			.setName('`cc` Command Phrase')
-			.setDesc('Phrase to trigger chat completion.')
+			.setName('Chat Command Phrase')
+			.setDesc(`Phrase to trigger chat completion (Default: ${CHAT_COMMAND_DEFAULT}).`)
 			.addText(text => text
-				.setPlaceholder(CC_COMMAND_DEFAULT)
-				.setValue(this.plugin.settings.ccCommandPhrase)
+				.setPlaceholder(CHAT_COMMAND_DEFAULT)
+				.setValue(this.plugin.settings.chatCommandPhrase)
 				.onChange(async (value) => {
 					const trimmedValue = value.trim();
-					if (trimmedValue && this.plugin.settings.ccCommandPhrase !== trimmedValue) {
-						this.plugin.settings.ccCommandPhrase = trimmedValue;
+					if (trimmedValue && this.plugin.settings.chatCommandPhrase !== trimmedValue) {
+						this.plugin.settings.chatCommandPhrase = trimmedValue;
 						await this.plugin.saveSettings();
-						new Notice('`cc` command phrase saved.');
+						new Notice('Chat command phrase saved.');
 					} else if (!trimmedValue) {
 						new Notice('Command phrase cannot be empty.');
-						text.setValue(this.plugin.settings.ccCommandPhrase); // Revert if empty
+						text.setValue(this.plugin.settings.chatCommandPhrase); // Revert if empty
 					}
 				}));
 
 		new Setting(containerEl)
-			.setName('Enable `cc` Keyboard Shortcut')
-			.setDesc('Make the \'Trigger Chat Completion (cc)\' command available for assigning a keyboard shortcut in Obsidian\'s hotkey settings.')
+			.setName('Enable Chat Keyboard Shortcut')
+			.setDesc(`Make the 'Trigger Chat Completion (${CHAT_COMMAND_DEFAULT})' command available for assigning a keyboard shortcut in Obsidian's hotkey settings.`)
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableCcShortcut)
+				.setValue(this.plugin.settings.enableCcShortcut) // Keep internal setting name for command ID link
 				.onChange(async (value) => {
 					this.plugin.settings.enableCcShortcut = value;
 					await this.plugin.saveSettings();
-					new Notice(`'cc' keyboard shortcut command ${value ? 'enabled' : 'disabled'}. Configure in Obsidian Hotkeys.`);
+					new Notice(`Chat keyboard shortcut command ${value ? 'enabled' : 'disabled'}. Configure in Obsidian Hotkeys.`);
 				}));
 
 		new Setting(containerEl)
-			.setName('`gg` Command Phrase')
-			.setDesc('Phrase to trigger archiving the current chat note.')
+			.setName('Archive Command Phrase')
+			.setDesc(`Phrase to trigger archiving the current chat note (Default: ${ARCHIVE_COMMAND_DEFAULT}).`)
 			.addText(text => text
-				.setPlaceholder(GG_COMMAND_DEFAULT)
-				.setValue(this.plugin.settings.ggCommandPhrase)
+				.setPlaceholder(ARCHIVE_COMMAND_DEFAULT)
+				.setValue(this.plugin.settings.archiveCommandPhrase)
 				.onChange(async (value) => {
 					const trimmedValue = value.trim();
-					if (trimmedValue && this.plugin.settings.ggCommandPhrase !== trimmedValue) {
-						this.plugin.settings.ggCommandPhrase = trimmedValue;
+					if (trimmedValue && this.plugin.settings.archiveCommandPhrase !== trimmedValue) {
+						this.plugin.settings.archiveCommandPhrase = trimmedValue;
 						await this.plugin.saveSettings();
-						new Notice('`gg` command phrase saved.');
+						new Notice('Archive command phrase saved.');
 					} else if (!trimmedValue) {
 						new Notice('Command phrase cannot be empty.');
-						text.setValue(this.plugin.settings.ggCommandPhrase); // Revert if empty
+						text.setValue(this.plugin.settings.archiveCommandPhrase); // Revert if empty
 					}
 				}));
 
 		new Setting(containerEl)
-			.setName('`dd` Command Phrase')
-			.setDesc('Phrase to trigger deleting the current chat note (if enabled).')
+			.setName('Delete Command Phrase')
+			.setDesc(`Phrase to trigger deleting the current chat note (if enabled) (Default: ${DELETE_COMMAND_DEFAULT}).`)
 			.addText(text => text
-				.setPlaceholder(DD_COMMAND_DEFAULT)
-				.setValue(this.plugin.settings.ddCommandPhrase)
+				.setPlaceholder(DELETE_COMMAND_DEFAULT)
+				.setValue(this.plugin.settings.deleteCommandPhrase)
 				.onChange(async (value) => {
 					const trimmedValue = value.trim();
-					if (trimmedValue && this.plugin.settings.ddCommandPhrase !== trimmedValue) {
-						this.plugin.settings.ddCommandPhrase = trimmedValue;
+					if (trimmedValue && this.plugin.settings.deleteCommandPhrase !== trimmedValue) {
+						this.plugin.settings.deleteCommandPhrase = trimmedValue;
 						await this.plugin.saveSettings();
-						new Notice('`dd` command phrase saved.');
+						new Notice('Delete command phrase saved.');
 					} else if (!trimmedValue) {
 						new Notice('Command phrase cannot be empty.');
-						text.setValue(this.plugin.settings.ddCommandPhrase); // Revert if empty
+						text.setValue(this.plugin.settings.deleteCommandPhrase); // Revert if empty
 					}
 				}));
 
 		new Setting(containerEl)
-			.setName('`nn` Command Phrase')
-			.setDesc('Phrase to trigger creating a new chat note (if enabled).')
+			.setName('New Chat Command Phrase')
+			.setDesc(`Phrase to trigger creating a new chat note (if enabled) (Default: ${NEW_CHAT_COMMAND_DEFAULT}).`)
 			.addText(text => text
-				.setPlaceholder(NN_COMMAND_DEFAULT)
-				.setValue(this.plugin.settings.nnCommandPhrase)
+				.setPlaceholder(NEW_CHAT_COMMAND_DEFAULT)
+				.setValue(this.plugin.settings.newChatCommandPhrase)
 				.onChange(async (value) => {
 					const trimmedValue = value.trim();
-					if (trimmedValue && this.plugin.settings.nnCommandPhrase !== trimmedValue) {
-						this.plugin.settings.nnCommandPhrase = trimmedValue;
+					if (trimmedValue && this.plugin.settings.newChatCommandPhrase !== trimmedValue) {
+						this.plugin.settings.newChatCommandPhrase = trimmedValue;
 						await this.plugin.saveSettings();
-						new Notice('`nn` command phrase saved.');
+						new Notice('New chat command phrase saved.');
 					} else if (!trimmedValue) {
 						new Notice('Command phrase cannot be empty.');
-						text.setValue(this.plugin.settings.nnCommandPhrase); // Revert if empty
+						text.setValue(this.plugin.settings.newChatCommandPhrase); // Revert if empty
 					}
 				}));
 
@@ -370,17 +370,17 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		llmSettingsContainer.style.display = this.plugin.settings.enableArchiveRenameLlm ? 'block' : 'none';
 
 
-		containerEl.createEl('h3', { text: 'New Chat (`nn`) Command Triggers' });
+		containerEl.createEl('h3', { text: 'New Chat Command Triggers' });
 
 		new Setting(containerEl)
-			.setName('Enable `nn` Phrase Trigger')
-			.setDesc('Type \'nn\' at the end of any note to trigger the \'Create New Chat Note\' command.')
+			.setName('Enable New Chat Phrase Trigger')
+			.setDesc(`Type the 'New Chat' phrase (default: ${NEW_CHAT_COMMAND_DEFAULT}) at the end of any note to trigger the 'Create New Chat Note' command.`)
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableNnCommandPhrase)
+				.setValue(this.plugin.settings.enableNnCommandPhrase) // Keep internal setting name for consistency
 				.onChange(async (value) => {
 					this.plugin.settings.enableNnCommandPhrase = value;
 					await this.plugin.saveSettings();
-					new Notice(`'nn' phrase trigger ${value ? 'enabled' : 'disabled'}.`);
+					new Notice(`New Chat phrase trigger ${value ? 'enabled' : 'disabled'}.`);
 				}));
 
 		new Setting(containerEl)
@@ -406,14 +406,14 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Archive Current Note on `nn`')
-			.setDesc('Automatically archive the current note (like using \'gg\') before creating the new one when using the \'nn\' command/phrase/button.')
+			.setName('Archive Current Note on New Chat')
+			.setDesc(`Automatically archive the current note (like using the Archive command) before creating the new one when using the New Chat command/phrase/button.`)
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.archivePreviousNoteOnNn)
+				.setValue(this.plugin.settings.archivePreviousNoteOnNn) // Keep internal setting name
 				.onChange(async (value) => {
 					this.plugin.settings.archivePreviousNoteOnNn = value;
 					await this.plugin.saveSettings();
-					new Notice(`Archive on 'nn' ${value ? 'enabled' : 'disabled'}.`);
+					new Notice(`Archive on New Chat ${value ? 'enabled' : 'disabled'}.`);
 				}));
 
 		if (this.plugin.settings.apiKey) {

@@ -80,10 +80,10 @@ export class EditorHandler {
 
 		// Build list of active commands based on settings
 		const activeCommands: CommandInfo[] = [];
-		if (settings.ccCommandPhrase) activeCommands.push({ phrase: settings.ccCommandPhrase, type: 'cc' });
-		if (settings.ggCommandPhrase) activeCommands.push({ phrase: settings.ggCommandPhrase, type: 'gg' });
-		if (settings.ddCommandPhrase && settings.enableDeleteCommand) activeCommands.push({ phrase: settings.ddCommandPhrase, type: 'dd' });
-		if (settings.nnCommandPhrase && settings.enableNnCommandPhrase) activeCommands.push({ phrase: settings.nnCommandPhrase, type: 'nn' });
+		if (settings.chatCommandPhrase) activeCommands.push({ phrase: settings.chatCommandPhrase, type: 'cc' });
+		if (settings.archiveCommandPhrase) activeCommands.push({ phrase: settings.archiveCommandPhrase, type: 'gg' });
+		if (settings.deleteCommandPhrase && settings.enableDeleteCommand) activeCommands.push({ phrase: settings.deleteCommandPhrase, type: 'dd' });
+		if (settings.newChatCommandPhrase && settings.enableNnCommandPhrase) activeCommands.push({ phrase: settings.newChatCommandPhrase, type: 'nn' });
 
 		const matchedCommand = activeCommands.find(cmd => cmd.phrase === lastLineTrimmedContent);
 

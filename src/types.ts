@@ -19,11 +19,11 @@ export interface PluginSettings {
   enableViewportScrolling: boolean;
   modelSortOrder: string; // Added for model sorting
   ddBypassSeparatorCheck: boolean;
-  enableCcShortcut: boolean;
-  ccCommandPhrase: string;
-  ggCommandPhrase: string;
-  ddCommandPhrase: string;
-  nnCommandPhrase: string;
+  enableCcShortcut: boolean; // Keep this name as it relates to the specific command ID
+  chatCommandPhrase: string;
+  archiveCommandPhrase: string;
+  deleteCommandPhrase: string;
+  newChatCommandPhrase: string;
   chatSeparator: string;
 }
 
@@ -47,10 +47,10 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	modelSortOrder: 'alphabetical', // Default sort order
 	ddBypassSeparatorCheck: false,
 	enableCcShortcut: false,
-	ccCommandPhrase: '', // Will be set from constants in main.ts
-	ggCommandPhrase: '', // Will be set from constants in main.ts
-	ddCommandPhrase: '', // Will be set from constants in main.ts
-	nnCommandPhrase: '', // Will be set from constants in main.ts
+	chatCommandPhrase: '', // Will be set from constants in main.ts
+	archiveCommandPhrase: '', // Will be set from constants in main.ts
+	deleteCommandPhrase: '', // Will be set from constants in main.ts
+	newChatCommandPhrase: '', // Will be set from constants in main.ts
 	chatSeparator: '' // Will be set from constants in main.ts
 };
 
