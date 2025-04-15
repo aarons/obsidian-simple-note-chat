@@ -12,7 +12,7 @@ export class FileSystemService {
     }
 
     /**
-     * Moves a file to the specified archive folder, handling name conflicts.
+     * Moves a file to an archive folder, handling name conflicts.
      * @param file The file to move.
      * @param archiveFolderName The relative path of the archive folder from the vault root.
      * @param settings The plugin settings containing archive and LLM options.
@@ -22,7 +22,6 @@ export class FileSystemService {
         try {
             const normalizedArchivePath = normalizePath(archiveFolderName);
 
-            // Ensure the archive folder exists
             const folderExists = await this.app.vault.adapter.exists(normalizedArchivePath);
             if (!folderExists) {
                 try {
@@ -30,12 +29,10 @@ export class FileSystemService {
                     console.log(`Created archive folder: ${normalizedArchivePath}`);
                 } catch (error) {
                     console.error(`Failed to create archive folder "${normalizedArchivePath}":`, error);
-                    // Optionally notify the user here
                     return null; // Cannot proceed without the folder
                 }
             }
 
-            // Determine the base filename based on settings
             let baseFilename: string;
             const originalExtension = file.extension ? `.${file.extension}` : '';
 
@@ -109,10 +106,9 @@ export class FileSystemService {
                 targetPath = normalizePath(`${normalizedArchivePath}/${targetBaseName}-${counter}${targetExtension}`);
             }
 
-            // Move/rename the file
             await this.app.fileManager.renameFile(file, targetPath);
             console.log(`Archived file ${file.path} to ${targetPath}`);
-            return targetPath; // Return the new path
+            return targetPath;
 
         } catch (error) {
             console.error(`Error archiving file "${file.path}" to folder "${archiveFolderName}":`, error);
@@ -122,17 +118,16 @@ export class FileSystemService {
     }
 
     /**
-     * Moves a file to the system trash.
+     * Deletes a file by moving it to the system trash.
      * @param file The file to delete.
      */
     async deleteFile(file: TFile): Promise<void> {
         try {
-            await this.app.vault.trash(file, true); // true uses system trash
+            await this.app.vault.trash(file, true);
             console.log(`Moved file ${file.path} to system trash`);
         } catch (error) {
             console.error(`Error deleting file "${file.path}":`, error);
-            // Optionally notify the user here
-            // Re-throw or handle as needed, currently just logs
+            // Error is logged but not re-thrown
         }
     }
 }
