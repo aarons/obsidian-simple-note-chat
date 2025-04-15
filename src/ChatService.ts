@@ -86,32 +86,16 @@ export class ChatService {
                 // Determine prefix needed before the separator based on preceding content
                 const contentBeforeStatus = editor.getRange({line: 0, ch: 0}, initialInsertPos);
                 let prefix = '';
-                if (contentBeforeStatus.endsWith('\n\n')) {
-                    // Already has a blank line
-                    prefix = '';
-                    console.log("Content before ends with '\\n\\n', no prefix needed.");
-                } else if (contentBeforeStatus.endsWith('\n')) {
-                    // Needs one more newline for a blank line
+                if (contentBeforeStatus.endsWith('\n')) {
                     prefix = '\n';
-                    console.log("Content before ends with '\\n', adding '\\n' prefix.");
                 } else if (contentBeforeStatus.length > 0) {
-                    // Needs two newlines for a blank line
                     prefix = '\n\n';
-                    console.log("Content before does not end with newline, adding '\\n\\n' prefix.");
-                } else {
-                     // Start of the file, no prefix needed
-                     prefix = '';
-                     console.log("Content before is empty (start of file), no prefix needed.");
                 }
 
-                // Construct the separator string with the correct prefix and required suffix
                 const initialSeparatorInsertion = `${prefix}${settings.chatSeparator}\n\n`;
-                console.log(`Calculated initial separator insertion: ${JSON.stringify(initialSeparatorInsertion)}`);
-
-                // Insert the separator string
                 editor.replaceRange(initialSeparatorInsertion, initialInsertPos, initialInsertPos);
+
                 let currentInsertPos = editor.offsetToPos(editor.posToOffset(initialInsertPos) + initialSeparatorInsertion.length);
-                console.log(`Inserted initial separator. First chunk insert pos:`, currentInsertPos);
 
                 let lastPosition = currentInsertPos; // Start tracking position after the initial separator insertion
                 const streamGenerator = this.openRouterService.streamChatCompletion(
