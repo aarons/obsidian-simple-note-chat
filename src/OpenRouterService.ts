@@ -132,8 +132,14 @@ export class OpenRouterService {
     ): AsyncGenerator<string> {
         const { apiKey, defaultModel } = settings;
 
-        if (!apiKey || !defaultModel) {
-            throw new Error("API key or default model is not configured.");
+        // Validate settings before proceeding
+        if (!apiKey) {
+            console.error('OpenRouterService: API key is missing.');
+            throw new Error("OpenRouter API key is not set");
+        }
+        if (!defaultModel) {
+            console.error('OpenRouterService: Default model is not set.');
+            throw new Error("Default model is not set");
         }
 
         const requestBody = {
@@ -278,9 +284,17 @@ export class OpenRouterService {
         messages: ChatMessage[],
         maxTokens?: number
     ): Promise<string | null> {
-        if (!apiKey || !model) {
-            console.error('OpenRouterService: API key or model is missing for getChatCompletion.');
+        // Validate settings before proceeding
+        if (!apiKey) {
+            console.error('OpenRouterService: API key is missing for getChatCompletion.');
+            new Notice('OpenRouter API key is not set. Please configure it in the plugin settings.');
             return null;
+        }
+        if (!model) {
+             console.error('OpenRouterService: Model is missing for getChatCompletion.');
+             // This case might indicate a programming error if model isn't passed correctly
+             new Notice('Error: No model specified for chat completion.');
+             return null;
         }
 
         const requestBody: any = {

@@ -51,17 +51,8 @@ export class ChatService {
      * @param settings The current plugin settings.
      */
     async startChat(_noteContent: string, editor: Editor, file: TFile, settings: PluginSettings): Promise<void> {
-        const { apiKey, defaultModel } = settings;
         const notePath = file.path;
 
-        if (!apiKey) {
-            new Notice('OpenRouter API key is not set. Please configure it in the plugin settings.');
-            return this.removeCallingStatus(editor, settings, 'API key not set.');
-        }
-        if (!defaultModel) {
-            new Notice('Default model is not set. Please configure it in the plugin settings.');
-            return this.removeCallingStatus(editor, settings, 'Default model not set.');
-        }
         if (this.activeStreams.has(notePath)) {
             new Notice(`Chat stream already active for note: ${notePath}. Please wait or cancel.`);
             console.log(`Chat stream already active for note: ${notePath}. Ignoring new request.`);
@@ -136,15 +127,27 @@ export class ChatService {
 
         } catch (error: any) {
             console.error('Error during chat stream orchestration:', error);
-            const reason = (error instanceof DOMException && error.name === 'AbortError')
-                           ? (abortController.signal.reason || 'Chat cancelled')
-                           : (error.message || 'Unknown stream error');
+            let reason = 'Unknown stream error';
+            let noticeMessage = 'Chat error: Unknown error';
 
-            if (error.name === 'AbortError') {
-                new Notice(`Chat request cancelled: ${reason}`);
+            if (error instanceof DOMException && error.name === 'AbortError') {
+                reason = abortController.signal.reason || 'Chat cancelled by user';
+                noticeMessage = `Chat request cancelled: ${reason}`;
+            } else if (error instanceof Error) {
+                reason = error.message;
+                // Check for specific configuration errors thrown by OpenRouterService
+                if (reason.includes("API key") || reason.includes("default model")) {
+                    noticeMessage = `Configuration error: ${reason}. Please check plugin settings.`;
+                } else {
+                    noticeMessage = `Chat error: ${reason}`;
+                }
             } else {
-                 new Notice(`Chat error: ${reason}`);
+                 // Handle non-Error objects if necessary
+                 reason = String(error);
+                 noticeMessage = `Chat error: ${reason}`;
             }
+
+            new Notice(noticeMessage);
 
             if (!statusRemoved) {
                 this.removeCallingStatus(editor, settings, `Error/Cancel occurred: ${reason}`);
