@@ -46,10 +46,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 							this.plugin.settings.apiKey = trimmedValue;
 							await this.plugin.saveSettings();
 							new Notice('API Key saved. Refreshing models...');
-							// Clear available models and trigger refresh
 							this.availableModels = [];
-							this.populateModelDropdowns(); // Clear dropdowns first
-							await this.fetchAndStoreModels(false); // Fetch new models silently
+							this.populateModelDropdowns();
+							await this.fetchAndStoreModels(false);
 						}
 					});
 				text.inputEl.setAttribute('type', 'password');
@@ -558,9 +557,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		}
 	}
 
-	/**
-	 * Called by the refresh button's onClick handler
-	 */
 	public async refreshModels(): Promise<void> {
 		await this.fetchAndStoreModels(true);
 	}
