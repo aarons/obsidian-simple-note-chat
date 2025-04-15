@@ -29,7 +29,7 @@ export interface PluginSettings {
 
 export const DEFAULT_SETTINGS: PluginSettings = {
 	apiKey: '',
-	defaultModel: '',
+	defaultModel: 'openrouter/auto',
 	stopCommandSequence: DEFAULT_STOP_SEQUENCE,
 	archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
 	enableDeleteCommand: false,
