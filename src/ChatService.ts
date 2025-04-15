@@ -1,6 +1,7 @@
 import { Notice, Plugin, Editor, TFile, EditorPosition } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
 import { OpenRouterService } from './OpenRouterService';
+import { log } from './utils/logger';
 
 interface ActiveStreamInfo {
     controller: AbortController;
@@ -34,7 +35,7 @@ export class ChatService {
 
         for (const part of parts) {
             if (part.startsWith('Calling ') && part.endsWith('...')) {
-                console.log(`Skipping potential status message during parsing: "${part}"`);
+                log.debug(`Skipping potential status message during parsing: "${part}"`);
                 continue;
             }
 
@@ -43,7 +44,7 @@ export class ChatService {
         }
 
         if (messages.length === 0) {
-            console.log("Parsing resulted in zero messages. Ensure note content is structured correctly with separators.");
+            log.debug("Parsing resulted in zero messages. Ensure note content is structured correctly with separators.");
         }
         return messages;
     }
@@ -69,7 +70,7 @@ export class ChatService {
 
         if (this.activeStreams.has(notePath)) {
             new Notice(`Chat stream already active for note: ${notePath}. Please wait or cancel.`);
-            console.log(`Chat stream already active for note: ${notePath}. Ignoring new request.`);
+            log.debug(`Chat stream already active for note: ${notePath}. Ignoring new request.`);
             return;
         }
 
@@ -108,7 +109,7 @@ export class ChatService {
                         // 1. Attempt to remove status message at known location
                         const removed = this.removeStatusMessageAtPos(editor, settings, statusMessageStartPos, statusMessageEndPos, 'First chunk received.');
                         if (!removed) {
-                             console.warn("Could not verify and remove status message at expected location, proceeding anyway.");
+                             log.warn("Could not verify and remove status message at expected location, proceeding anyway.");
                         }
 
                         // 2. Determine prefix for separator
@@ -226,7 +227,7 @@ export class ChatService {
                 removed = true;
             }
         } catch (e) {
-            console.error("Error removing status message range:", e, { start: startPos, end: endPos, reason: reason });
+            log.error("Error removing status message range:", e, { start: startPos, end: endPos, reason: reason });
         }
         return removed;
     }
@@ -249,20 +250,20 @@ export class ChatService {
     cancelStream(filePath: string, editor: Editor, settings: PluginSettings): boolean {
         const streamInfo = this.activeStreams.get(filePath);
         if (streamInfo) {
-            console.log(`Attempting to cancel chat stream for note: ${filePath}`);
+            log.debug(`Attempting to cancel chat stream for note: ${filePath}`);
             const reason = "Chat cancelled by user action.";
             streamInfo.controller.abort(reason);
 
             // Attempt to clean up the status message using stored positions
-            console.log(`Attempting status message cleanup for cancelled stream: ${filePath}`);
+            log.debug(`Attempting status message cleanup for cancelled stream: ${filePath}`);
             this.removeStatusMessageAtPos(editor, settings, streamInfo.statusStartPos, streamInfo.statusEndPos, reason);
 
             this.activeStreams.delete(filePath); // Ensure removal
-            console.log(`Stream cancelled and removed from active streams for: ${filePath}`);
+            log.debug(`Stream cancelled and removed from active streams for: ${filePath}`);
             new Notice(reason);
             return true;
         } else {
-            console.log(`No active chat stream found to cancel for note: ${filePath}`);
+            log.debug(`No active chat stream found to cancel for note: ${filePath}`);
             return false;
         }
     }

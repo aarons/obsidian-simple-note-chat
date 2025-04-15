@@ -2,6 +2,7 @@
 import { requestUrl, Notice } from 'obsidian';
 import { OPENROUTER_API_URL } from './constants';
 import { PluginSettings, ChatMessage } from './types';
+import { log } from './utils/logger';
 export interface OpenRouterModel {
     id: string;
     name: string;
@@ -37,7 +38,7 @@ export class OpenRouterService {
      */
     async fetchModels(apiKey: string): Promise<OpenRouterModel[]> {
         if (!apiKey) {
-            console.warn('OpenRouter API key is missing.');
+            log.warn('OpenRouter API key is missing.');
             return []; // Don't show notice, just return empty
         }
 
@@ -55,12 +56,12 @@ export class OpenRouterService {
                 if (data && Array.isArray(data.data)) {
                     return data.data as OpenRouterModel[];
                 } else {
-                    console.error('Unexpected response structure from OpenRouter API:', data);
+                    log.error('Unexpected response structure from OpenRouter API:', data);
                     new Notice('Failed to parse model list from OpenRouter. Unexpected format.');
                     return [];
                 }
             } else {
-                console.error(`Error fetching models from OpenRouter: ${response.status}`, response.text);
+                log.error(`Error fetching models from OpenRouter: ${response.status}`, response.text);
                 let errorMessage = `Failed to fetch models from OpenRouter. Status: ${response.status}.`;
                 if (response.status === 401) {
                     errorMessage += ' Please check your API key.';
@@ -69,7 +70,7 @@ export class OpenRouterService {
                 return [];
             }
         } catch (error) {
-            console.error('Network or other error fetching models from OpenRouter:', error);
+            log.error('Network or other error fetching models from OpenRouter:', error);
             new Notice('Error connecting to OpenRouter. Check your network connection or the API endpoint.');
             return [];
         }
@@ -134,11 +135,11 @@ export class OpenRouterService {
 
         // Validate settings before proceeding
         if (!apiKey) {
-            console.error('OpenRouterService: API key is missing.');
+            log.error('OpenRouterService: API key is missing.');
             throw new Error("OpenRouter API key is not set");
         }
         if (!defaultModel) {
-            console.error('OpenRouterService: Default model is not set.');
+            log.error('OpenRouterService: Default model is not set.');
             throw new Error("Default model is not set");
         }
 
@@ -148,7 +149,7 @@ export class OpenRouterService {
             stream: true,
         };
 
-        console.log('OpenRouterService: Sending stream request:', JSON.stringify(requestBody, null, 2));
+        log.debug('OpenRouterService: Sending stream request:', JSON.stringify(requestBody, null, 2));
 
         let response: Response;
         try {
@@ -162,12 +163,12 @@ export class OpenRouterService {
                 signal: signal,
             });
 
-            console.log('OpenRouterService: Response status:', response.status);
+            log.debug('OpenRouterService: Response status:', response.status);
 
         } catch (error: any) {
-             console.error('OpenRouterService: Fetch error:', error);
+             log.error('OpenRouterService: Fetch error:', error);
              if (error.name === 'AbortError') {
-                 console.log('OpenRouterService: Fetch aborted.');
+                 log.debug('OpenRouterService: Fetch aborted.');
                  return;
              }
              throw new Error(`Network error calling OpenRouter: ${error.message}`);
@@ -175,7 +176,7 @@ export class OpenRouterService {
 
         if (!response.ok) {
             const errorBody = await response.text().catch(() => 'Failed to read error body');
-            console.error('OpenRouterService: API Error:', response.status, errorBody);
+            log.error('OpenRouterService: API Error:', response.status, errorBody);
             let specificError = `API request failed with status ${response.status}`;
             try {
                 const errorJson = JSON.parse(errorBody);
@@ -197,7 +198,7 @@ export class OpenRouterService {
         try {
             while (!done) {
                  if (signal.aborted) {
-                    console.log('OpenRouterService: Abort signal detected during stream read.');
+                    log.debug('OpenRouterService: Abort signal detected during stream read.');
                     // Ensure the reader is cancelled if we break early
                     await reader.cancel('Aborted by signal');
                     // Throwing here ensures the calling ChatService knows it was aborted
@@ -210,7 +211,7 @@ export class OpenRouterService {
                     done = readResult.done;
                 } catch (readError: any) {
                      // Catch errors during reader.read() itself
-                     console.error('OpenRouterService: Error reading stream chunk:', readError);
+                     log.error('OpenRouterService: Error reading stream chunk:', readError);
                      // Check if it's an abort error triggered by reader.cancel()
                      if (readError.name === 'AbortError') {
                          // Already handled by the signal check or cancellation logic
@@ -240,33 +241,33 @@ export class OpenRouterService {
                                     yield chunk;
                                 }
                             } catch (e) {
-                                console.error('OpenRouterService: Error parsing SSE JSON:', e, 'Data:', dataContent);
+                                log.error('OpenRouterService: Error parsing SSE JSON:', e, 'Data:', dataContent);
                                 // Optionally yield an error marker or throw? For now, just log.
                             }
                         } else if (message.startsWith(':')) {
-                             console.log("OpenRouterService: Received SSE comment:", message);
+                             log.debug("OpenRouterService: Received SSE comment:", message);
                         } else if (message.trim()) {
-                             console.warn("OpenRouterService: Received unexpected non-empty line:", message);
+                             log.warn("OpenRouterService: Received unexpected non-empty line:", message);
                         }
                     }
                 }
             }
-            console.log('OpenRouterService: Stream finished.');
+            log.debug('OpenRouterService: Stream finished.');
 
         } catch (error) {
-             console.error("OpenRouterService: Error during stream processing loop:", error);
+             log.error("OpenRouterService: Error during stream processing loop:", error);
              throw error;
         } finally {
             if (!done) {
-                 console.log("OpenRouterService: Stream loop exited unexpectedly, ensuring reader cancellation.");
+                 log.debug("OpenRouterService: Stream loop exited unexpectedly, ensuring reader cancellation.");
                  try {
                      await reader.cancel('Stream processing finished or errored.');
                  } catch (cancelError) {
-                     console.warn("OpenRouterService: Error during final reader cancellation:", cancelError);
+                     log.warn("OpenRouterService: Error during final reader cancellation:", cancelError);
                  }
             }
              reader.releaseLock();
-             console.log("OpenRouterService: Stream reader lock released.");
+             log.debug("OpenRouterService: Stream reader lock released.");
         }
     }
 
@@ -286,12 +287,12 @@ export class OpenRouterService {
     ): Promise<string | null> {
         // Validate settings before proceeding
         if (!apiKey) {
-            console.error('OpenRouterService: API key is missing for getChatCompletion.');
+            log.error('OpenRouterService: API key is missing for getChatCompletion.');
             new Notice('OpenRouter API key is not set. Please configure it in the plugin settings.');
             return null;
         }
         if (!model) {
-             console.error('OpenRouterService: Model is missing for getChatCompletion.');
+             log.error('OpenRouterService: Model is missing for getChatCompletion.');
              // This case might indicate a programming error if model isn't passed correctly
              new Notice('Error: No model specified for chat completion.');
              return null;
@@ -307,7 +308,7 @@ export class OpenRouterService {
             requestBody.max_tokens = maxTokens;
         }
 
-        console.log('OpenRouterService: Sending non-stream request:', JSON.stringify(requestBody, null, 2));
+        log.debug('OpenRouterService: Sending non-stream request:', JSON.stringify(requestBody, null, 2));
 
         try {
             const response = await requestUrl({
@@ -321,22 +322,22 @@ export class OpenRouterService {
                 throw: false, // Prevent requestUrl from throwing on non-200 status
             });
 
-            console.log('OpenRouterService: Non-stream response status:', response.status);
+            log.debug('OpenRouterService: Non-stream response status:', response.status);
 
             if (response.status === 200) {
                 const data = response.json;
                 const content = data?.choices?.[0]?.message?.content;
 
                 if (content) {
-                    console.log('OpenRouterService: Received non-stream completion.');
+                    log.debug('OpenRouterService: Received non-stream completion.');
                     return content.trim();
                 } else {
-                    console.error('OpenRouterService: Could not extract content from non-stream response:', data);
+                    log.error('OpenRouterService: Could not extract content from non-stream response:', data);
                     new Notice('Failed to parse LLM response from OpenRouter.');
                     return null;
                 }
             } else {
-                console.error(`OpenRouterService: Error fetching non-stream completion: ${response.status}`, response.text);
+                log.error(`OpenRouterService: Error fetching non-stream completion: ${response.status}`, response.text);
                 let errorMessage = `LLM request failed. Status: ${response.status}.`;
                  try {
                     const errorJson = response.json; // Try parsing error JSON
@@ -348,7 +349,7 @@ export class OpenRouterService {
                 return null;
             }
         } catch (error) {
-            console.error('OpenRouterService: Network or other error during non-stream completion:', error);
+            log.error('OpenRouterService: Network or other error during non-stream completion:', error);
             new Notice('Error connecting to OpenRouter for title generation. Check network or API.');
             return null;
         }

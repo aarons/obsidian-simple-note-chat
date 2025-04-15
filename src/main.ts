@@ -5,6 +5,7 @@ import { OpenRouterService } from './OpenRouterService';
 import { EditorHandler } from './EditorHandler';
 import { FileSystemService } from './FileSystemService';
 import { PluginSettings, DEFAULT_SETTINGS } from './types';
+import { log } from './utils/logger';
 import {
 	DEFAULT_NN_TITLE_FORMAT,
 	CHAT_COMMAND_DEFAULT,
@@ -27,7 +28,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	fileSystemService: FileSystemService;
 
 	async onload() {
-		console.log('Loading Simple Note Chat plugin');
+		log.debug('Loading Simple Note Chat plugin');
 		await this.loadSettings();
 
 		this.openRouterService = new OpenRouterService();
@@ -64,7 +65,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 									new Notice(`Previous note '${activeFile.name}' not archived because it lacks a chat separator.`);
 								}
 							} catch (archiveError) {
-								console.error(`Error during pre-nn archive attempt for ${activeFile.name}:`, archiveError);
+								log.error(`Error during pre-nn archive attempt for ${activeFile.name}:`, archiveError);
 								new Notice(`Error trying to archive previous note '${activeFile.name}'. Continuing to create new note.`);
 							}
 						}
@@ -78,7 +79,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 					this.app.workspace.openLinkText(newFile.path, '', false);
 					new Notice(`Created new chat note: ${title}.md`);
 				} catch (error) {
-					console.error("Error creating new chat note:", error);
+					log.error("Error creating new chat note:", error);
 					new Notice("Error creating new chat note. Check console for details.");
 				}
 			}
@@ -108,7 +109,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 				const newEndPos = editor.offsetToPos(editor.posToOffset(docEnd) + textToInsert.length);
 				editor.setCursor(newEndPos);
 
-				console.log("Executed 'cc' shortcut command, inserted phrase.");
+				log.debug("Executed 'cc' shortcut command, inserted phrase.");
 				return true;
 			}
 		});
@@ -121,7 +122,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	}
 
 	onunload() {
-		console.log('Unloading Simple Note Chat plugin');
+		log.debug('Unloading Simple Note Chat plugin');
 	}
 
 	async loadSettings() {
@@ -143,13 +144,13 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			if (activeView && activeView.file) {
 				const filePath = activeView.file.path;
 				if (this.chatService.isStreamActive(filePath)) {
-					console.log(`Escape key pressed, attempting to cancel stream for: ${filePath}`);
+					log.debug(`Escape key pressed, attempting to cancel stream for: ${filePath}`);
 					// Pass editor and settings to cancelStream
 					if (this.chatService.cancelStream(filePath, activeView.editor, this.settings)) {
 						// Notice is now handled within cancelStream upon successful cancellation
-						console.log("Stream cancellation initiated by Escape key.");
+						log.debug("Stream cancellation initiated by Escape key.");
 					} else {
-						console.log("Escape key pressed, but no active stream found or cancellation failed.");
+						log.debug("Escape key pressed, but no active stream found or cancellation failed.");
 					}
 				}
 			}

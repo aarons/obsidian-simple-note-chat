@@ -1,6 +1,7 @@
 import { App, Editor, MarkdownView, TFile, EditorPosition, Notice } from 'obsidian';
 import SimpleNoteChat from './main';
 import { PluginSettings } from './types';
+import { log } from './utils/logger';
 
 interface CommandInfo {
 	phrase: string;
@@ -21,7 +22,7 @@ export class EditorHandler {
 		const file = markdownView.file;
 
 		if (!file) {
-			console.warn("Editor change detected but no active file.");
+			log.warn("Editor change detected but no active file.");
 			return;
 		}
 		const filePath = file.path;
@@ -32,7 +33,7 @@ export class EditorHandler {
 			const stopSequence = settings.stopCommandSequence;
 
 			if (stopSequence && content.includes(stopSequence)) {
-				console.log(`Stop sequence "${stopSequence}" detected in active stream file: ${filePath}`);
+				log.debug(`Stop sequence "${stopSequence}" detected in active stream file: ${filePath}`);
 				// Pass editor and settings to cancelStream
 				if (this.plugin.chatService.cancelStream(filePath, editor, settings)) {
 					const sequenceIndex = content.lastIndexOf(stopSequence);
@@ -40,7 +41,7 @@ export class EditorHandler {
 						const startPos = editor.offsetToPos(sequenceIndex);
 						const endPos = editor.offsetToPos(sequenceIndex + stopSequence.length);
 						editor.replaceRange('', startPos, endPos);
-						console.log(`Removed stop sequence "${stopSequence}" from editor.`);
+						log.debug(`Removed stop sequence "${stopSequence}" from editor.`);
 
 						const endOfDoc = editor.offsetToPos(editor.getValue().length);
 						const interruptionMessage = "\n\n[Response Interrupted]\n\n";
@@ -51,7 +52,7 @@ export class EditorHandler {
 						new Notice("Stream stopped by sequence.");
 						return; // Stop further processing
 					} else {
-						console.warn("Stop sequence detected but could not find its index to remove.");
+						log.warn("Stop sequence detected but could not find its index to remove.");
 					}
 				}
 			}
@@ -100,7 +101,7 @@ export class EditorHandler {
 		const matchedCommand = activeCommands.find(cmd => cmd.phrase === commandLineContent);
 
 		if (matchedCommand) {
-			console.log(`Detected command phrase: ${matchedCommand.phrase} (type: ${matchedCommand.type}) on line ${commandLineIndex}`);
+			log.debug(`Detected command phrase: ${matchedCommand.phrase} (type: ${matchedCommand.type}) on line ${commandLineIndex}`);
 
 			// 4. Execute the action, passing the index of the command line
 			this._executeCommandAction(
@@ -125,7 +126,7 @@ export class EditorHandler {
 
 		const file = markdownView.file; // Re-check file existence
 		if (!file && commandType !== 'nn') { // 'nn' doesn't strictly need the current file
-			console.error(`Cannot execute command '${commandType}': markdownView.file is null.`);
+			log.error(`Cannot execute command '${commandType}': markdownView.file is null.`);
 			new Notice(`Failed to execute command '${commandType}': No active file.`);
 			return;
 		}
@@ -165,7 +166,7 @@ export class EditorHandler {
 
 				// Set cursor to the beginning of the status message
 				editor.setCursor(statusMessageStartPos);
-				console.log(`Replaced command line and trailing empty lines with status. Range: [${statusMessageStartPos.line}, ${statusMessageStartPos.ch}] to end of doc. New End: [${statusMessageEndPos.line}, ${statusMessageEndPos.ch}]`);
+				log.debug(`Replaced command line and trailing empty lines with status. Range: [${statusMessageStartPos.line}, ${statusMessageStartPos.ch}] to end of doc. New End: [${statusMessageEndPos.line}, ${statusMessageEndPos.ch}]`);
 
 				// Call startChat with the correct positions relative to the *new* content
 				this.plugin.chatService.startChat(
@@ -175,7 +176,7 @@ export class EditorHandler {
 					statusMessageStartPos, // Position where status message starts
 					statusMessageEndPos   // Position where status message ends (calculated above)
 				).catch(error => {
-					console.error("Error starting chat:", error);
+					log.error("Error starting chat:", error);
 					const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 					try {
 						// Attempt to replace the *original* status message range with the error
@@ -184,7 +185,7 @@ export class EditorHandler {
 						const currentStatusEndPos = editor.offsetToPos(currentStatusEndOffset);
 						editor.replaceRange(`Error: ${errorMessage}\n`, statusMessageStartPos, currentStatusEndPos);
 					} catch (replaceError) {
-						console.error("Failed to replace status message with error:", replaceError);
+						log.error("Failed to replace status message with error:", replaceError);
 						new Notice(`Chat Error: ${errorMessage}`); // Fallback notice
 					}
 				});
@@ -214,7 +215,7 @@ export class EditorHandler {
 						if (newPath) { new Notice(`Note archived to: ${newPath}`); }
 						else {
 							new Notice("Failed to archive note.");
-							console.warn("FileSystemService.moveFileToArchive returned null.");
+							log.warn("FileSystemService.moveFileToArchive returned null.");
 							// Consider adding back the command lines if archive fails? Might be complex.
 						}
 					} catch (error) {

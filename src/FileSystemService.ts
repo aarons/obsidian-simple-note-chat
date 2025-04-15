@@ -1,6 +1,7 @@
 import { App, TFile, normalizePath, moment, Notice } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
 import { OpenRouterService } from './OpenRouterService';
+import { log } from './utils/logger';
 
 export class FileSystemService {
     private app: App;
@@ -26,9 +27,9 @@ export class FileSystemService {
             if (!folderExists) {
                 try {
                     await this.app.vault.createFolder(normalizedArchivePath);
-                    console.log(`Created archive folder: ${normalizedArchivePath}`);
+                    log.debug(`Created archive folder: ${normalizedArchivePath}`);
                 } catch (error) {
-                    console.error(`Failed to create archive folder "${normalizedArchivePath}":`, error);
+                    log.error(`Failed to create archive folder "${normalizedArchivePath}":`, error);
                     return null; // Cannot proceed without the folder
                 }
             }
@@ -49,17 +50,17 @@ export class FileSystemService {
 
                 if (!titleModel || !settings.apiKey) {
                     new Notice("LLM Title generation skipped: API Key or Title/Default Model not set.");
-                    console.warn("LLM Title generation skipped: API Key or Title/Default Model not set.");
+                    log.warn("LLM Title generation skipped: API Key or Title/Default Model not set.");
                 } else if (!content.trim()) {
                     new Notice("LLM Title generation skipped: Note content is empty.");
-                    console.warn("LLM Title generation skipped: Note content is empty.");
+                    log.warn("LLM Title generation skipped: Note content is empty.");
                 }
                 else {
                     const wordLimit = settings.llmRenameWordLimit > 0 ? settings.llmRenameWordLimit : 10;
                     const prompt = `Generate a concise filename-friendly title for the following note content, under ${wordLimit} words.${settings.llmRenameIncludeEmojis ? ' You can include relevant emojis.' : ''} Respond ONLY with the title itself, no explanations or quotation marks. Content:\n\n---\n\n${content}`;
                     const messages: ChatMessage[] = [{ role: 'user', content: prompt }];
 
-                    console.log(`FileSystemService: Requesting LLM title with model ${titleModel}`);
+                    log.debug(`FileSystemService: Requesting LLM title with model ${titleModel}`);
                     const llmTitle = await this.openRouterService.getChatCompletion(
                         settings.apiKey,
                         titleModel,
@@ -68,7 +69,7 @@ export class FileSystemService {
                     );
 
                     if (llmTitle) {
-                        console.log(`FileSystemService: Received LLM title: "${llmTitle}"`);
+                        log.debug(`FileSystemService: Received LLM title: "${llmTitle}"`);
                         const sanitizedTitle = llmTitle
                             .replace(/[\\/:*?"<>|\n\r]+/g, '')
                             .replace(/\s+/g, '_')
@@ -82,13 +83,13 @@ export class FileSystemService {
                             } else {
                                 baseFilename = `${sanitizedTitle}${originalExtension}`;
                             }
-                            console.log(`FileSystemService: Updated baseFilename with LLM title: ${baseFilename}`);
+                            log.debug(`FileSystemService: Updated baseFilename with LLM title: ${baseFilename}`);
                         } else {
-                             console.warn(`FileSystemService: LLM title "${llmTitle}" became empty after sanitization.`);
+                             log.warn(`FileSystemService: LLM title "${llmTitle}" became empty after sanitization.`);
                              new Notice("LLM title was empty after sanitization. Archiving with current name.");
                         }
                     } else {
-                        console.warn("FileSystemService: LLM title generation failed.");
+                        log.warn("FileSystemService: LLM title generation failed.");
                         new Notice("LLM title generation failed. Archiving with current name.");
                     }
                 }
@@ -107,11 +108,11 @@ export class FileSystemService {
             }
 
             await this.app.fileManager.renameFile(file, targetPath);
-            console.log(`Archived file ${file.path} to ${targetPath}`);
+            log.debug(`Archived file ${file.path} to ${targetPath}`);
             return targetPath;
 
         } catch (error) {
-            console.error(`Error archiving file "${file.path}" to folder "${archiveFolderName}":`, error);
+            log.error(`Error archiving file "${file.path}" to folder "${archiveFolderName}":`, error);
             // Optionally notify the user here
             return null; // Indicate failure
         }
@@ -124,9 +125,9 @@ export class FileSystemService {
     async deleteFile(file: TFile): Promise<void> {
         try {
             await this.app.vault.trash(file, true);
-            console.log(`Moved file ${file.path} to system trash`);
+            log.debug(`Moved file ${file.path} to system trash`);
         } catch (error) {
-            console.error(`Error deleting file "${file.path}":`, error);
+            log.error(`Error deleting file "${file.path}":`, error);
             // Error is logged but not re-thrown
         }
     }

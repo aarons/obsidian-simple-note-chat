@@ -3,6 +3,7 @@ import { App, PluginSettingTab, Setting, Notice, DropdownComponent } from 'obsid
 import SimpleNoteChatPlugin from './main';
 import { OpenRouterService, OpenRouterModel } from './OpenRouterService';
 import { PluginSettings } from './types';
+import { log } from './utils/logger';
 import {
 	DEFAULT_STOP_SEQUENCE,
 	DEFAULT_ARCHIVE_FOLDER,
@@ -439,7 +440,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		placeholderText: string
 	): void {
 		if (!dropdown) {
-			console.warn(`SettingsTab: Dropdown for setting key "${String(settingKey)}" is null.`);
+			log.warn(`SettingsTab: Dropdown for setting key "${String(settingKey)}" is null.`);
 			return;
 		}
 
@@ -491,7 +492,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					this.plugin.settings.modelSortOrder
 				);
 			} catch (error) {
-				console.error("SettingsTab: Error sorting models:", error);
+				log.error("SettingsTab: Error sorting models:", error);
 				new Notice("Error sorting models. Check console.");
 				sortedModels = this.availableModels;
 			}
@@ -545,7 +546,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			}
 
 		} catch (error) {
-			console.error("SettingsTab: Error fetching or storing models:", error);
+			log.error("SettingsTab: Error fetching or storing models:", error);
 			if (showNotices) {
 				new Notice('An unexpected error occurred while updating model list.');
 			}
