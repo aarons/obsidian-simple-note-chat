@@ -139,7 +139,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	private handleKeyDown(evt: KeyboardEvent): void {
 		if (evt.key === 'Escape') {
 			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			// Removed duplicate declaration of activeView
 			if (activeView && activeView.file) {
 				const filePath = activeView.file.path;
 				if (this.chatService.isStreamActive(filePath)) {
