@@ -503,7 +503,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				// 1. Sort the raw models
 				const sortedModels = this.openRouterService.sortModels(
 					this.availableModels,
-					this.plugin.settings.modelSortOrder
+					this.plugin.settings.modelSortOrder as ModelSortOption // Cast to satisfy TS
 				);
 				// 2. Format the sorted models for display
 				formattedModels = this.openRouterService.getFormattedModels(sortedModels);
