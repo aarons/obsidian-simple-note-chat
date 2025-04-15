@@ -29,8 +29,57 @@ export interface OpenRouterModel {
     } | null;
 }
 
+/**
+ * Represents the formatted information for a model, suitable for display.
+ */
+export interface FormattedModelInfo {
+    id: string;
+    displayName: string;
+}
+
 
 export class OpenRouterService {
+    /**
+     * Formats a price string (representing price per token) into price per million tokens.
+     * @param price The price string (e.g., "0.0000015") or undefined/null.
+     * @returns A formatted string representing the price per million tokens (e.g., "$1.50", "free", "<$0.01").
+     */
+    private formatPricePerMillion(price: string | undefined | null): string {
+        if (price === undefined || price === null) return '?'; // Indicate unknown price
+
+        const numPrice = typeof price === 'string' ? parseFloat(price) : NaN;
+
+        if (isNaN(numPrice)) return '?'; // Indicate invalid price string
+        if (numPrice === 0) return 'free';
+
+        const pricePerMillion = numPrice * 1000000;
+
+        let formattedPrice: string;
+        // Format based on magnitude
+        if (pricePerMillion < 0.01) {
+            formattedPrice = '<0.01';
+        } else if (pricePerMillion < 10) {
+            // Use toFixed(2) for prices like $1.50, $0.15 etc.
+            formattedPrice = pricePerMillion.toFixed(2);
+        } else if (pricePerMillion < 100) {
+            // Use toFixed(1) for prices like $15.5, $99.9
+            formattedPrice = pricePerMillion.toFixed(1);
+        } else {
+            // Round for prices >= $100
+            formattedPrice = Math.round(pricePerMillion).toString();
+        }
+
+        // Remove trailing zeros after decimal point if they are redundant (e.g., "1.50" -> "1.5", "2.00" -> "2")
+        // But keep ".0" if it resulted from toFixed(1) e.g. 15.0
+        if (formattedPrice.includes('.')) {
+             formattedPrice = formattedPrice.replace(/(\.\d*?)0+$/, '$1'); // Remove trailing zeros
+             formattedPrice = formattedPrice.replace(/\.$/, ''); // Remove trailing decimal point if it exists (e.g. "2.")
+        }
+
+
+        return `$${formattedPrice}`;
+    }
+
     /**
      * Fetches models from the OpenRouter API.
      * @param apiKey The OpenRouter API key.
