@@ -60,22 +60,20 @@ export class EditorHandler {
 		}
 
 		// --- Detect Command Phrases ---
+		// Check if the command phrase is on the second-to-last line,
+		// and the last line is empty (indicating a newline was just typed).
 		const editorContent = editor.getValue();
 		const lines = editorContent.split('\n');
 
-		let lastLineIndex = -1;
-		let lastLineTrimmedContent = '';
-		for (let i = lines.length - 1; i >= 0; i--) {
-			const trimmedLine = lines[i].trim();
-			if (trimmedLine.length > 0) {
-				lastLineIndex = i;
-				lastLineTrimmedContent = trimmedLine;
-				break;
-			}
+		if (lines.length < 2) {
+			return; // Not enough lines for a command + newline
 		}
 
-		if (lastLineIndex === -1) {
-			return; // No command found
+		const lastLine = lines[lines.length - 1];
+		const secondLastLine = lines[lines.length - 2];
+
+		if (lastLine.trim() !== '') {
+			return; // Last line is not empty, command not triggered by newline
 		}
 
 		// Build list of active commands based on settings
@@ -85,29 +83,19 @@ export class EditorHandler {
 		if (settings.deleteCommandPhrase && settings.enableDeleteCommand) activeCommands.push({ phrase: settings.deleteCommandPhrase, type: 'dd' });
 		if (settings.newChatCommandPhrase && settings.enableNnCommandPhrase) activeCommands.push({ phrase: settings.newChatCommandPhrase, type: 'nn' });
 
-		const matchedCommand = activeCommands.find(cmd => cmd.phrase === lastLineTrimmedContent);
+		// Match against the *exact* content of the second-to-last line
+		const matchedCommand = activeCommands.find(cmd => cmd.phrase === secondLastLine);
 
 		if (matchedCommand) {
-			console.log(`Detected command phrase: ${matchedCommand.phrase} (type: ${matchedCommand.type})`);
-
-			const lineStartPos: EditorPosition = { line: lastLineIndex, ch: 0 };
-			const lineEndPos: EditorPosition = { line: lastLineIndex, ch: lines[lastLineIndex].length };
-
-			// Extract content *before* the command line
-			let contentBeforeCommand = lines.slice(0, lastLineIndex).join('\n').trimEnd();
-			// Add a newline if there was content before the command
-			if (contentBeforeCommand.length > 0) {
-				contentBeforeCommand += '\n';
-			}
+			const commandLineIndex = lines.length - 2;
+			console.log(`Detected command phrase: ${matchedCommand.phrase} (type: ${matchedCommand.type}) on line ${commandLineIndex}`);
 
 			this._executeCommandAction(
 				matchedCommand.type,
 				editor,
 				markdownView,
 				settings,
-				lineStartPos,
-				lineEndPos,
-				contentBeforeCommand,
+				commandLineIndex,
 				lines // Pass original lines for context if needed
 			);
 		}
@@ -118,10 +106,8 @@ export class EditorHandler {
 		editor: Editor,
 		markdownView: MarkdownView,
 		settings: PluginSettings,
-		lineStartPos: EditorPosition,
-		lineEndPos: EditorPosition,
-		contentBeforeCommand: string,
-		lines: string[]
+		commandLineIndex: number,
+		lines: string[] // Original lines for context
 	): void {
 
 		const file = markdownView.file; // Re-check file existence
@@ -131,67 +117,77 @@ export class EditorHandler {
 			return;
 		}
 
-		// Helper to set cursor position after removing/replacing the command line
-		const setCursorAfterAction = () => {
-			const lineIndex = lineStartPos.line;
-			if (lineIndex > 0) {
-				const prevLine = lineIndex - 1;
-				editor.setCursor({ line: prevLine, ch: lines[prevLine].length });
+		// Define positions for the command line and the empty line after it
+		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
+		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: lines[commandLineIndex].length };
+		const nextLineStartPos: EditorPosition = { line: commandLineIndex + 1, ch: 0 };
+		// The end position for the range including the empty line is the start of the empty line
+		const rangeEndPos: EditorPosition = nextLineStartPos;
+
+		// Helper to set cursor to the end of the line *before* the command line
+		const setCursorBeforeCommand = () => {
+			const targetLineIndex = commandLineIndex - 1;
+			if (targetLineIndex >= 0) {
+				const targetLineLength = editor.getLine(targetLineIndex).length;
+				editor.setCursor({ line: targetLineIndex, ch: targetLineLength });
 			} else {
-				editor.setCursor({ line: 0, ch: 0 }); // Move to start if it was the only line or first line
+				editor.setCursor({ line: 0, ch: 0 }); // Move to start if document is now empty or command was on first line
 			}
 		};
+
 
 		switch (commandType) {
 			case 'cc':
 				const modelName = settings.defaultModel || 'default model';
-				// Ensure status message ends with a newline for consistent removal later
+				// Ensure status message ends with a newline
 				const statusMessage = `Calling ${modelName}...\n`;
-				const statusMessageStartPos = lineStartPos; // Status replaces the command line
 
-				// Replace the command line with the status message
-				editor.replaceRange(statusMessage, lineStartPos, lineEndPos);
+				// Replace the command line and the empty line after it with the status message
+				editor.replaceRange(statusMessage, commandLineStartPos, rangeEndPos);
 
 				// Calculate the end position of the inserted status message
+				// Start position is where the command line was
+				const statusMessageStartPos = commandLineStartPos;
 				const statusMessageEndOffset = editor.posToOffset(statusMessageStartPos) + statusMessage.length;
 				const statusMessageEndPos = editor.offsetToPos(statusMessageEndOffset);
 
-				// Set cursor to the beginning of the status message (optional, could be end)
+				// Set cursor to the beginning of the status message
 				editor.setCursor(statusMessageStartPos);
-				console.log(`Inserted status message. Start: [${statusMessageStartPos.line}, ${statusMessageStartPos.ch}], End: [${statusMessageEndPos.line}, ${statusMessageEndPos.ch}]`);
+				console.log(`Replaced command lines with status. Start: [${statusMessageStartPos.line}, ${statusMessageStartPos.ch}], End: [${statusMessageEndPos.line}, ${statusMessageEndPos.ch}]`);
 
-				// Call startChat with the positions
+				// Call startChat with the correct positions relative to the *new* content
 				this.plugin.chatService.startChat(
 					editor,
 					file!,
 					settings,
-					statusMessageStartPos,
-					statusMessageEndPos
+					statusMessageStartPos, // Position where status message starts
+					statusMessageEndPos   // Position where status message ends
 				).catch(error => {
 					console.error("Error starting chat:", error);
-					// Attempt to replace the status message with an error message
 					const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 					try {
-						editor.replaceRange(`Error: ${errorMessage}`, statusMessageStartPos, statusMessageEndPos);
+						// Attempt to replace the status message range with the error
+						editor.replaceRange(`Error: ${errorMessage}\n`, statusMessageStartPos, statusMessageEndPos);
 					} catch (replaceError) {
 						console.error("Failed to replace status message with error:", replaceError);
-						// Fallback notice if replacing fails
-						new Notice(`Chat Error: ${errorMessage}`);
+						new Notice(`Chat Error: ${errorMessage}`); // Fallback notice
 					}
 				});
 				break;
 
 			case 'gg':
-				editor.replaceRange('', lineStartPos, lineEndPos);
-				setCursorAfterAction();
-
-				const noteContentGg = editor.getValue(); // Get content *after* removing command line
+				// Check for separator *before* removing lines
+				const noteContentGg = editor.getValue();
 				const chatSeparatorGg = settings.chatSeparator;
 				if (!noteContentGg.includes(chatSeparatorGg)) {
 					new Notice(`Archive command ('gg') requires at least one chat separator ('${chatSeparatorGg}') in the note.`);
-					// Consider adding the command back here if desired, but it complicates flow.
+					// Do not remove the command lines if check fails
 					return;
 				}
+
+				// Remove command line and the empty line after it
+				editor.replaceRange('', commandLineStartPos, rangeEndPos);
+				setCursorBeforeCommand(); // Set cursor before async operation
 
 				(async () => {
 					try {
@@ -204,6 +200,7 @@ export class EditorHandler {
 						else {
 							new Notice("Failed to archive note.");
 							console.warn("FileSystemService.moveFileToArchive returned null.");
+							// Consider adding back the command lines if archive fails? Might be complex.
 						}
 					} catch (error) {
 						console.error("Error during note archive:", error);
@@ -213,16 +210,19 @@ export class EditorHandler {
 				break;
 
 			case 'dd':
-				const noteContentDd = editor.getValue(); // Check content *before* removing the line
+				// Check content *before* removing lines
+				const noteContentDd = editor.getValue();
 				const chatSeparatorDd = settings.chatSeparator;
 				if (!settings.ddBypassSeparatorCheck && !noteContentDd.includes(chatSeparatorDd)) {
 					new Notice(`Delete command ('dd') requires a chat separator ('${chatSeparatorDd}') or bypass enabled.`);
+					// Do not remove lines if check fails
 					return;
 				}
 
 				if (confirm("Are you sure you want to move this note to the trash?")) {
-					editor.replaceRange('', lineStartPos, lineEndPos);
-					setCursorAfterAction();
+					// Remove command line and the empty line after it
+					editor.replaceRange('', commandLineStartPos, rangeEndPos);
+					setCursorBeforeCommand(); // Set cursor before async operation
 
 					(async () => {
 						try {
@@ -231,18 +231,21 @@ export class EditorHandler {
 						} catch (error) {
 							console.error("Error during note deletion:", error);
 							new Notice("Failed to move note to trash. Check console for details.");
+							// Consider adding back the command lines if delete fails?
 						}
 					})();
 				} else {
 					new Notice("Note deletion cancelled.");
-					// Command line remains as user cancelled before removal.
+					// Command lines remain as user cancelled.
 				}
 				break;
 
 			case 'nn':
-				editor.replaceRange('', lineStartPos, lineEndPos);
-				setCursorAfterAction();
+				// Remove command line and the empty line after it
+				editor.replaceRange('', commandLineStartPos, rangeEndPos);
+				setCursorBeforeCommand();
 
+				// Execute the command *after* modifying the editor
 				// @ts-ignore - Assuming 'commands' exists on app
 				this.app.commands.executeCommandById('simple-note-chat:create-new-chat-note');
 				new Notice("Creating new chat note...");
