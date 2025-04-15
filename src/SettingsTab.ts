@@ -72,7 +72,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				this.sortDropdown = dropdown;
 				// Add options based on the ModelSortOption enum
 				dropdown
-					.addOption(ModelSortOption.ALPHABETICAL, 'Alphabetical (A-Z)')
+					.addOption(ModelSortOption.ALPHABETICAL, 'Alphabetical')
 					.addOption(ModelSortOption.PROMPT_PRICE_ASC, 'Prompt Price: Ascending')
 					.addOption(ModelSortOption.PROMPT_PRICE_DESC, 'Prompt Price: Descending')
 					.addOption(ModelSortOption.COMPLETION_PRICE_ASC, 'Completion Price: Ascending')
