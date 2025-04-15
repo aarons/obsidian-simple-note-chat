@@ -81,15 +81,18 @@ export class ChatService {
             if (statusInfo) {
                 statusRemoved = true;
                 initialInsertPos = statusInfo.startPos;
-                console.log("Removed status message, initial insertion point:", initialInsertPos);
-                const contentBeforeStatus = editor.getRange({line: 0, ch: 0}, initialInsertPos).trim();
-                const initialSeparator = contentBeforeStatus.length > 0 ? `\n\n${settings.chatSeparator}\n\n` : `${settings.chatSeparator}\n\n`;
+                console.log("Removed status message, insertion point:", initialInsertPos);
 
-                editor.replaceRange(initialSeparator, initialInsertPos, initialInsertPos);
+                // Determine prefix based on whether there's content before the insertion point
+                const contentBeforeStatus = editor.getRange({line: 0, ch: 0}, initialInsertPos);
+                const prefix = contentBeforeStatus.trim().length > 0 ? '\n\n' : '';
 
-                let currentInsertPos = editor.offsetToPos(editor.posToOffset(initialInsertPos) + initialSeparator.length);
-                console.log("Added initial separator, first chunk insert pos:", currentInsertPos);
-                let lastPosition = currentInsertPos;
+                // Insert the prefix
+                editor.replaceRange(prefix, initialInsertPos, initialInsertPos);
+                let currentInsertPos = editor.offsetToPos(editor.posToOffset(initialInsertPos) + prefix.length);
+                console.log(`Added prefix (${JSON.stringify(prefix)}), first chunk insert pos:`, currentInsertPos);
+
+                let lastPosition = currentInsertPos; // Start tracking position after prefix
                 const streamGenerator = this.openRouterService.streamChatCompletion(
                     messages,
                     settings,
@@ -107,15 +110,18 @@ export class ChatService {
                         }
                     }
                 }
+                // Check if any content was actually inserted by the stream
                  if (editor.posToOffset(currentInsertPos) !== editor.posToOffset(lastPosition)) {
-                    const finalSeparator = `\n\n${settings.chatSeparator}\n\n`;
-                    editor.replaceRange(finalSeparator, lastPosition, lastPosition);
-                    const finalCursorPos = editor.offsetToPos(editor.posToOffset(lastPosition) + finalSeparator.length);
+                    // Content was added, append the final separator and position cursor
+                    const finalSuffix = `\n\n${settings.chatSeparator}\n\n`;
+                    editor.replaceRange(finalSuffix, lastPosition, lastPosition);
+                    const finalCursorPos = editor.offsetToPos(editor.posToOffset(lastPosition) + finalSuffix.length);
                     editor.setCursor(finalCursorPos);
-                    console.log("Added final separator, final cursor pos:", finalCursorPos);
+                    console.log("Stream finished. Added final suffix and set cursor:", finalCursorPos);
                 } else {
+                     // No content received from stream, place cursor after the prefix
                      editor.setCursor(currentInsertPos);
-                     console.log("No content received from stream. Cursor set after initial separator.");
+                     console.log("No content received from stream. Cursor set after prefix.");
                 }
 
             } else {
