@@ -13,7 +13,11 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = (process.argv[2] === 'production');
 const pluginId = 'simple-note-chat';
-const outDir = prod ? '.' : `test-vault/.obsidian/plugins/${pluginId}/`; // Output directly to vault for dev
+
+// Determine the target vault path from environment variable or default
+const targetVaultPath = process.env.TARGET_VAULT_PATH || 'test-vault';
+
+const outDir = prod ? '.' : path.join(targetVaultPath, '.obsidian', 'plugins', pluginId); // Output to target vault for dev
 const outFile = path.join(outDir, 'main.js');
 const manifestFile = 'manifest.json';
 const hotreloadFile = path.join(outDir, '.hotreload');
