@@ -81,24 +81,39 @@ export class ChatService {
             if (statusInfo) {
                 statusRemoved = true;
                 initialInsertPos = statusInfo.startPos;
-                console.log("Removed status message, base insertion point:", initialInsertPos);
+                console.log("Removed status message. Base insertion point for separator:", initialInsertPos);
 
-                // Determine initial content to insert (separator or nothing)
+                // Determine prefix needed before the separator based on preceding content
                 const contentBeforeStatus = editor.getRange({line: 0, ch: 0}, initialInsertPos);
-                let initialInsertionContent = '';
-                if (contentBeforeStatus.trim().length > 0) {
-                    initialInsertionContent = `\n\n${settings.chatSeparator}\n\n`;
-                    console.log("Content found before status message, inserting initial separator.");
+                let prefix = '';
+                if (contentBeforeStatus.endsWith('\n\n')) {
+                    // Already has a blank line
+                    prefix = '';
+                    console.log("Content before ends with '\\n\\n', no prefix needed.");
+                } else if (contentBeforeStatus.endsWith('\n')) {
+                    // Needs one more newline for a blank line
+                    prefix = '\n';
+                    console.log("Content before ends with '\\n', adding '\\n' prefix.");
+                } else if (contentBeforeStatus.length > 0) {
+                    // Needs two newlines for a blank line
+                    prefix = '\n\n';
+                    console.log("Content before does not end with newline, adding '\\n\\n' prefix.");
                 } else {
-                    console.log("No content found before status message (first message), not inserting initial separator.");
+                     // Start of the file, no prefix needed
+                     prefix = '';
+                     console.log("Content before is empty (start of file), no prefix needed.");
                 }
 
-                // Insert the initial content (separator or nothing)
-                editor.replaceRange(initialInsertionContent, initialInsertPos, initialInsertPos);
-                let currentInsertPos = editor.offsetToPos(editor.posToOffset(initialInsertPos) + initialInsertionContent.length);
-                console.log(`Initial insertion complete. First chunk insert pos:`, currentInsertPos);
+                // Construct the separator string with the correct prefix and required suffix
+                const initialSeparatorInsertion = `${prefix}${settings.chatSeparator}\n\n`;
+                console.log(`Calculated initial separator insertion: ${JSON.stringify(initialSeparatorInsertion)}`);
 
-                let lastPosition = currentInsertPos; // Start tracking position after initial insertion
+                // Insert the separator string
+                editor.replaceRange(initialSeparatorInsertion, initialInsertPos, initialInsertPos);
+                let currentInsertPos = editor.offsetToPos(editor.posToOffset(initialInsertPos) + initialSeparatorInsertion.length);
+                console.log(`Inserted initial separator. First chunk insert pos:`, currentInsertPos);
+
+                let lastPosition = currentInsertPos; // Start tracking position after the initial separator insertion
                 const streamGenerator = this.openRouterService.streamChatCompletion(
                     messages,
                     settings,
