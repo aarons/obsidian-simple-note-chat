@@ -1,7 +1,7 @@
 // src/SettingsTab.ts
 import { App, PluginSettingTab, Setting, Notice, DropdownComponent } from 'obsidian';
 import SimpleNoteChatPlugin from './main';
-import { OpenRouterService, OpenRouterModel, FormattedModelInfo } from './OpenRouterService'; // Import FormattedModelInfo
+import { OpenRouterService, OpenRouterModel, FormattedModelInfo, ModelSortOption } from './OpenRouterService'; // Import FormattedModelInfo and ModelSortOption
 import { PluginSettings } from './types';
 import { log } from './utils/logger';
 import {
@@ -70,17 +70,28 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			.setDesc('Choose how to sort the OpenRouter model lists in the dropdowns below.')
 			.addDropdown(dropdown => {
 				this.sortDropdown = dropdown;
+				// Add options based on the ModelSortOption enum
 				dropdown
-					.addOption('alphabetical', 'Alphabetical (A-Z)')
-					.addOption('price_asc', 'Price: Prompt + Completion (Ascending)')
-					.addOption('price_desc', 'Price: Prompt + Completion (Descending)')
+					.addOption(ModelSortOption.ALPHABETICAL, 'Alphabetical (A-Z)')
+					.addOption(ModelSortOption.PROMPT_PRICE_ASC, 'Price: Prompt (Ascending)')
+					.addOption(ModelSortOption.PROMPT_PRICE_DESC, 'Price: Prompt (Descending)')
+					.addOption(ModelSortOption.COMPLETION_PRICE_ASC, 'Price: Completion (Ascending)')
+					.addOption(ModelSortOption.COMPLETION_PRICE_DESC, 'Price: Completion (Descending)')
+					// Set the current value from settings
 					.setValue(this.plugin.settings.modelSortOrder)
 					.onChange(async (value) => {
-						this.plugin.settings.modelSortOrder = value;
-						await this.plugin.saveSettings();
-						new Notice(`Model sort order set to: ${dropdown.selectEl.selectedOptions[0]?.text || value}`);
-						// Re-populate dropdowns with new sort order
-						this.populateModelDropdowns();
+						// Ensure the value is a valid ModelSortOption before saving
+						if (Object.values(ModelSortOption).includes(value as ModelSortOption)) {
+							this.plugin.settings.modelSortOrder = value as ModelSortOption;
+							await this.plugin.saveSettings();
+							new Notice(`Model sort order set to: ${dropdown.selectEl.selectedOptions[0]?.text || value}`);
+							// Re-populate dropdowns with new sort order
+							this.populateModelDropdowns();
+						} else {
+							log.warn(`SettingsTab: Invalid sort option selected: ${value}`);
+							// Optionally revert dropdown to saved setting or default
+							dropdown.setValue(this.plugin.settings.modelSortOrder);
+						}
 					});
 			});
 
