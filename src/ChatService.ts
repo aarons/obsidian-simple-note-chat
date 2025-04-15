@@ -105,11 +105,6 @@ export class ChatService {
             for await (const chunk of streamGenerator) {
                 if (chunk) {
                     if (isFirstChunk) {
-                        // --- First Chunk Handling ---
-                        console.log("First chunk received. Replacing status message and inserting initial separator.");
-                        const modelName = settings.defaultModel || 'default model';
-                        const expectedStatusMessage = `Calling ${modelName}...\n`; // Assuming status includes newline
-
                         // 1. Attempt to remove status message at known location
                         const removed = this.removeStatusMessageAtPos(editor, settings, statusMessageStartPos, statusMessageEndPos, 'First chunk received.');
                         if (!removed) {
