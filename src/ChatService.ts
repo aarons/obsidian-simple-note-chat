@@ -2,10 +2,16 @@ import { Notice, Plugin, Editor, TFile, EditorPosition } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
 import { OpenRouterService } from './OpenRouterService';
 
+interface ActiveStreamInfo {
+    controller: AbortController;
+    statusStartPos: EditorPosition;
+    statusEndPos: EditorPosition;
+}
+
 export class ChatService {
     private plugin: Plugin;
     private openRouterService: OpenRouterService;
-    private activeStreams: Map<string, AbortController> = new Map(); // Key: note path
+    private activeStreams: Map<string, ActiveStreamInfo> = new Map(); // Key: note path
 
     constructor(plugin: Plugin, openRouterService: OpenRouterService) {
         this.plugin = plugin;
