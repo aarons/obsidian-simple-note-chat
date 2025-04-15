@@ -79,7 +79,8 @@ export class OpenRouterService {
     /**
      * Sorts an array of models based on specified criteria.
      * @param models The array of models to sort.
-     * @param sortCriteria The sorting criteria ('alphabetical', 'price_asc', 'price_desc'). Defaults to 'alphabetical'.
+     * @param sortCriteria The sorting criteria ('alphabetical', 'prompt_price_asc', 'prompt_price_desc', 
+     *                     'completion_price_asc', 'completion_price_desc'). Defaults to 'alphabetical'.
      * @returns The sorted array of models.
      */
     sortModels(models: OpenRouterModel[], sortCriteria: string = 'alphabetical'): OpenRouterModel[] {
@@ -89,17 +90,34 @@ export class OpenRouterService {
             let comparison = 0;
 
             switch (sortCriteria) {
-                case 'price_asc':
-                case 'price_desc':
-                    const priceA = (parseFloat(a.pricing?.prompt ?? 'Infinity') || Infinity) + (parseFloat(a.pricing?.completion ?? 'Infinity') || Infinity);
-                    const priceB = (parseFloat(b.pricing?.prompt ?? 'Infinity') || Infinity) + (parseFloat(b.pricing?.completion ?? 'Infinity') || Infinity);
-                    if (priceA === Infinity && priceB === Infinity) {
+                case 'prompt_price_asc':
+                case 'prompt_price_desc':
+                    const promptPriceA = parseFloat(a.pricing?.prompt ?? 'Infinity') || Infinity;
+                    const promptPriceB = parseFloat(b.pricing?.prompt ?? 'Infinity') || Infinity;
+                    
+                    if (promptPriceA === Infinity && promptPriceB === Infinity) {
                         comparison = 0;
                     } else {
-                        comparison = priceA - priceB;
+                        comparison = promptPriceA - promptPriceB;
                     }
 
-                    if (sortCriteria === 'price_desc') {
+                    if (sortCriteria === 'prompt_price_desc') {
+                        comparison *= -1;
+                    }
+                    break;
+                
+                case 'completion_price_asc':
+                case 'completion_price_desc':
+                    const completionPriceA = parseFloat(a.pricing?.completion ?? 'Infinity') || Infinity;
+                    const completionPriceB = parseFloat(b.pricing?.completion ?? 'Infinity') || Infinity;
+                    
+                    if (completionPriceA === Infinity && completionPriceB === Infinity) {
+                        comparison = 0;
+                    } else {
+                        comparison = completionPriceA - completionPriceB;
+                    }
+
+                    if (sortCriteria === 'completion_price_desc') {
                         comparison *= -1;
                     }
                     break;
