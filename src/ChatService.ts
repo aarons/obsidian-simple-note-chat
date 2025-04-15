@@ -13,7 +13,7 @@ export class ChatService {
     }
 
     /**
-     * Parses the raw note content into an array of ChatMessages.
+     * Parses note content into ChatMessages.
      * @param content The raw string content of the note.
      * @param separator The separator used to divide messages.
      * @returns An array of ChatMessage objects.
@@ -44,8 +44,7 @@ export class ChatService {
 
 
     /**
-     * Orchestrates the chat process: parses content, calls OpenRouterService for streaming,
-     * and updates the editor in real-time.
+     * Handles the chat process from parsing to streaming and updating the editor.
      * @param _noteContent The content of the note before the "Calling..." status was added.
      * @param editor The editor instance where the command was triggered.
      * @param file The file associated with the editor.
@@ -158,7 +157,7 @@ export class ChatService {
     }
 
     /**
-     * Finds the status message and returns the content before it.
+     * Extracts content before the status message.
      * @param currentFullContent The complete current content of the editor.
      * @param statusMessageBase The status message text without trailing newline.
      * @returns Object containing content before the status and whether status was found.
@@ -190,7 +189,7 @@ export class ChatService {
 
 
     /**
-     * Finds and removes the "Calling {model}..." status message from the editor.
+     * Removes the "Calling {model}..." status message from the editor.
      * @param editor The editor instance.
      * @param settings Plugin settings to get the model name.
      * @returns The start position where the message was found and removed, or null if not found.
@@ -246,7 +245,7 @@ export class ChatService {
     }
 
      /**
-      * Removes the status message during error/cancellation cleanup.
+      * Removes status message during error/cancellation.
       */
      private removeCallingStatus(editor: Editor, settings: PluginSettings, reason?: string): void {
          console.log(`Attempting to remove status message. Reason: ${reason || 'N/A'}`);
