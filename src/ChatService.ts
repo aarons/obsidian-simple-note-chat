@@ -216,8 +216,7 @@ export class ChatService {
      * @returns True if the message was found and removed, false otherwise.
      */
     private removeStatusMessageAtPos(editor: Editor, settings: PluginSettings, startPos: EditorPosition, endPos: EditorPosition, reason?: string): boolean {
-        const modelName = settings.defaultModel || 'default model';
-        const expectedStatus = `Calling ${modelName}...`;
+        const expectedStatus = `Calling ${settings.defaultModel}...`;
         let removed = false;
 
         try {

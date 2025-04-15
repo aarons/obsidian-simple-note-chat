@@ -149,9 +149,8 @@ export class EditorHandler {
 
 		switch (commandType) {
 			case 'cc':
-				const modelName = settings.defaultModel || 'default model';
 				// Ensure status message ends with a newline
-				const statusMessage = `Calling ${modelName}...\n`;
+				const statusMessage = `Calling ${settings.defaultModel}...\n`;
 
 				// Replace the command line and all subsequent empty lines with the status message
 				editor.replaceRange(statusMessage, commandLineStartPos, rangeEndPos);
