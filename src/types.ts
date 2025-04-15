@@ -1,6 +1,5 @@
 import { DEFAULT_STOP_SEQUENCE, DEFAULT_ARCHIVE_FOLDER, DEFAULT_NN_TITLE_FORMAT } from './constants';
 
-// Defines the structure for the plugin settings
 export interface PluginSettings {
   apiKey: string;
   defaultModel: string;
@@ -28,7 +27,6 @@ export interface PluginSettings {
   chatSeparator: string;
 }
 
-// Define the default settings
 export const DEFAULT_SETTINGS: PluginSettings = {
 	apiKey: '',
 	defaultModel: '',
@@ -55,7 +53,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	nnCommandPhrase: '', // Will be set from constants in main.ts
 	chatSeparator: '' // Will be set from constants in main.ts
 };
-// Defines the structure for a chat message
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
