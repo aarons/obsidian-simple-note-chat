@@ -238,6 +238,7 @@ export class OpenRouterService {
                                 const jsonData = JSON.parse(dataContent);
                                 const chunk = jsonData.choices?.[0]?.delta?.content;
                                 if (chunk) {
+                                    log.debug('OpenRouterService: Received chunk:', chunk);
                                     yield chunk;
                                 }
                             } catch (e) {
@@ -330,6 +331,7 @@ export class OpenRouterService {
 
                 if (content) {
                     log.debug('OpenRouterService: Received non-stream completion.');
+                    log.debug('OpenRouterService: Content:', content);
                     return content.trim();
                 } else {
                     log.error('OpenRouterService: Could not extract content from non-stream response:', data);
