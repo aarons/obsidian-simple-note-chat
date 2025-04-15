@@ -60,20 +60,33 @@ export class EditorHandler {
 		}
 
 		// --- Detect Command Phrases ---
-		// Check if the command phrase is on the second-to-last line,
-		// and the last line is empty (indicating a newline was just typed).
+		// Find the last non-empty line, ensuring it's followed by at least one empty/whitespace line.
 		const editorContent = editor.getValue();
 		const lines = editorContent.split('\n');
+		const lastLineIndex = lines.length - 1;
 
-		if (lines.length < 2) {
-			return; // Not enough lines for a command + newline
+		if (lastLineIndex < 0) {
+			return; // Empty file
 		}
 
-		const lastLine = lines[lines.length - 1];
-		const secondLastLine = lines[lines.length - 2];
+		// 1. Check if the very last line is empty or whitespace
+		if (lines[lastLineIndex].trim() !== '') {
+			return; // Last line has content, not a command trigger
+		}
 
-		if (lastLine.trim() !== '') {
-			return; // Last line is not empty, command not triggered by newline
+		// 2. Find the last non-empty line index before the trailing empty lines
+		let commandLineIndex = -1;
+		let commandLineContent = '';
+		for (let i = lastLineIndex - 1; i >= 0; i--) {
+			if (lines[i].trim() !== '') {
+				commandLineIndex = i;
+				commandLineContent = lines[i]; // Use the exact line content for matching
+				break;
+			}
+		}
+
+		if (commandLineIndex === -1) {
+			return; // No non-empty line found before the last empty one(s)
 		}
 
 		// Build list of active commands based on settings
@@ -83,13 +96,13 @@ export class EditorHandler {
 		if (settings.deleteCommandPhrase && settings.enableDeleteCommand) activeCommands.push({ phrase: settings.deleteCommandPhrase, type: 'dd' });
 		if (settings.newChatCommandPhrase && settings.enableNnCommandPhrase) activeCommands.push({ phrase: settings.newChatCommandPhrase, type: 'nn' });
 
-		// Match against the *exact* content of the second-to-last line
-		const matchedCommand = activeCommands.find(cmd => cmd.phrase === secondLastLine);
+		// 3. Match against the *exact* content of the last non-empty line
+		const matchedCommand = activeCommands.find(cmd => cmd.phrase === commandLineContent);
 
 		if (matchedCommand) {
-			const commandLineIndex = lines.length - 2;
 			console.log(`Detected command phrase: ${matchedCommand.phrase} (type: ${matchedCommand.type}) on line ${commandLineIndex}`);
 
+			// 4. Execute the action, passing the index of the command line
 			this._executeCommandAction(
 				matchedCommand.type,
 				editor,
@@ -117,12 +130,10 @@ export class EditorHandler {
 			return;
 		}
 
-		// Define positions for the command line and the empty line after it
+		// Define positions for the command line and all subsequent empty lines
 		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
-		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: lines[commandLineIndex].length };
-		const nextLineStartPos: EditorPosition = { line: commandLineIndex + 1, ch: 0 };
-		// The end position for the range including the empty line is the start of the empty line
-		const rangeEndPos: EditorPosition = nextLineStartPos;
+		// The end position is the end of the entire document to capture all trailing lines
+		const rangeEndPos: EditorPosition = editor.offsetToPos(editor.getValue().length);
 
 		// Helper to set cursor to the end of the line *before* the command line
 		const setCursorBeforeCommand = () => {
@@ -142,18 +153,20 @@ export class EditorHandler {
 				// Ensure status message ends with a newline
 				const statusMessage = `Calling ${modelName}...\n`;
 
-				// Replace the command line and the empty line after it with the status message
+				// Replace the command line and all subsequent empty lines with the status message
 				editor.replaceRange(statusMessage, commandLineStartPos, rangeEndPos);
 
 				// Calculate the end position of the inserted status message
-				// Start position is where the command line was
+				// Start position is where the command line was.
 				const statusMessageStartPos = commandLineStartPos;
+				// The new end position is calculated *after* the replacement
 				const statusMessageEndOffset = editor.posToOffset(statusMessageStartPos) + statusMessage.length;
 				const statusMessageEndPos = editor.offsetToPos(statusMessageEndOffset);
 
+
 				// Set cursor to the beginning of the status message
 				editor.setCursor(statusMessageStartPos);
-				console.log(`Replaced command lines with status. Start: [${statusMessageStartPos.line}, ${statusMessageStartPos.ch}], End: [${statusMessageEndPos.line}, ${statusMessageEndPos.ch}]`);
+				console.log(`Replaced command line and trailing empty lines with status. Range: [${statusMessageStartPos.line}, ${statusMessageStartPos.ch}] to end of doc. New End: [${statusMessageEndPos.line}, ${statusMessageEndPos.ch}]`);
 
 				// Call startChat with the correct positions relative to the *new* content
 				this.plugin.chatService.startChat(
@@ -161,13 +174,16 @@ export class EditorHandler {
 					file!,
 					settings,
 					statusMessageStartPos, // Position where status message starts
-					statusMessageEndPos   // Position where status message ends
+					statusMessageEndPos   // Position where status message ends (calculated above)
 				).catch(error => {
 					console.error("Error starting chat:", error);
 					const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 					try {
-						// Attempt to replace the status message range with the error
-						editor.replaceRange(`Error: ${errorMessage}\n`, statusMessageStartPos, statusMessageEndPos);
+						// Attempt to replace the *original* status message range with the error
+						// Need to re-calculate the end position based on the *current* content if the status message was modified
+						const currentStatusEndOffset = editor.posToOffset(statusMessageStartPos) + statusMessage.length;
+						const currentStatusEndPos = editor.offsetToPos(currentStatusEndOffset);
+						editor.replaceRange(`Error: ${errorMessage}\n`, statusMessageStartPos, currentStatusEndPos);
 					} catch (replaceError) {
 						console.error("Failed to replace status message with error:", replaceError);
 						new Notice(`Chat Error: ${errorMessage}`); // Fallback notice
@@ -185,7 +201,7 @@ export class EditorHandler {
 					return;
 				}
 
-				// Remove command line and the empty line after it
+				// Remove command line and all subsequent empty lines
 				editor.replaceRange('', commandLineStartPos, rangeEndPos);
 				setCursorBeforeCommand(); // Set cursor before async operation
 
@@ -220,7 +236,7 @@ export class EditorHandler {
 				}
 
 				if (confirm("Are you sure you want to move this note to the trash?")) {
-					// Remove command line and the empty line after it
+					// Remove command line and all subsequent empty lines
 					editor.replaceRange('', commandLineStartPos, rangeEndPos);
 					setCursorBeforeCommand(); // Set cursor before async operation
 
@@ -241,7 +257,7 @@ export class EditorHandler {
 				break;
 
 			case 'nn':
-				// Remove command line and the empty line after it
+				// Remove command line and all subsequent empty lines
 				editor.replaceRange('', commandLineStartPos, rangeEndPos);
 				setCursorBeforeCommand();
 
