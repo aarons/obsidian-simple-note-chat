@@ -515,7 +515,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 
 	/**
-	 * Fetches models from OpenRouter and updates dropdowns
 	 * @param showNotices If true, displays loading and result notices
 	 */
 	private async fetchAndStoreModels(showNotices: boolean = true): Promise<void> {
