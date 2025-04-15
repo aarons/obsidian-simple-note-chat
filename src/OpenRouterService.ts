@@ -30,6 +30,17 @@ export interface OpenRouterModel {
 }
 
 /**
+ * Defines the available sorting options for models.
+ */
+export enum ModelSortOption {
+    ALPHABETICAL = 'alphabetical',
+    PROMPT_PRICE_ASC = 'prompt_price_asc',
+    PROMPT_PRICE_DESC = 'prompt_price_desc',
+    COMPLETION_PRICE_ASC = 'completion_price_asc',
+    COMPLETION_PRICE_DESC = 'completion_price_desc'
+}
+
+/**
  * Represents the formatted information for a model, suitable for display.
  */
 export interface FormattedModelInfo {
@@ -129,49 +140,57 @@ export class OpenRouterService {
      * Sorts an array of models based on specified criteria.
      * @param models The array of models to sort.
      * @param sortCriteria The sorting criteria ('alphabetical', 'prompt_price_asc', 'prompt_price_desc', 
-     *                     'completion_price_asc', 'completion_price_desc'). Defaults to 'alphabetical'.
+     * @param sortCriteria The sorting criteria enum value. Defaults to `ModelSortOption.ALPHABETICAL`.
      * @returns The sorted array of models.
      */
-    sortModels(models: OpenRouterModel[], sortCriteria: string = 'alphabetical'): OpenRouterModel[] {
+    sortModels(models: OpenRouterModel[], sortCriteria: ModelSortOption = ModelSortOption.ALPHABETICAL): OpenRouterModel[] {
         const modelsToSort = [...models];
 
         modelsToSort.sort((a, b) => {
             let comparison = 0;
 
             switch (sortCriteria) {
-                case 'prompt_price_asc':
-                case 'prompt_price_desc':
+                case ModelSortOption.PROMPT_PRICE_ASC:
+                case ModelSortOption.PROMPT_PRICE_DESC:
                     const promptPriceA = parseFloat(a.pricing?.prompt ?? 'Infinity') || Infinity;
                     const promptPriceB = parseFloat(b.pricing?.prompt ?? 'Infinity') || Infinity;
-                    
+
                     if (promptPriceA === Infinity && promptPriceB === Infinity) {
-                        comparison = 0;
+                        comparison = 0; // Treat two unknowns as equal
+                    } else if (promptPriceA === Infinity) {
+                        comparison = 1; // Put unknown price after known price
+                    } else if (promptPriceB === Infinity) {
+                        comparison = -1; // Put known price before unknown price
                     } else {
                         comparison = promptPriceA - promptPriceB;
                     }
 
-                    if (sortCriteria === 'prompt_price_desc') {
+                    if (sortCriteria === ModelSortOption.PROMPT_PRICE_DESC) {
                         comparison *= -1;
                     }
                     break;
-                
-                case 'completion_price_asc':
-                case 'completion_price_desc':
+
+                case ModelSortOption.COMPLETION_PRICE_ASC:
+                case ModelSortOption.COMPLETION_PRICE_DESC:
                     const completionPriceA = parseFloat(a.pricing?.completion ?? 'Infinity') || Infinity;
                     const completionPriceB = parseFloat(b.pricing?.completion ?? 'Infinity') || Infinity;
-                    
+
                     if (completionPriceA === Infinity && completionPriceB === Infinity) {
                         comparison = 0;
+                    } else if (completionPriceA === Infinity) {
+                        comparison = 1;
+                    } else if (completionPriceB === Infinity) {
+                        comparison = -1;
                     } else {
                         comparison = completionPriceA - completionPriceB;
                     }
 
-                    if (sortCriteria === 'completion_price_desc') {
+                    if (sortCriteria === ModelSortOption.COMPLETION_PRICE_DESC) {
                         comparison *= -1;
                     }
                     break;
 
-                case 'alphabetical':
+                case ModelSortOption.ALPHABETICAL:
                 default:
                     const nameA = a.name?.toLowerCase() ?? a.id?.toLowerCase() ?? '';
                     const nameB = b.name?.toLowerCase() ?? b.id?.toLowerCase() ?? '';
