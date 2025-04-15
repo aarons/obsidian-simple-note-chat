@@ -77,7 +77,6 @@ export class ChatService {
         let initialInsertPos: EditorPosition | null = null;
 
         try {
-            console.log(`Starting chat stream for note: ${notePath} with model: ${defaultModel}`);
             const statusInfo = this.findAndRemoveStatusMessage(editor, settings);
             if (statusInfo) {
                 statusRemoved = true;
