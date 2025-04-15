@@ -84,7 +84,6 @@ export class EditorHandler {
 		if (settings.ddCommandPhrase && settings.enableDeleteCommand) activeCommands.push({ phrase: settings.ddCommandPhrase, type: 'dd' });
 		if (settings.nnCommandPhrase && settings.enableNnCommandPhrase) activeCommands.push({ phrase: settings.nnCommandPhrase, type: 'nn' });
 
-		// Find matching command
 		const matchedCommand = activeCommands.find(cmd => cmd.phrase === lastLineTrimmedContent);
 
 		if (matchedCommand) {
@@ -121,7 +120,7 @@ export class EditorHandler {
 		lineStartPos: EditorPosition,
 		lineEndPos: EditorPosition,
 		contentBeforeCommand: string,
-		lines: string[] // Original lines array
+		lines: string[]
 	): void {
 
 		const file = markdownView.file; // Re-check file existence
@@ -147,12 +146,12 @@ export class EditorHandler {
 				const modelName = settings.defaultModel || 'default model';
 				const statusMessage = `Calling ${modelName}...`;
 				editor.replaceRange(statusMessage, lineStartPos, lineEndPos);
-				editor.setCursor(lineStartPos); // Cursor at start of status message
+				editor.setCursor(lineStartPos);
 
 				this.plugin.chatService.startChat(
 					contentBeforeCommand,
 					editor,
-					file!, // We checked file existence above
+					file!,
 					settings
 				).catch(error => {
 					console.error("Error starting chat:", error);
@@ -163,7 +162,7 @@ export class EditorHandler {
 				break;
 
 			case 'gg':
-				editor.replaceRange('', lineStartPos, lineEndPos); // Remove command line first
+				editor.replaceRange('', lineStartPos, lineEndPos);
 				setCursorAfterAction();
 
 				const noteContentGg = editor.getValue(); // Get content *after* removing command line
@@ -177,7 +176,7 @@ export class EditorHandler {
 				(async () => {
 					try {
 						const newPath = await this.plugin.fileSystemService.moveFileToArchive(
-							file!, // Checked above
+							file!,
 							settings.archiveFolderName,
 							settings
 						);
@@ -202,12 +201,12 @@ export class EditorHandler {
 				}
 
 				if (confirm("Are you sure you want to move this note to the trash?")) {
-					editor.replaceRange('', lineStartPos, lineEndPos); // Remove command line *before* deleting
+					editor.replaceRange('', lineStartPos, lineEndPos);
 					setCursorAfterAction();
 
 					(async () => {
 						try {
-							await this.plugin.fileSystemService.deleteFile(file!); // Checked above
+							await this.plugin.fileSystemService.deleteFile(file!);
 							new Notice("Note moved to trash.");
 						} catch (error) {
 							console.error("Error during note deletion:", error);
@@ -221,7 +220,7 @@ export class EditorHandler {
 				break;
 
 			case 'nn':
-				editor.replaceRange('', lineStartPos, lineEndPos); // Remove command line *before* executing
+				editor.replaceRange('', lineStartPos, lineEndPos);
 				setCursorAfterAction();
 
 				// @ts-ignore - Assuming 'commands' exists on app
