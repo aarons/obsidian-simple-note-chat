@@ -33,7 +33,8 @@ export class EditorHandler {
 
 			if (stopSequence && content.includes(stopSequence)) {
 				console.log(`Stop sequence "${stopSequence}" detected in active stream file: ${filePath}`);
-				if (this.plugin.chatService.cancelStream(filePath)) {
+				// Pass editor and settings to cancelStream
+				if (this.plugin.chatService.cancelStream(filePath, editor, settings)) {
 					const sequenceIndex = content.lastIndexOf(stopSequence);
 					if (sequenceIndex !== -1) {
 						const startPos = editor.offsetToPos(sequenceIndex);
@@ -144,20 +145,39 @@ export class EditorHandler {
 		switch (commandType) {
 			case 'cc':
 				const modelName = settings.defaultModel || 'default model';
-				const statusMessage = `Calling ${modelName}...`;
-				editor.replaceRange(statusMessage, lineStartPos, lineEndPos);
-				editor.setCursor(lineStartPos);
+				// Ensure status message ends with a newline for consistent removal later
+				const statusMessage = `Calling ${modelName}...\n`;
+				const statusMessageStartPos = lineStartPos; // Status replaces the command line
 
+				// Replace the command line with the status message
+				editor.replaceRange(statusMessage, lineStartPos, lineEndPos);
+
+				// Calculate the end position of the inserted status message
+				const statusMessageEndOffset = editor.posToOffset(statusMessageStartPos) + statusMessage.length;
+				const statusMessageEndPos = editor.offsetToPos(statusMessageEndOffset);
+
+				// Set cursor to the beginning of the status message (optional, could be end)
+				editor.setCursor(statusMessageStartPos);
+				console.log(`Inserted status message. Start: [${statusMessageStartPos.line}, ${statusMessageStartPos.ch}], End: [${statusMessageEndPos.line}, ${statusMessageEndPos.ch}]`);
+
+				// Call startChat with the positions
 				this.plugin.chatService.startChat(
-					contentBeforeCommand,
 					editor,
 					file!,
-					settings
+					settings,
+					statusMessageStartPos,
+					statusMessageEndPos
 				).catch(error => {
 					console.error("Error starting chat:", error);
-					const currentLineEndPos: EditorPosition = { line: lineStartPos.line, ch: statusMessage.length };
+					// Attempt to replace the status message with an error message
 					const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-					editor.replaceRange(`Error: ${errorMessage}`, lineStartPos, currentLineEndPos);
+					try {
+						editor.replaceRange(`Error: ${errorMessage}`, statusMessageStartPos, statusMessageEndPos);
+					} catch (replaceError) {
+						console.error("Failed to replace status message with error:", replaceError);
+						// Fallback notice if replacing fails
+						new Notice(`Chat Error: ${errorMessage}`);
+					}
 				});
 				break;
 

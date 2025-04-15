@@ -139,12 +139,17 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	private handleKeyDown(evt: KeyboardEvent): void {
 		if (evt.key === 'Escape') {
 			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (activeView && activeView.file) {
 				const filePath = activeView.file.path;
 				if (this.chatService.isStreamActive(filePath)) {
 					console.log(`Escape key pressed, attempting to cancel stream for: ${filePath}`);
-					if (this.chatService.cancelStream(filePath)) {
-						new Notice("Chat stream cancelled.");
+					// Pass editor and settings to cancelStream
+					if (this.chatService.cancelStream(filePath, activeView.editor, this.settings)) {
+						// Notice is now handled within cancelStream upon successful cancellation
+						console.log("Stream cancellation initiated by Escape key.");
+					} else {
+						console.log("Escape key pressed, but no active stream found or cancellation failed.");
 					}
 				}
 			}
