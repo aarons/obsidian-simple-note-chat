@@ -33,6 +33,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.createEl('h2', { text: 'Simple Note Chat - Settings' });
 
+		// ========== 1. LLM SETUP ==========
+		containerEl.createEl('h3', { text: 'LLM Setup' });
+
 		new Setting(containerEl)
 			.setName('OpenRouter API Key')
 			.setDesc('Enter your OpenRouter API key. Get one from openrouter.ai')
@@ -108,56 +111,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			});
 		});
 
-
-		new Setting(containerEl)
-			.setName('Stop Sequence')
-			.setDesc('Type this sequence anywhere in the note while a response is streaming to stop it.')
-			.addText(text => text
-				.setPlaceholder(DEFAULT_STOP_SEQUENCE)
-				.setValue(this.plugin.settings.stopCommandSequence)
-				.onChange(async (value) => {
-					const trimmedValue = value.trim();
-					if (trimmedValue) {
-						this.plugin.settings.stopCommandSequence = trimmedValue;
-						await this.plugin.saveSettings();
-						new Notice('Stop sequence saved.');
-					} else {
-						new Notice('Stop sequence cannot be empty.');
-						text.setValue(this.plugin.settings.stopCommandSequence);
-					}
-				}));
-
-		new Setting(containerEl)
-			.setName('Enable Viewport Scrolling')
-			.setDesc('Automatically scroll the note to the bottom as the chat response streams in.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableViewportScrolling)
-				.onChange(async (value) => {
-					this.plugin.settings.enableViewportScrolling = value;
-					await this.plugin.saveSettings();
-					new Notice(`Viewport scrolling ${value ? 'enabled' : 'disabled'}.`);
-				}));
-
-		new Setting(containerEl)
-			.setName('Archive Folder')
-			.setDesc('Folder where notes will be moved when using the archive command (relative to vault root).')
-			.addText(text => text
-				.setPlaceholder(DEFAULT_ARCHIVE_FOLDER)
-				.setValue(this.plugin.settings.archiveFolderName)
-				.onChange(async (value) => {
-					const trimmedValue = value.trim();
-					const normalizedValue = trimmedValue ? (trimmedValue.endsWith('/') ? trimmedValue : `${trimmedValue}/`) : '';
-
-					if (this.plugin.settings.archiveFolderName !== normalizedValue) {
-						this.plugin.settings.archiveFolderName = normalizedValue;
-						await this.plugin.saveSettings();
-						new Notice('Archive folder setting saved.');
-						text.setValue(normalizedValue);
-					}
-				}));
-
-
-		containerEl.createEl('h3', { text: 'Custom Phrases & Separator' });
+		// ========== 2. CHAT COMMAND (cc) ==========
+		containerEl.createEl('h3', { text: 'Chat Command (cc)' });
 
 		new Setting(containerEl)
 			.setName('Chat Command Phrase')
@@ -189,40 +144,32 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Archive Command Phrase')
-			.setDesc(`Phrase to trigger archiving the current chat note (Default: ${ARCHIVE_COMMAND_DEFAULT}).`)
+			.setName('Stop Sequence')
+			.setDesc('Type this sequence anywhere in the note while a response is streaming to stop it.')
 			.addText(text => text
-				.setPlaceholder(ARCHIVE_COMMAND_DEFAULT)
-				.setValue(this.plugin.settings.archiveCommandPhrase)
+				.setPlaceholder(DEFAULT_STOP_SEQUENCE)
+				.setValue(this.plugin.settings.stopCommandSequence)
 				.onChange(async (value) => {
 					const trimmedValue = value.trim();
-					if (trimmedValue && this.plugin.settings.archiveCommandPhrase !== trimmedValue) {
-						this.plugin.settings.archiveCommandPhrase = trimmedValue;
+					if (trimmedValue) {
+						this.plugin.settings.stopCommandSequence = trimmedValue;
 						await this.plugin.saveSettings();
-						new Notice('Archive command phrase saved.');
-					} else if (!trimmedValue) {
-						new Notice('Command phrase cannot be empty.');
-						text.setValue(this.plugin.settings.archiveCommandPhrase); // Revert if empty
+						new Notice('Stop sequence saved.');
+					} else {
+						new Notice('Stop sequence cannot be empty.');
+						text.setValue(this.plugin.settings.stopCommandSequence);
 					}
 				}));
 
-
 		new Setting(containerEl)
-			.setName('New Chat Command Phrase')
-			.setDesc(`Phrase to trigger creating a new chat note (if enabled) (Default: ${NEW_CHAT_COMMAND_DEFAULT}).`)
-			.addText(text => text
-				.setPlaceholder(NEW_CHAT_COMMAND_DEFAULT)
-				.setValue(this.plugin.settings.newChatCommandPhrase)
+			.setName('Enable Viewport Scrolling')
+			.setDesc('Automatically scroll the note to the bottom as the chat response streams in.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enableViewportScrolling)
 				.onChange(async (value) => {
-					const trimmedValue = value.trim();
-					if (trimmedValue && this.plugin.settings.newChatCommandPhrase !== trimmedValue) {
-						this.plugin.settings.newChatCommandPhrase = trimmedValue;
-						await this.plugin.saveSettings();
-						new Notice('New chat command phrase saved.');
-					} else if (!trimmedValue) {
-						new Notice('Command phrase cannot be empty.');
-						text.setValue(this.plugin.settings.newChatCommandPhrase); // Revert if empty
-					}
+					this.plugin.settings.enableViewportScrolling = value;
+					await this.plugin.saveSettings();
+					new Notice(`Viewport scrolling ${value ? 'enabled' : 'disabled'}.`);
 				}));
 
 		new Setting(containerEl)
@@ -240,11 +187,44 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
-		new Setting(containerEl)
-			.setName('Note on Custom Phrases & Separator')
-			.setDesc('Changing command phrases or the separator may require Obsidian to be reloaded for the changes to take full effect in the editor detection.');
+		// ========== 3. ARCHIVE COMMAND (gg) ==========
+		containerEl.createEl('h3', { text: 'Archive Command (gg)' });
 
-		containerEl.createEl('h3', { text: 'Archive Chat (`gg`) Command Settings' });
+		new Setting(containerEl)
+			.setName('Archive Command Phrase')
+			.setDesc(`Phrase to trigger archiving the current chat note (Default: ${ARCHIVE_COMMAND_DEFAULT}).`)
+			.addText(text => text
+				.setPlaceholder(ARCHIVE_COMMAND_DEFAULT)
+				.setValue(this.plugin.settings.archiveCommandPhrase)
+				.onChange(async (value) => {
+					const trimmedValue = value.trim();
+					if (trimmedValue && this.plugin.settings.archiveCommandPhrase !== trimmedValue) {
+						this.plugin.settings.archiveCommandPhrase = trimmedValue;
+						await this.plugin.saveSettings();
+						new Notice('Archive command phrase saved.');
+					} else if (!trimmedValue) {
+						new Notice('Command phrase cannot be empty.');
+						text.setValue(this.plugin.settings.archiveCommandPhrase); // Revert if empty
+					}
+				}));
+
+		new Setting(containerEl)
+			.setName('Archive Folder')
+			.setDesc('Folder where notes will be moved when using the archive command (relative to vault root).')
+			.addText(text => text
+				.setPlaceholder(DEFAULT_ARCHIVE_FOLDER)
+				.setValue(this.plugin.settings.archiveFolderName)
+				.onChange(async (value) => {
+					const trimmedValue = value.trim();
+					const normalizedValue = trimmedValue ? (trimmedValue.endsWith('/') ? trimmedValue : `${trimmedValue}/`) : '';
+
+					if (this.plugin.settings.archiveFolderName !== normalizedValue) {
+						this.plugin.settings.archiveFolderName = normalizedValue;
+						await this.plugin.saveSettings();
+						new Notice('Archive folder setting saved.');
+						text.setValue(normalizedValue);
+					}
+				}));
 
 		new Setting(containerEl)
 			.setName('Rename Note on Archive (Date/Time)')
@@ -314,7 +294,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}
 			});
 
-
 		new Setting(llmSettingsContainer)
 			.setName('Include Emojis in LLM Title')
 			.setDesc('Allow the LLM to include relevant emojis in the title.')
@@ -342,14 +321,32 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		llmSettingsContainer.style.display = this.plugin.settings.enableArchiveRenameLlm ? 'block' : 'none';
 
+		// ========== 4. NEW CHAT COMMAND (nn) ==========
+		containerEl.createEl('h3', { text: 'New Chat Command (nn)' });
 
-		containerEl.createEl('h3', { text: 'New Chat Command Triggers' });
+		new Setting(containerEl)
+			.setName('New Chat Command Phrase')
+			.setDesc(`Phrase to trigger creating a new chat note (Default: ${NEW_CHAT_COMMAND_DEFAULT}).`)
+			.addText(text => text
+				.setPlaceholder(NEW_CHAT_COMMAND_DEFAULT)
+				.setValue(this.plugin.settings.newChatCommandPhrase)
+				.onChange(async (value) => {
+					const trimmedValue = value.trim();
+					if (trimmedValue && this.plugin.settings.newChatCommandPhrase !== trimmedValue) {
+						this.plugin.settings.newChatCommandPhrase = trimmedValue;
+						await this.plugin.saveSettings();
+						new Notice('New chat command phrase saved.');
+					} else if (!trimmedValue) {
+						new Notice('Command phrase cannot be empty.');
+						text.setValue(this.plugin.settings.newChatCommandPhrase); // Revert if empty
+					}
+				}));
 
 		new Setting(containerEl)
 			.setName('Enable New Chat Phrase Trigger')
-			.setDesc(`Type the 'New Chat' phrase (default: ${NEW_CHAT_COMMAND_DEFAULT}) at the end of any note to trigger the 'Create New Chat Note' command.`)
+			.setDesc(`Type the New Chat phrase at the end of any note to trigger the 'Create New Chat Note' command.`)
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableNnCommandPhrase) // Keep internal setting name for consistency
+				.setValue(this.plugin.settings.enableNnCommandPhrase)
 				.onChange(async (value) => {
 					this.plugin.settings.enableNnCommandPhrase = value;
 					await this.plugin.saveSettings();
@@ -358,7 +355,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Enable Ribbon Button Trigger')
-			.setDesc('Add a button to the left ribbon bar to trigger the \'Create New Chat Note\' command.')
+			.setDesc('Add a button to the left ribbon bar to trigger the New Chat command.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableNnRibbonButton)
 				.onChange(async (value) => {
@@ -369,7 +366,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Enable Keyboard Shortcut Trigger')
-			.setDesc('Allow assigning a keyboard shortcut in Obsidian\'s hotkey settings for the \'Create New Chat Note\' command.')
+			.setDesc('Allow assigning a keyboard shortcut in Obsidian\'s hotkey settings for the New Chat command.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableNnKeyboardShortcut)
 				.onChange(async (value) => {
@@ -380,15 +377,23 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Archive Current Note on New Chat')
-			.setDesc(`Automatically archive the current note (like using the Archive command) before creating the new one when using the New Chat command/phrase/button.`)
+			.setDesc('Automatically archive the current note before creating a new one when using the New Chat command.')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.archivePreviousNoteOnNn) // Keep internal setting name
+				.setValue(this.plugin.settings.archivePreviousNoteOnNn)
 				.onChange(async (value) => {
 					this.plugin.settings.archivePreviousNoteOnNn = value;
 					await this.plugin.saveSettings();
 					new Notice(`Archive on New Chat ${value ? 'enabled' : 'disabled'}.`);
 				}));
 
+		// ========== GENERAL INFORMATION ==========
+		containerEl.createEl('h3', { text: 'Additional Information' });
+		
+		new Setting(containerEl)
+			.setName('Command Phrases & Separators')
+			.setDesc('Changing command phrases or the separator may require Obsidian to be reloaded for the changes to take full effect in the editor detection.');
+
+		// Load models if API key is set
 		if (this.plugin.settings.apiKey) {
 			this.fetchAndStoreModels(false);
 		} else {

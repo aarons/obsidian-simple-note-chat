@@ -183,67 +183,35 @@ The default command phrases (`cc`, `gg`, `dd`, `nn`) and the stop sequence (`sto
 
 Configure the plugin via the Obsidian settings panel (`Settings` -> `Community Plugins` -> `Simple Note Chat`):
 
-**OpenRouter Authentication**
+### LLM Setup
+- **OpenRouter API Key**: Enter your API key from OpenRouter.ai
+- **Refresh Model List**: Update the available models from OpenRouter
+- **Sort Model Lists By**: Choose how to organize models (alphabetical or by price)
+- **Default Chat Model**: Select which model to use for new chats
 
-OpenRouter is used as the default model provider. More providers can be added if needed.
+### Chat Command (cc)
+- **Chat Command Phrase**: The text that triggers a chat completion (default: `cc`)
+- **Enable Chat Keyboard Shortcut**: Make the command available for hotkey assignment
+- **Stop Sequence**: Text to type during streaming to stop the response (default: `stop`)
+- **Enable Viewport Scrolling**: Automatically scroll to follow the AI response
+- **Chat Separator**: Markdown used to separate messages (default: `<hr>`)
 
-**Default Chat Model**
+### Archive Command (gg)
+- **Archive Command Phrase**: Text that triggers archiving (default: `gg`)
+- **Archive Folder**: Where archived notes are stored (default: `archived/`)
+- **Rename Note on Archive**: Options for renaming notes when archived
+  - Date/Time format (e.g., YYYY-MM-DD-HH-mm)
+  - LLM-generated title based on note content
+  - Word limit for generated titles
+  - Option to include emojis
+  - Model to use for title generation
 
-Choose the default LLM to use for chats. Includes a button to refresh the list of available models from OpenRouter.
-
-**Initiate Chat**
-
-Configuration Options:
-- The phrase to use to initiate a chat, default: cc
-- Optional keyboard shortcut to initiate chat (shift-control-c for example)
-
-**Scroll Viewport**
-
-Choose whether the note view automatically scrolls down as the response streams. This is turned off by default.
-
-- whether to scroll the viewport when receiving a response
-    - yes: will move the view to the bottom of the note
-    - no: will not move the viewport; the file is updated in the background
-    	- allows user to scroll down at their own pace, or to navigate away to another file until this one is updated
-
-**Chat Separator**
-
-Customize the markdown used to separate messages (default: `<hr>`).
-
-Using common markdown like `---` might interfere with parsing the note when sending it for a chat, but it is easier to type if you frequently modify existing chats.
-
-**Archive Chat**
-
-Configuration Options:
-- The phrase used to initiate a note archival, default: gg
-- The folder where chats are moved using the archive command, default: archived/
-- Whether to change the note title when archiving (default: off)
-    - when turned on, default name is: year-month-day-hour-min
-    - optionally can use custom date strings
-    - optionally can use LLM to append a subject title
-        - limit to X words (default 3)
-        - include emojies (default false)
-        - model to use for titling the note
-            - default the same model
-            - optional select a different model for titles
-
-**New Chat**
-
-This is a shortcut for creating a new blank note in Obsidian and giving it the current date and time. There is no requirement of creating a blank note, you can chat from any note in your vault using the `cc` phrase.
-
-Enable one or more methods for quickly creating new chat notes:
-- The phrase to use, default: nn
-- Whether to add a ribbon button
-- Whether to enable a keyboard shortcut
-
-
-
-**Stop Streaming**
-
-Configure methods to stop an LLM response mid-stream:
-
-- Stop Shortcut Key: Customize the keyboard shortcut (default: `Escape`).
-- Stop Typed Sequence: Customize the typed sequence (default: `stop`).
+### New Chat Command (nn)
+- **New Chat Command Phrase**: Text that creates a new chat note (default: `nn`)
+- **Enable New Chat Phrase Trigger**: Activate the command by typing the phrase
+- **Enable Ribbon Button**: Add a button to the Obsidian sidebar
+- **Enable Keyboard Shortcut**: Make the command available for hotkey assignment
+- **Archive Current Note on New Chat**: Automatically archive the current note before creating a new one
 
 ## License
 
