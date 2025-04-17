@@ -273,5 +273,4 @@ export class EditorHandler {
 		this.app.commands.executeCommandById('simple-note-chat:create-new-chat-note');
 		new Notice("Creating new chat note...");
 	}
-	}
 }
