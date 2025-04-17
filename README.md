@@ -194,8 +194,8 @@ Choose the default LLM to use for chats. Includes a button to refresh the list o
 **Initiate Chat**
 
 Configuration Options:
-- the phrase to use to initiate a chat, default: cc
-- optional keyboard shortcut to initiate chat (shift-control-c for example)
+- The phrase to use to initiate a chat, default: cc
+- Optional keyboard shortcut to initiate chat (shift-control-c for example)
 
 **Scroll Viewport**
 
@@ -237,13 +237,6 @@ Enable one or more methods for quickly creating new chat notes:
 - Whether to enable a keyboard shortcut
 
 
-**Delete Chat**
-
-Configure the note deletion command:
-
-- Enable Deleting Chats: Checkbox to enable/disable the delete command (default: `false`).
-- Delete Phrase: Customize the phrase for deletion (default: `dd`).
-- Bypass Separator Check: Disable the safety check that requires chat separators in a note for deletion to occur (default: `false`)
 
 **Stop Streaming**
 
