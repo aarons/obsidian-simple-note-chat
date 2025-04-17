@@ -29,7 +29,7 @@ export class ChatService {
         const chatBoundaryMarker = '^^^';
         let contentToParse = fullContent;
 
-        const boundaryIndex = fullContent.indexOf(`\n${chatBoundaryMarker}\n`); // Look for marker on its own line
+        const boundaryIndex = fullContent.indexOf(`\n${chatBoundaryMarker}\n`);
 
         if (boundaryIndex !== -1) {
             // Find the start of the content *after* the marker line
