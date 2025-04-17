@@ -62,6 +62,34 @@ cc  <- No newline after cc
 Becca was really nice today <- 'cc' is in someones name
 ```
 
+### Using Hat Mode to Constrain Chat Context
+
+You can limit which parts of your note are sent to the chat model by using the "hat mode" feature. This is useful for long notes where you only want to chat about specific content.
+
+To use hat mode:
+1. Add a line containing only `^^^` (three caret symbols) somewhere in your note
+2. The chat will only consider content *below* this marker
+3. Content above the marker will be ignored when sending to the LLM
+
+**Example:**
+
+```markdown
+# Research Notes
+These are my personal thoughts on the topic.
+Some private notes I don't want to send to the LLM.
+
+^^^
+
+# Questions for AI
+What's the relationship between temperature and pressure in a closed system?
+
+cc
+```
+
+In this example, only the content after the `^^^` marker will be sent to the chat model. The content above the marker remains private.
+
+If no `^^^` marker is found, the entire note content will be used as before.
+
 
 ### Conversation Structure
 
