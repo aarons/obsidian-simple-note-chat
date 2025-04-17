@@ -215,8 +215,15 @@ Configure the plugin via the Obsidian settings panel (`Settings` -> `Community P
 
 ## License
 
-This project is licensed under the **Affero General Public License (AGPL) v3.0 or later**. See the `CONTRIBUTING.md` file for more details.
+This project is licensed under the **Affero General Public License (AGPL) v3.0 or later**. See the [contributing.md](contributing.md) file for more details.
 
 ## Contributing
 
-Contributions are welcome! Please see the [contributing.md](contributing.md) file for development setup instructions and contribution guidelines.
+Contributions are welcome!
+
+In short:
+
+*   Please open a Pull Request (PR) with a clear explanation of the changes.
+*   Contributions that add third-party dependencies are unlikely to be accepted due to security risks.
+
+Please see the [contributing.md](contributing.md) file for development setup and more guidelines.
