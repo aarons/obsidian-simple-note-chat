@@ -25,10 +25,24 @@ export class ChatService {
      * @param separator The separator used to divide messages.
      * @returns An array of ChatMessage objects.
      */
-    private parseNoteContent(content: string, separator: string): ChatMessage[] {
-        const parts = content.split(separator)
-                             .map(part => part.trim())
-                             .filter(part => part.length > 0);
+    private parseNoteContent(fullContent: string, separator: string): ChatMessage[] {
+        const chatBoundaryMarker = '^^^';
+        let contentToParse = fullContent;
+
+        const boundaryIndex = fullContent.indexOf(`\n${chatBoundaryMarker}\n`); // Look for marker on its own line
+
+        if (boundaryIndex !== -1) {
+            // Find the start of the content *after* the marker line
+            const startIndex = boundaryIndex + `\n${chatBoundaryMarker}\n`.length;
+            contentToParse = fullContent.substring(startIndex);
+            log.debug(`Found chat boundary marker "^^^". Parsing content starting from index ${startIndex}.`);
+        } else {
+            log.debug(`Chat boundary marker "^^^" not found. Parsing entire content.`);
+        }
+
+        const parts = contentToParse.split(separator)
+                                    .map(part => part.trim())
+                                    .filter(part => part.length > 0);
 
         const messages: ChatMessage[] = [];
         let currentRole: 'user' | 'assistant' = 'user';
