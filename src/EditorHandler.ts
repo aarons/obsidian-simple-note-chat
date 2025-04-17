@@ -8,6 +8,7 @@ import { log } from './utils/logger';
 export class EditorHandler {
 	private app: App;
 	private plugin: SimpleNoteChat;
+	private activationTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
 	constructor(app: App, plugin: SimpleNoteChat) {
 		this.app = app;
@@ -23,6 +24,13 @@ export class EditorHandler {
 			return;
 		}
 		const filePath = file.path;
+
+		// cancel any pending 0.5‑second activations for this file
+		const pending = this.activationTimers.get(filePath);
+		if (pending) {
+			clearTimeout(pending);
+			this.activationTimers.delete(filePath);
+		}
 
 		// --- Handle Stop Sequence during Active Stream ---
 		if (this.plugin.chatService.isStreamActive(filePath)) {
@@ -57,65 +65,45 @@ export class EditorHandler {
 			return;
 		}
 
-		// --- Detect Command Phrases ---
-		// Find the last non-empty line, ensuring it's followed by at least one empty/whitespace line.
-		const editorContent = editor.getValue();
-		const lines = editorContent.split('\n');
-		const lastLineIndex = lines.length - 1;
+		// --- Detect Command Phrases (support <phrase><Enter>  OR  <phrase><space>[0.5s]) ---
 
-		if (lastLineIndex < 0) {
-			return; // Empty file
+		const lines = editor.getValue().split('\n');
+
+		// 1. locate last content line (≠ empty after trim)
+		let lastContentLineIdx = lines.length - 1;
+		while (lastContentLineIdx >= 0 && lines[lastContentLineIdx].trim() === '') {
+			lastContentLineIdx--;
 		}
+		if (lastContentLineIdx < 0) return;                      // whole file is blank
+		const lastContentLine = lines[lastContentLineIdx];
 
-		// 1. Check if the very last line is empty or whitespace
-		if (lines[lastLineIndex].trim() !== '') {
-			return; // Last line has content, not a command trigger
-		}
+		// 2. build phrase→handler map (as before)
+		const commandHandlers: Record<string, () => void> = {};
+		if (settings.chatCommandPhrase)  commandHandlers[settings.chatCommandPhrase]  = () => this._handleChatCommand(editor, markdownView, settings, lastContentLineIdx, lines);
+		if (settings.archiveCommandPhrase) commandHandlers[settings.archiveCommandPhrase] = () => this._handleArchiveCommand(editor, markdownView, settings, lastContentLineIdx, lines);
+		if (settings.newChatCommandPhrase && settings.enableNnCommandPhrase)
+			commandHandlers[settings.newChatCommandPhrase] = () => this._handleNewChatCommand(editor, markdownView, settings, lastContentLineIdx, lines);
 
-		// 2. Find the last non-empty line index before the trailing empty lines
-		let commandLineIndex = -1;
-		let commandLineContent = '';
-		for (let i = lastLineIndex - 1; i >= 0; i--) {
-			if (lines[i].trim() !== '') {
-				commandLineIndex = i;
-				commandLineContent = lines[i]; // Use the exact line content for matching
-				break;
-			}
-		}
-
-		if (commandLineIndex === -1) {
-			return; // No non-empty line found before the last empty one(s)
+		// 3a.  <phrase><Enter> variant  (i.e. at least one blank line follows)
+		const hasTrailingBlank = lastContentLineIdx < lines.length - 1;
+		if (hasTrailingBlank && commandHandlers[lastContentLine]) {
+			commandHandlers[lastContentLine]();
+			return;
 		}
 
-		// Create direct mapping of command phrases to handler functions
-		const commandHandlers: {[phrase: string]: () => void} = {};
-		
-		if (settings.chatCommandPhrase) {
-			commandHandlers[settings.chatCommandPhrase] = () => {
-				this._handleChatCommand(editor, markdownView, settings, commandLineIndex, lines);
-			};
-		}
-		
-		if (settings.archiveCommandPhrase) {
-			commandHandlers[settings.archiveCommandPhrase] = () => {
-				this._handleArchiveCommand(editor, markdownView, settings, commandLineIndex, lines);
-			};
-		}
-		
-		if (settings.newChatCommandPhrase && settings.enableNnCommandPhrase) {
-			commandHandlers[settings.newChatCommandPhrase] = () => {
-				this._handleNewChatCommand(editor, markdownView, settings, commandLineIndex, lines);
-			};
-		}
-
-		// Match against the *exact* content of the last non-empty line
-		const handler = commandHandlers[commandLineContent];
-		
-		if (handler) {
-			log.debug(`Detected command phrase: ${commandLineContent} on line ${commandLineIndex}`);
-			
-			// Execute the appropriate handler directly
-			handler();
+		// 3b.  <phrase><space> variant  (no blank line yet, ends with space)
+		const trimmed = lastContentLine.trimEnd();              // drop right‑side spaces
+		if (lastContentLine.endsWith(' ') && commandHandlers[trimmed]) {
+			const timeout = setTimeout(() => {
+				// re‑check that nothing changed during the delay
+				const currentLines = editor.getValue().split('\n');
+				const idx = currentLines.length - 1;
+				if (idx >= 0 && currentLines[idx] === lastContentLine) {
+					commandHandlers[trimmed]();
+				}
+				this.activationTimers.delete(filePath);
+			}, 500);                                            // 0.5 s
+			this.activationTimers.set(filePath, timeout);
 		}
 	}
 

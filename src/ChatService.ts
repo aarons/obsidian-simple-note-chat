@@ -147,30 +147,46 @@ export class ChatService {
 
                     } else {
                         if (!lastPosition) {
-                             throw new Error("Internal state error: lastPosition not set after first chunk.");
-                        }
-                        const from = lastPosition;
-                        const to = lastPosition;
-                        editor.replaceRange(chunk, from, to);
-                        lastPosition = editor.offsetToPos(editor.posToOffset(from) + chunk.length);
-                    }
+                       // 1. normalise spacing before the separator
+                       statusMessageStartPos = this.normaliseTrailingNewlines(editor, statusMessageStartPos);
 
-                    // Scroll into view if enabled
-                    if (settings.enableViewportScrolling && lastPosition) {
-                        editor.scrollIntoView({ from: lastPosition, to: lastPosition }, true);
-                    }
-                }
-            } // End for await loop
+                       // 2. insert separator + required blank line
+                       const initialSeparator = `\n\n${settings.chatSeparator}\n\n`;
+                       editor.replaceRange(initialSeparator, statusMessageStartPos, statusMessageStartPos);
+                       currentInsertPos = editor.offsetToPos(editor.posToOffset(statusMessageStartPos) + initialSeparator.length);
 
-            // --- After Stream Completion ---
-            if (!isFirstChunk && lastPosition && currentInsertPos) { // Ensure stream actually inserted content
-                 // Content was added by the stream. Append the final separator and position cursor.
-                 const finalSuffix = `\n${settings.chatSeparator}\n\n`;
-                 editor.replaceRange(finalSuffix, lastPosition, lastPosition);
-                 const finalCursorPos = editor.offsetToPos(editor.posToOffset(lastPosition) + finalSuffix.length);
-                 editor.setCursor(finalCursorPos);
-            } else if (isFirstChunk) {
-                 // Stream finished, but no chunks were received. Status message might still be there.
+                       // 4. Insert the first chunk
+                       editor.replaceRange(chunk, currentInsertPos, currentInsertPos);
+                       lastPosition = editor.offsetToPos(editor.posToOffset(currentInsertPos) + chunk.length);
+                       isFirstChunk = false; // Mark first chunk as processed
+
+                   } else {
+                       if (!lastPosition) {
+                            throw new Error("Internal state error: lastPosition not set after first chunk.");
+                       }
+                       const from = lastPosition;
+                       const to = lastPosition;
+                       editor.replaceRange(chunk, from, to);
+                       lastPosition = editor.offsetToPos(editor.posToOffset(from) + chunk.length);
+                   }
+
+                   // Scroll into view if enabled
+                   if (settings.enableViewportScrolling && lastPosition) {
+                       editor.scrollIntoView({ from: lastPosition, to: lastPosition }, true);
+                   }
+               }
+           } // End for await loop
+
+           // --- After Stream Completion ---
+           if (!isFirstChunk && lastPosition && currentInsertPos) { // Ensure stream actually inserted content
+                // Content was added by the stream. Append the final separator and position cursor.
+                lastPosition = this.normaliseTrailingNewlines(editor, lastPosition);
+                const finalSeparator = `\n\n${settings.chatSeparator}\n\n`;
+                editor.replaceRange(finalSeparator, lastPosition, lastPosition);
+                const finalCursorPos = editor.offsetToPos(editor.posToOffset(lastPosition) + finalSeparator.length);
+                editor.setCursor(finalCursorPos);
+           } else if (isFirstChunk) {
+                // Stream finished, but no chunks were received. Status message might still be there.
                  this.removeStatusMessageAtPos(editor, settings, statusMessageStartPos, statusMessageEndPos, 'Stream ended with no content.');
                  editor.setCursor(statusMessageStartPos); // Place cursor where status message was
             } else if (lastPosition && currentInsertPos) {
@@ -246,6 +262,20 @@ export class ChatService {
         return removed;
     }
 
+    /**
+     * Ensures exactly ONE blank line (== “\n\n”) will precede the next insertion.
+     * Returns the (possibly moved) insertion position.
+     */
+    private normaliseTrailingNewlines(editor: Editor, pos: EditorPosition): EditorPosition {
+        let offset = editor.posToOffset(pos);
+        const txt = editor.getValue();
+        while (offset > 0 && txt[offset - 1] === '\n') offset--;        // strip all trailing \n
+        if (offset !== editor.posToOffset(pos)) {
+            editor.replaceRange('', editor.offsetToPos(offset), pos);   // delete the extras
+        }
+        // now cursor is right after last non‑newline char
+        return editor.offsetToPos(offset);
+    }
 
     /**
      * Checks if a stream is currently active for the given file path.
