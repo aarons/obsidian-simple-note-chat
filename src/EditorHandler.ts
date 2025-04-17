@@ -3,10 +3,7 @@ import SimpleNoteChat from './main';
 import { PluginSettings } from './types';
 import { log } from './utils/logger';
 
-interface CommandInfo {
-	phrase: string;
-	type: 'cc' | 'gg' | 'nn';
-}
+// Command handlers are now mapped directly to phrases
 
 export class EditorHandler {
 	private app: App;
@@ -90,43 +87,65 @@ export class EditorHandler {
 			return; // No non-empty line found before the last empty one(s)
 		}
 
-		// Build list of active commands based on settings
-		const activeCommands: CommandInfo[] = [];
-		if (settings.chatCommandPhrase) activeCommands.push({ phrase: settings.chatCommandPhrase, type: 'cc' });
-		if (settings.archiveCommandPhrase) activeCommands.push({ phrase: settings.archiveCommandPhrase, type: 'gg' });
-		if (settings.newChatCommandPhrase && settings.enableNnCommandPhrase) activeCommands.push({ phrase: settings.newChatCommandPhrase, type: 'nn' });
+		// Create direct mapping of command phrases to handler functions
+		const commandHandlers: {[phrase: string]: () => void} = {};
+		
+		if (settings.chatCommandPhrase) {
+			commandHandlers[settings.chatCommandPhrase] = () => {
+				this._handleChatCommand(editor, markdownView, settings, commandLineIndex, lines);
+			};
+		}
+		
+		if (settings.archiveCommandPhrase) {
+			commandHandlers[settings.archiveCommandPhrase] = () => {
+				this._handleArchiveCommand(editor, markdownView, settings, commandLineIndex, lines);
+			};
+		}
+		
+		if (settings.newChatCommandPhrase && settings.enableNnCommandPhrase) {
+			commandHandlers[settings.newChatCommandPhrase] = () => {
+				this._handleNewChatCommand(editor, markdownView, settings, commandLineIndex, lines);
+			};
+		}
 
-		// 3. Match against the *exact* content of the last non-empty line
-		const matchedCommand = activeCommands.find(cmd => cmd.phrase === commandLineContent);
-
-		if (matchedCommand) {
-			log.debug(`Detected command phrase: ${matchedCommand.phrase} (type: ${matchedCommand.type}) on line ${commandLineIndex}`);
-
-			// 4. Execute the action, passing the index of the command line
-			this._executeCommandAction(
-				matchedCommand.type,
-				editor,
-				markdownView,
-				settings,
-				commandLineIndex,
-				lines // Pass original lines for context if needed
-			);
+		// Match against the *exact* content of the last non-empty line
+		const handler = commandHandlers[commandLineContent];
+		
+		if (handler) {
+			log.debug(`Detected command phrase: ${commandLineContent} on line ${commandLineIndex}`);
+			
+			// Execute the appropriate handler directly
+			handler();
 		}
 	}
 
-	private _executeCommandAction(
-		commandType: 'cc' | 'gg' | 'nn',
+	/**
+	 * Helper to set cursor to the end of the line before the command line
+	 */
+	private _setCursorBeforeCommand(editor: Editor, commandLineIndex: number): void {
+		const targetLineIndex = commandLineIndex - 1;
+		if (targetLineIndex >= 0) {
+			const targetLineLength = editor.getLine(targetLineIndex).length;
+			editor.setCursor({ line: targetLineIndex, ch: targetLineLength });
+		} else {
+			editor.setCursor({ line: 0, ch: 0 }); // Move to start if document is now empty or command was on first line
+		}
+	}
+
+	/**
+	 * Handle the chat command (cc)
+	 */
+	private _handleChatCommand(
 		editor: Editor,
 		markdownView: MarkdownView,
 		settings: PluginSettings,
 		commandLineIndex: number,
-		lines: string[] // Original lines for context
+		lines: string[]
 	): void {
-
-		const file = markdownView.file; // Re-check file existence
-		if (!file && commandType !== 'nn') { // 'nn' doesn't strictly need the current file
-			log.error(`Cannot execute command '${commandType}': markdownView.file is null.`);
-			new Notice(`Failed to execute command '${commandType}': No active file.`);
+		const file = markdownView.file;
+		if (!file) {
+			log.error(`Cannot execute chat command: markdownView.file is null.`);
+			new Notice(`Failed to execute chat command: No active file.`);
 			return;
 		}
 
@@ -135,106 +154,124 @@ export class EditorHandler {
 		// The end position is the end of the entire document to capture all trailing lines
 		const rangeEndPos: EditorPosition = editor.offsetToPos(editor.getValue().length);
 
-		// Helper to set cursor to the end of the line *before* the command line
-		const setCursorBeforeCommand = () => {
-			const targetLineIndex = commandLineIndex - 1;
-			if (targetLineIndex >= 0) {
-				const targetLineLength = editor.getLine(targetLineIndex).length;
-				editor.setCursor({ line: targetLineIndex, ch: targetLineLength });
-			} else {
-				editor.setCursor({ line: 0, ch: 0 }); // Move to start if document is now empty or command was on first line
+		// Ensure status message ends with a newline
+		const statusMessage = `Calling ${settings.defaultModel}...\n`;
+
+		// Replace the command line and all subsequent empty lines with the status message
+		editor.replaceRange(statusMessage, commandLineStartPos, rangeEndPos);
+
+		// Calculate the end position of the inserted status message
+		// Start position is where the command line was.
+		const statusMessageStartPos = commandLineStartPos;
+		// The new end position is calculated *after* the replacement
+		const statusMessageEndOffset = editor.posToOffset(statusMessageStartPos) + statusMessage.length;
+		const statusMessageEndPos = editor.offsetToPos(statusMessageEndOffset);
+
+		// Set cursor to the beginning of the status message
+		editor.setCursor(statusMessageStartPos);
+		log.debug(`Replaced command line and trailing empty lines with status. Range: [${statusMessageStartPos.line}, ${statusMessageStartPos.ch}] to end of doc. New End: [${statusMessageEndPos.line}, ${statusMessageEndPos.ch}]`);
+
+		// Call startChat with the correct positions relative to the *new* content
+		this.plugin.chatService.startChat(
+			editor,
+			file,
+			settings,
+			statusMessageStartPos, // Position where status message starts
+			statusMessageEndPos   // Position where status message ends (calculated above)
+		).catch(error => {
+			log.error("Error starting chat:", error);
+			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+			try {
+				// Attempt to replace the *original* status message range with the error
+				// Need to re-calculate the end position based on the *current* content if the status message was modified
+				const currentStatusEndOffset = editor.posToOffset(statusMessageStartPos) + statusMessage.length;
+				const currentStatusEndPos = editor.offsetToPos(currentStatusEndOffset);
+				editor.replaceRange(`Error: ${errorMessage}\n`, statusMessageStartPos, currentStatusEndPos);
+			} catch (replaceError) {
+				log.error("Failed to replace status message with error:", replaceError);
+				new Notice(`Chat Error: ${errorMessage}`); // Fallback notice
 			}
-		};
+		});
+	}
 
-
-		switch (commandType) {
-			case 'cc':
-				// Ensure status message ends with a newline
-				const statusMessage = `Calling ${settings.defaultModel}...\n`;
-
-				// Replace the command line and all subsequent empty lines with the status message
-				editor.replaceRange(statusMessage, commandLineStartPos, rangeEndPos);
-
-				// Calculate the end position of the inserted status message
-				// Start position is where the command line was.
-				const statusMessageStartPos = commandLineStartPos;
-				// The new end position is calculated *after* the replacement
-				const statusMessageEndOffset = editor.posToOffset(statusMessageStartPos) + statusMessage.length;
-				const statusMessageEndPos = editor.offsetToPos(statusMessageEndOffset);
-
-
-				// Set cursor to the beginning of the status message
-				editor.setCursor(statusMessageStartPos);
-				log.debug(`Replaced command line and trailing empty lines with status. Range: [${statusMessageStartPos.line}, ${statusMessageStartPos.ch}] to end of doc. New End: [${statusMessageEndPos.line}, ${statusMessageEndPos.ch}]`);
-
-				// Call startChat with the correct positions relative to the *new* content
-				this.plugin.chatService.startChat(
-					editor,
-					file!,
-					settings,
-					statusMessageStartPos, // Position where status message starts
-					statusMessageEndPos   // Position where status message ends (calculated above)
-				).catch(error => {
-					log.error("Error starting chat:", error);
-					const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-					try {
-						// Attempt to replace the *original* status message range with the error
-						// Need to re-calculate the end position based on the *current* content if the status message was modified
-						const currentStatusEndOffset = editor.posToOffset(statusMessageStartPos) + statusMessage.length;
-						const currentStatusEndPos = editor.offsetToPos(currentStatusEndOffset);
-						editor.replaceRange(`Error: ${errorMessage}\n`, statusMessageStartPos, currentStatusEndPos);
-					} catch (replaceError) {
-						log.error("Failed to replace status message with error:", replaceError);
-						new Notice(`Chat Error: ${errorMessage}`); // Fallback notice
-					}
-				});
-				break;
-
-			case 'gg':
-				// Check for separator *before* removing lines
-				const noteContentGg = editor.getValue();
-				const chatSeparatorGg = settings.chatSeparator;
-				if (!noteContentGg.includes(chatSeparatorGg)) {
-					new Notice(`Archive command ('gg') requires at least one chat separator ('${chatSeparatorGg}') in the note.`);
-					// Do not remove the command lines if check fails
-					return;
-				}
-
-				// Remove command line and all subsequent empty lines
-				editor.replaceRange('', commandLineStartPos, rangeEndPos);
-				setCursorBeforeCommand(); // Set cursor before async operation
-
-				(async () => {
-					try {
-						const newPath = await this.plugin.fileSystemService.moveFileToArchive(
-							file!,
-							settings.archiveFolderName,
-							settings
-						);
-						if (newPath) { new Notice(`Note archived to: ${newPath}`); }
-						else {
-							new Notice("Failed to archive note.");
-							log.warn("FileSystemService.moveFileToArchive returned null.");
-							// Consider adding back the command lines if archive fails? Might be complex.
-						}
-					} catch (error) {
-						console.error("Error during note archive:", error);
-						new Notice("Failed to archive note. Check console for details.");
-					}
-				})();
-				break;
-
-
-			case 'nn':
-				// Remove command line and all subsequent empty lines
-				editor.replaceRange('', commandLineStartPos, rangeEndPos);
-				setCursorBeforeCommand();
-
-				// Execute the command *after* modifying the editor
-				// @ts-ignore - Assuming 'commands' exists on app
-				this.app.commands.executeCommandById('simple-note-chat:create-new-chat-note');
-				new Notice("Creating new chat note...");
-				break;
+	/**
+	 * Handle the archive command (gg)
+	 */
+	private _handleArchiveCommand(
+		editor: Editor,
+		markdownView: MarkdownView,
+		settings: PluginSettings,
+		commandLineIndex: number,
+		lines: string[]
+	): void {
+		const file = markdownView.file;
+		if (!file) {
+			log.error(`Cannot execute archive command: markdownView.file is null.`);
+			new Notice(`Failed to execute archive command: No active file.`);
+			return;
 		}
+
+		// Define positions for the command line and all subsequent empty lines
+		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
+		// The end position is the end of the entire document to capture all trailing lines
+		const rangeEndPos: EditorPosition = editor.offsetToPos(editor.getValue().length);
+
+		// Check for separator *before* removing lines
+		const noteContentGg = editor.getValue();
+		const chatSeparatorGg = settings.chatSeparator;
+		if (!noteContentGg.includes(chatSeparatorGg)) {
+			new Notice(`Archive command ('${settings.archiveCommandPhrase}') requires at least one chat separator ('${chatSeparatorGg}') in the note.`);
+			// Do not remove the command lines if check fails
+			return;
+		}
+
+		// Remove command line and all subsequent empty lines
+		editor.replaceRange('', commandLineStartPos, rangeEndPos);
+		this._setCursorBeforeCommand(editor, commandLineIndex); // Set cursor before async operation
+
+		(async () => {
+			try {
+				const newPath = await this.plugin.fileSystemService.moveFileToArchive(
+					file,
+					settings.archiveFolderName,
+					settings
+				);
+				if (newPath) { new Notice(`Note archived to: ${newPath}`); }
+				else {
+					new Notice("Failed to archive note.");
+					log.warn("FileSystemService.moveFileToArchive returned null.");
+					// Consider adding back the command lines if archive fails? Might be complex.
+				}
+			} catch (error) {
+				console.error("Error during note archive:", error);
+				new Notice("Failed to archive note. Check console for details.");
+			}
+		})();
+	}
+
+	/**
+	 * Handle the new chat command (nn)
+	 */
+	private _handleNewChatCommand(
+		editor: Editor,
+		markdownView: MarkdownView,
+		settings: PluginSettings,
+		commandLineIndex: number,
+		lines: string[]
+	): void {
+		// Define positions for the command line and all subsequent empty lines
+		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
+		// The end position is the end of the entire document to capture all trailing lines
+		const rangeEndPos: EditorPosition = editor.offsetToPos(editor.getValue().length);
+
+		// Remove command line and all subsequent empty lines
+		editor.replaceRange('', commandLineStartPos, rangeEndPos);
+		this._setCursorBeforeCommand(editor, commandLineIndex);
+
+		// Execute the command *after* modifying the editor
+		// @ts-ignore - Assuming 'commands' exists on app
+		this.app.commands.executeCommandById('simple-note-chat:create-new-chat-note');
+		new Notice("Creating new chat note...");
+	}
 	}
 }
