@@ -165,7 +165,7 @@ export class ChatService {
             // --- After Stream Completion ---
             if (!isFirstChunk && lastPosition && currentInsertPos) { // Ensure stream actually inserted content
                  // Content was added by the stream. Append the final separator and position cursor.
-                 const finalSuffix = `\n\n${settings.chatSeparator}\n\n`;
+                 const finalSuffix = `\n${settings.chatSeparator}\n\n`;
                  editor.replaceRange(finalSuffix, lastPosition, lastPosition);
                  const finalCursorPos = editor.offsetToPos(editor.posToOffset(lastPosition) + finalSuffix.length);
                  editor.setCursor(finalCursorPos);
