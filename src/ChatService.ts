@@ -111,73 +111,74 @@ export class ChatService {
         let lastPosition: EditorPosition | null = null; // Tracks the end of the last inserted chunk
 
         try {
-            const streamGenerator = this.openRouterService.streamChatCompletion(
-                messages,
-                settings,
-                abortController.signal
-            );
-
-            for await (const chunk of streamGenerator) {
-                if (chunk) {
-                    if (isFirstChunk) {
-                        // 1. Remove status message
-                        this.removeStatusMessageAtPos(editor, settings,
-                            statusMessageStartPos, statusMessageEndPos, 'First chunk received.');
-
-                        // 2. Insert separator with normalized spacing and get start position
-                        currentInsertPos = this.insertSeparatorWithSpacing(
-                            editor,
-                            statusMessageStartPos, // Insert where status message was
-                            settings.chatSeparator
-                        );
-
-                        // 3. Insert the chunk
-                        editor.replaceRange(chunk, currentInsertPos, currentInsertPos);
-                        lastPosition = editor.offsetToPos(
-                            editor.posToOffset(currentInsertPos) + chunk.length
-                        );
-                        isFirstChunk = false;
-                    } else {
-                        if (!lastPosition) {
-                            throw new Error("Internal state error: lastPosition not set after first chunk.");
-                        }
-                        editor.replaceRange(chunk, lastPosition, lastPosition);
-                        lastPosition = editor.offsetToPos(
-                            editor.posToOffset(lastPosition) + chunk.length
-                        );
-                    }
-
-                    // Scroll into view if enabled
-                    if (settings.enableViewportScrolling && lastPosition) {
-                        editor.scrollIntoView({ from: lastPosition, to: lastPosition }, true);
-                    }
-           } // End for await loop
-
-           // --- After Stream Completion ---
-           if (!isFirstChunk && lastPosition) { // Ensure stream actually inserted content
-                // Content was added by the stream. Append the final separator and position cursor.
-                lastPosition = this.insertSeparatorWithSpacing(
-                    editor,
-                    lastPosition,
-                    settings.chatSeparator
+            try {
+                const streamGenerator = this.openRouterService.streamChatCompletion(
+                    messages,
+                    settings,
+                    abortController.signal
                 );
-                editor.setCursor(lastPosition); // Set cursor *after* the inserted separator block
-           } else if (isFirstChunk) {
-                // Stream finished, but no chunks were received. Status message might still be there.
-                 this.removeStatusMessageAtPos(editor, settings, statusMessageStartPos, statusMessageEndPos, 'Stream ended with no content.');
-                 editor.setCursor(statusMessageStartPos); // Place cursor where status message was
-            } else if (lastPosition) { // Simplified condition: if lastPosition exists but isFirstChunk is false
-                 // Stream finished, content was received, but maybe the separator logic failed?
-                 // Place cursor at the end of the received content as a fallback.
-                 log.warn("Stream finished, content likely received, placing cursor at end of content.");
-                 editor.setCursor(lastPosition);
-            } else {
-                 // Fallback if state is unexpected (e.g., !isFirstChunk but no lastPosition)
-                 log.error("Stream finished in an unexpected state. Placing cursor at status message start position.");
-                 editor.setCursor(statusMessageStartPos);
-            }
 
-        } catch (error: any) {
+                for await (const chunk of streamGenerator) {
+                    if (chunk) {
+                        if (isFirstChunk) {
+                            // 1. Remove status message
+                            this.removeStatusMessageAtPos(editor, settings,
+                                statusMessageStartPos, statusMessageEndPos, 'First chunk received.');
+
+                            // 2. Insert separator with normalized spacing and get start position
+                            currentInsertPos = this.insertSeparatorWithSpacing(
+                                editor,
+                                statusMessageStartPos, // Insert where status message was
+                                settings.chatSeparator
+                            );
+
+                            // 3. Insert the chunk
+                            editor.replaceRange(chunk, currentInsertPos, currentInsertPos);
+                            lastPosition = editor.offsetToPos(
+                                editor.posToOffset(currentInsertPos) + chunk.length
+                            );
+                            isFirstChunk = false;
+                        } else {
+                            if (!lastPosition) {
+                                throw new Error("Internal state error: lastPosition not set after first chunk.");
+                            }
+                            editor.replaceRange(chunk, lastPosition, lastPosition);
+                            lastPosition = editor.offsetToPos(
+                                editor.posToOffset(lastPosition) + chunk.length
+                            );
+                        }
+
+                        // Scroll into view if enabled
+                        if (settings.enableViewportScrolling && lastPosition) {
+                            editor.scrollIntoView({ from: lastPosition, to: lastPosition }, true);
+                        }
+                    }
+                } // End for await loop
+
+               // --- After Stream Completion ---
+               if (!isFirstChunk && lastPosition) { // Ensure stream actually inserted content
+                    // Content was added by the stream. Append the final separator and position cursor.
+                    lastPosition = this.insertSeparatorWithSpacing(
+                        editor,
+                        lastPosition,
+                        settings.chatSeparator
+                    );
+                    editor.setCursor(lastPosition); // Set cursor *after* the inserted separator block
+               } else if (isFirstChunk) {
+                    // Stream finished, but no chunks were received. Status message might still be there.
+                     this.removeStatusMessageAtPos(editor, settings, statusMessageStartPos, statusMessageEndPos, 'Stream ended with no content.');
+                     editor.setCursor(statusMessageStartPos); // Place cursor where status message was
+                } else if (lastPosition) { // Simplified condition: if lastPosition exists but isFirstChunk is false
+                     // Stream finished, content was received, but maybe the separator logic failed?
+                     // Place cursor at the end of the received content as a fallback.
+                     log.warn("Stream finished, content likely received, placing cursor at end of content.");
+                     editor.setCursor(lastPosition);
+                } else {
+                     // Fallback if state is unexpected (e.g., !isFirstChunk but no lastPosition)
+                     log.error("Stream finished in an unexpected state. Placing cursor at status message start position.");
+                     editor.setCursor(statusMessageStartPos);
+                }
+            } catch (error: any) {
             console.error('Error during chat stream orchestration:', error);
             let reason = 'Unknown stream error';
             let noticeMessage = 'Chat error: Unknown error';
