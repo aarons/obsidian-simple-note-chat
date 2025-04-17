@@ -111,12 +111,11 @@ export class ChatService {
         let lastPosition: EditorPosition | null = null; // Tracks the end of the last inserted chunk
 
         try {
-            try {
-                const streamGenerator = this.openRouterService.streamChatCompletion(
-                    messages,
-                    settings,
-                    abortController.signal
-                );
+            const streamGenerator = this.openRouterService.streamChatCompletion(
+                messages,
+                settings,
+                abortController.signal
+            );
 
                 for await (const chunk of streamGenerator) {
                     if (chunk) {
@@ -178,7 +177,7 @@ export class ChatService {
                      log.error("Stream finished in an unexpected state. Placing cursor at status message start position.");
                      editor.setCursor(statusMessageStartPos);
                 }
-            } catch (error: any) {
+        } catch (error: any) {
             console.error('Error during chat stream orchestration:', error);
             let reason = 'Unknown stream error';
             let noticeMessage = 'Chat error: Unknown error';
@@ -207,7 +206,6 @@ export class ChatService {
             } else {
                  console.log("Error occurred after first chunk, status message should already be removed.");
             }
-
         } finally {
             this.activeStreams.delete(notePath);
             console.log(`Removed active stream tracker for note: ${notePath}`);
