@@ -5,7 +5,7 @@ import { log } from './utils/logger';
 
 interface CommandInfo {
 	phrase: string;
-	type: 'cc' | 'gg' | 'dd' | 'nn';
+	type: 'cc' | 'gg' | 'nn';
 }
 
 export class EditorHandler {
@@ -94,7 +94,6 @@ export class EditorHandler {
 		const activeCommands: CommandInfo[] = [];
 		if (settings.chatCommandPhrase) activeCommands.push({ phrase: settings.chatCommandPhrase, type: 'cc' });
 		if (settings.archiveCommandPhrase) activeCommands.push({ phrase: settings.archiveCommandPhrase, type: 'gg' });
-		if (settings.deleteCommandPhrase && settings.enableDeleteCommand) activeCommands.push({ phrase: settings.deleteCommandPhrase, type: 'dd' });
 		if (settings.newChatCommandPhrase && settings.enableNnCommandPhrase) activeCommands.push({ phrase: settings.newChatCommandPhrase, type: 'nn' });
 
 		// 3. Match against the *exact* content of the last non-empty line
@@ -116,7 +115,7 @@ export class EditorHandler {
 	}
 
 	private _executeCommandAction(
-		commandType: 'cc' | 'gg' | 'dd' | 'nn',
+		commandType: 'cc' | 'gg' | 'nn',
 		editor: Editor,
 		markdownView: MarkdownView,
 		settings: PluginSettings,
@@ -225,36 +224,6 @@ export class EditorHandler {
 				})();
 				break;
 
-			case 'dd':
-				// Check content *before* removing lines
-				const noteContentDd = editor.getValue();
-				const chatSeparatorDd = settings.chatSeparator;
-				if (!settings.ddBypassSeparatorCheck && !noteContentDd.includes(chatSeparatorDd)) {
-					new Notice(`Delete command ('dd') requires a chat separator ('${chatSeparatorDd}') or bypass enabled.`);
-					// Do not remove lines if check fails
-					return;
-				}
-
-				if (confirm("Are you sure you want to move this note to the trash?")) {
-					// Remove command line and all subsequent empty lines
-					editor.replaceRange('', commandLineStartPos, rangeEndPos);
-					setCursorBeforeCommand(); // Set cursor before async operation
-
-					(async () => {
-						try {
-							await this.plugin.fileSystemService.deleteFile(file!);
-							new Notice("Note moved to trash.");
-						} catch (error) {
-							console.error("Error during note deletion:", error);
-							new Notice("Failed to move note to trash. Check console for details.");
-							// Consider adding back the command lines if delete fails?
-						}
-					})();
-				} else {
-					new Notice("Note deletion cancelled.");
-					// Command lines remain as user cancelled.
-				}
-				break;
 
 			case 'nn':
 				// Remove command line and all subsequent empty lines

@@ -10,7 +10,6 @@ import {
 	DEFAULT_NN_TITLE_FORMAT,
 	CHAT_COMMAND_DEFAULT,
 	ARCHIVE_COMMAND_DEFAULT,
-	DELETE_COMMAND_DEFAULT,
 	NEW_CHAT_COMMAND_DEFAULT,
 	CHAT_SEPARATOR_DEFAULT
 } from './constants';
@@ -157,27 +156,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
-		new Setting(containerEl)
-			.setName('Enable Delete Command (`dd`)')
-			.setDesc('Allow deleting notes using the \'dd\' command. Notes are moved to system trash. USE WITH CAUTION!')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableDeleteCommand)
-				.onChange(async (value) => {
-					this.plugin.settings.enableDeleteCommand = value;
-					await this.plugin.saveSettings();
-					new Notice(`Delete command ('dd') ${value ? 'enabled' : 'disabled'}.`);
-				}));
-
-		new Setting(containerEl)
-			.setName('Bypass Separator Check for `dd`')
-			.setDesc('Allow the \'dd\' command to work even if the note doesn\'t contain a chat separator. USE WITH EXTREME CAUTION!')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.ddBypassSeparatorCheck)
-				.onChange(async (value) => {
-					this.plugin.settings.ddBypassSeparatorCheck = value;
-					await this.plugin.saveSettings();
-					new Notice(`'dd' separator bypass ${value ? 'enabled' : 'disabled'}.`);
-				}));
 
 		containerEl.createEl('h3', { text: 'Custom Phrases & Separator' });
 
@@ -228,23 +206,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
-		new Setting(containerEl)
-			.setName('Delete Command Phrase')
-			.setDesc(`Phrase to trigger deleting the current chat note (if enabled) (Default: ${DELETE_COMMAND_DEFAULT}).`)
-			.addText(text => text
-				.setPlaceholder(DELETE_COMMAND_DEFAULT)
-				.setValue(this.plugin.settings.deleteCommandPhrase)
-				.onChange(async (value) => {
-					const trimmedValue = value.trim();
-					if (trimmedValue && this.plugin.settings.deleteCommandPhrase !== trimmedValue) {
-						this.plugin.settings.deleteCommandPhrase = trimmedValue;
-						await this.plugin.saveSettings();
-						new Notice('Delete command phrase saved.');
-					} else if (!trimmedValue) {
-						new Notice('Command phrase cannot be empty.');
-						text.setValue(this.plugin.settings.deleteCommandPhrase); // Revert if empty
-					}
-				}));
 
 		new Setting(containerEl)
 			.setName('New Chat Command Phrase')

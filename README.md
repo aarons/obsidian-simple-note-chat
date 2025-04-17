@@ -153,17 +153,6 @@ By default:
     - this can be neabled, in which case `nn` would archive the current note, then start a new one (like typing `gg` then `nn`)
 
 
-### Deleting a Chat (`dd`)
-
-This feature is **disabled by default**. Enabling it allows **permanent deletion** of notes from your vault. Use with caution.
-
-To delete the current chat note (if enabled in settings):
-
-1.  Go to the end of the note.
-2.  On a **new, separate line**, type `dd`.
-3.  Ensure there is a **newline** *after* `dd`.
-
-For safety, by default, this command only works on notes that contain chat separators (`<hr>`, or your custom separator). This check can be disabled in the settings, but doing so increases the risk of accidentally deleting non-chat notes.
 
 
 ### Stopping a Response
@@ -186,7 +175,6 @@ The default command phrases (`cc`, `gg`, `dd`, `nn`) and the stop sequence (`sto
 
 `gg` stands for 'good game' and signifies the chat is over. Other phrases considered were `ac` for archive chat, `ta` for thanks, or `aa` for aarchive
 
-`dd` inspired by the vim command to delete (cut) a line of text
 
 `nn` new-note wooooo
 

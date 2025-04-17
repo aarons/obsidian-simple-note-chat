@@ -5,7 +5,6 @@ export interface PluginSettings {
   defaultModel: string;
   stopCommandSequence: string;
   archiveFolderName: string;
-  enableDeleteCommand: boolean;
   enableNnCommandPhrase: boolean;
   enableNnRibbonButton: boolean;
   enableNnKeyboardShortcut: boolean;
@@ -18,11 +17,9 @@ export interface PluginSettings {
   llmRenameModel: string; // Stores the ID of the model to use for titling
   enableViewportScrolling: boolean;
   modelSortOrder: string; // Added for model sorting
-  ddBypassSeparatorCheck: boolean;
   enableCcShortcut: boolean; // Keep this name as it relates to the specific command ID
   chatCommandPhrase: string;
   archiveCommandPhrase: string;
-  deleteCommandPhrase: string;
   newChatCommandPhrase: string;
   chatSeparator: string;
 }
@@ -32,7 +29,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	defaultModel: 'openrouter/auto',
 	stopCommandSequence: DEFAULT_STOP_SEQUENCE,
 	archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
-	enableDeleteCommand: false,
 	enableNnCommandPhrase: true,
 	enableNnRibbonButton: false,
 	enableNnKeyboardShortcut: false,
@@ -45,11 +41,9 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	llmRenameModel: '', // Default to empty, maybe use `defaultModel` later if empty?
 	enableViewportScrolling: false,
 	modelSortOrder: 'alphabetical', // Default sort order
-	ddBypassSeparatorCheck: false,
 	enableCcShortcut: false,
 	chatCommandPhrase: '', // Will be set from constants in main.ts
 	archiveCommandPhrase: '', // Will be set from constants in main.ts
-	deleteCommandPhrase: '', // Will be set from constants in main.ts
 	newChatCommandPhrase: '', // Will be set from constants in main.ts
 	chatSeparator: '' // Will be set from constants in main.ts
 };
