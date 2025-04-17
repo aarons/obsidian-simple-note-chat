@@ -120,83 +120,60 @@ export class ChatService {
             for await (const chunk of streamGenerator) {
                 if (chunk) {
                     if (isFirstChunk) {
-                        // 1. Attempt to remove status message at known location
-                        const removed = this.removeStatusMessageAtPos(editor, settings, statusMessageStartPos, statusMessageEndPos, 'First chunk received.');
-                        if (!removed) {
-                             log.warn("Could not verify and remove status message at expected location, proceeding anyway.");
-                        }
+                        // 1. Remove status message
+                        this.removeStatusMessageAtPos(editor, settings,
+                            statusMessageStartPos, statusMessageEndPos, 'First chunk received.');
 
-                        // 2. Determine prefix for separator
-                        const contentBeforeStatus = editor.getRange({ line: 0, ch: 0 }, statusMessageStartPos);
-                        let prefix = '';
-                        if (contentBeforeStatus.endsWith('\n')) {
-                            prefix = '\n';
-                        } else if (contentBeforeStatus.length > 0) {
-                            prefix = '\n\n';
-                        }
+                        // 2. Insert separator with normalized spacing and get start position
+                        currentInsertPos = this.insertSeparatorWithSpacing(
+                            editor,
+                            statusMessageStartPos, // Insert where status message was
+                            settings.chatSeparator
+                        );
 
-                        // 3. Insert separator
-                        const initialSeparatorInsertion = `${prefix}${settings.chatSeparator}\n\n`;
-                        editor.replaceRange(initialSeparatorInsertion, statusMessageStartPos, statusMessageStartPos); // Insert at original start pos
-                        currentInsertPos = editor.offsetToPos(editor.posToOffset(statusMessageStartPos) + initialSeparatorInsertion.length);
-
-                        // 4. Insert the first chunk
+                        // 3. Insert the chunk
                         editor.replaceRange(chunk, currentInsertPos, currentInsertPos);
-                        lastPosition = editor.offsetToPos(editor.posToOffset(currentInsertPos) + chunk.length);
-                        isFirstChunk = false; // Mark first chunk as processed
-
+                        lastPosition = editor.offsetToPos(
+                            editor.posToOffset(currentInsertPos) + chunk.length
+                        );
+                        isFirstChunk = false;
                     } else {
                         if (!lastPosition) {
-                       // 1. normalise spacing before the separator
-                       statusMessageStartPos = this.normaliseTrailingNewlines(editor, statusMessageStartPos);
-
-                       // 2. insert separator + required blank line
-                       const initialSeparator = `\n\n${settings.chatSeparator}\n\n`;
-                       editor.replaceRange(initialSeparator, statusMessageStartPos, statusMessageStartPos);
-                       currentInsertPos = editor.offsetToPos(editor.posToOffset(statusMessageStartPos) + initialSeparator.length);
-
-                       // 4. Insert the first chunk
-                       editor.replaceRange(chunk, currentInsertPos, currentInsertPos);
-                       lastPosition = editor.offsetToPos(editor.posToOffset(currentInsertPos) + chunk.length);
-                       isFirstChunk = false; // Mark first chunk as processed
-
-                   } else {
-                       if (!lastPosition) {
                             throw new Error("Internal state error: lastPosition not set after first chunk.");
-                       }
-                       const from = lastPosition;
-                       const to = lastPosition;
-                       editor.replaceRange(chunk, from, to);
-                       lastPosition = editor.offsetToPos(editor.posToOffset(from) + chunk.length);
-                   }
+                        }
+                        editor.replaceRange(chunk, lastPosition, lastPosition);
+                        lastPosition = editor.offsetToPos(
+                            editor.posToOffset(lastPosition) + chunk.length
+                        );
+                    }
 
-                   // Scroll into view if enabled
-                   if (settings.enableViewportScrolling && lastPosition) {
-                       editor.scrollIntoView({ from: lastPosition, to: lastPosition }, true);
-                   }
-               }
+                    // Scroll into view if enabled
+                    if (settings.enableViewportScrolling && lastPosition) {
+                        editor.scrollIntoView({ from: lastPosition, to: lastPosition }, true);
+                    }
            } // End for await loop
 
            // --- After Stream Completion ---
-           if (!isFirstChunk && lastPosition && currentInsertPos) { // Ensure stream actually inserted content
+           if (!isFirstChunk && lastPosition) { // Ensure stream actually inserted content
                 // Content was added by the stream. Append the final separator and position cursor.
-                lastPosition = this.normaliseTrailingNewlines(editor, lastPosition);
-                const finalSeparator = `\n\n${settings.chatSeparator}\n\n`;
-                editor.replaceRange(finalSeparator, lastPosition, lastPosition);
-                const finalCursorPos = editor.offsetToPos(editor.posToOffset(lastPosition) + finalSeparator.length);
-                editor.setCursor(finalCursorPos);
+                lastPosition = this.insertSeparatorWithSpacing(
+                    editor,
+                    lastPosition,
+                    settings.chatSeparator
+                );
+                editor.setCursor(lastPosition); // Set cursor *after* the inserted separator block
            } else if (isFirstChunk) {
                 // Stream finished, but no chunks were received. Status message might still be there.
                  this.removeStatusMessageAtPos(editor, settings, statusMessageStartPos, statusMessageEndPos, 'Stream ended with no content.');
                  editor.setCursor(statusMessageStartPos); // Place cursor where status message was
-            } else if (lastPosition && currentInsertPos) {
-                 // Stream finished, content was received, but the check failed? (Shouldn't happen often)
-                 // Place cursor at the end of the received content.
-                 console.warn("Stream finished, content likely received, placing cursor at end of content.");
+            } else if (lastPosition) { // Simplified condition: if lastPosition exists but isFirstChunk is false
+                 // Stream finished, content was received, but maybe the separator logic failed?
+                 // Place cursor at the end of the received content as a fallback.
+                 log.warn("Stream finished, content likely received, placing cursor at end of content.");
                  editor.setCursor(lastPosition);
             } else {
-                 // Fallback if state is unexpected
-                 console.error("Stream finished in an unexpected state. Placing cursor at status message start position.");
+                 // Fallback if state is unexpected (e.g., !isFirstChunk but no lastPosition)
+                 log.error("Stream finished in an unexpected state. Placing cursor at status message start position.");
                  editor.setCursor(statusMessageStartPos);
             }
 
@@ -263,19 +240,28 @@ export class ChatService {
     }
 
     /**
-     * Ensures exactly ONE blank line (== “\n\n”) will precede the next insertion.
-     * Returns the (possibly moved) insertion position.
+     * Inserts the separator ensuring EXACTLY one blank line before and after.
+     * Returns the position right after the inserted block.
      */
-    private normaliseTrailingNewlines(editor: Editor, pos: EditorPosition): EditorPosition {
+    private insertSeparatorWithSpacing(
+        editor: Editor,
+        pos: EditorPosition,
+        separator: string
+    ): EditorPosition {
+        // 1. strip all trailing \n before `pos`
         let offset = editor.posToOffset(pos);
         const txt = editor.getValue();
-        while (offset > 0 && txt[offset - 1] === '\n') offset--;        // strip all trailing \n
-        if (offset !== editor.posToOffset(pos)) {
-            editor.replaceRange('', editor.offsetToPos(offset), pos);   // delete the extras
-        }
-        // now cursor is right after last non‑newline char
-        return editor.offsetToPos(offset);
+        while (offset > 0 && txt[offset - 1] === '\n') offset--;
+        const beforePos = editor.offsetToPos(offset);
+
+        // 2. minimum prefix to leave ONE blank line
+        const prefix = (offset === 0 || txt[offset - 1] === '\n') ? '\n' : '\n\n';
+
+        const block = `${prefix}${separator}\n\n`;
+        editor.replaceRange(block, beforePos, pos); // Replace from first non-\n char up to original pos
+        return editor.offsetToPos(offset + block.length); // Return position after the inserted block
     }
+
 
     /**
      * Checks if a stream is currently active for the given file path.
