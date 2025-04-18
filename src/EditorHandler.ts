@@ -130,27 +130,27 @@ export class EditorHandler {
 			? { line: commandLineIndex + 1, ch: 0 } // Remove the line and its newline
 			: commandLineEndPos; // Just remove the content if it's the last line
 
-		// Ensure status message starts and ends with a newline for separation
-		const statusMessage = `\nCalling ${settings.defaultModel}...\n`;
+		// Status message ends with a newline, but does NOT start with one.
+		const statusMessage = `Calling ${settings.defaultModel}...\n`;
 
 		// Replace the command line (and its newline if applicable) with the status message
 		editor.replaceRange(statusMessage, commandLineStartPos, rangeToRemoveEnd);
 
 		// Calculate the start and end positions *of the inserted status message*
-		// IMPORTANT: The statusMessage starts with '\n', so the actual text begins on the next line.
-		const actualStatusTextStartPos: EditorPosition = { line: commandLineStartPos.line + 1, ch: 0 };
-		// The end position is calculated relative to the *actual* start of the text.
-		// We need the length of the status message *excluding* the leading '\n'.
-		const statusTextLength = statusMessage.trimStart().length;
+		// The status text now starts exactly where the command line started.
+		const actualStatusTextStartPos: EditorPosition = commandLineStartPos;
+		// The length is simply the length of the new status message.
+		const statusTextLength = statusMessage.length;
+		// The end position is calculated relative to the start position.
 		const statusMessageEndOffset = editor.posToOffset(actualStatusTextStartPos) + statusTextLength;
 		const statusMessageEndPos = editor.offsetToPos(statusMessageEndOffset);
 
 
-		// Set cursor to the beginning of the actual status text (ready for stream)
-		editor.setCursor(actualStatusTextStartPos);
-		log.debug(`Replaced command line ${commandLineIndex} with status. Status Range for ChatService: [${actualStatusTextStartPos.line}, ${actualStatusTextStartPos.ch}] to [${statusMessageEndPos.line}, ${statusMessageEndPos.ch}]`);
+		// Set cursor AFTER the status message, on the new empty line (ready for stream)
+		editor.setCursor(statusMessageEndPos);
+		log.debug(`Replaced command line ${commandLineIndex} with status. Status Range for ChatService: [${actualStatusTextStartPos.line}, ${actualStatusTextStartPos.ch}] to [${statusMessageEndPos.line}, ${statusMessageEndPos.ch}]. Cursor set to end.`);
 
-		// Call startChat. The range passed should be where the *actual status text* is,
+		// Call startChat. The range passed should be where the *status message text* is,
 		// so the ChatService knows where to replace it with the actual response.
 		this.plugin.chatService.startChat(
 			editor,
