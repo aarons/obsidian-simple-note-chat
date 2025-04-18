@@ -1,7 +1,7 @@
 export const CHAT_COMMAND_DEFAULT = 'cc';
 export const ARCHIVE_COMMAND_DEFAULT = 'gg';
 export const NEW_CHAT_COMMAND_DEFAULT = 'nn';
-export const DEFAULT_STOP_SEQUENCE = 'stop';
+// Removed DEFAULT_STOP_SEQUENCE
 
 export const COMMAND_PHRASES_DEFAULTS = [
     CHAT_COMMAND_DEFAULT,

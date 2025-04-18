@@ -27,17 +27,7 @@ Improve the responsiveness and feel of command phrase triggering (`cc`, `gg`, `n
         *   If the timeout completes and the line content hasn't changed, call the corresponding `trigger<CommandName>Command` method in `EditorHandler.ts`.
         *   If the content changes before the timeout, clear the timer.
 
-3.  **Stop Sequence (`sss`) (Immediate Trigger):**
-    *   **Event:** `editor-change` listener in `EditorHandler.ts`.
-    *   **Condition:**
-        *   A chat stream *is* active for the file.
-        *   The `settings.stopCommandSequence` is found anywhere in the document content.
-    *   **Action:**
-        *   Cancel the active stream using `chatService.cancelStream`.
-        *   Remove the stop sequence from the editor.
-        *   Append an interruption message.
-
-4.  **`Escape` Key (Immediate Trigger):**
+3.  **`Escape` Key (Immediate Trigger):**
     *   **Event:** `keydown` listener in `main.ts`.
     *   **Condition:**
         *   Key pressed is `Escape`.
@@ -64,8 +54,8 @@ Improve the responsiveness and feel of command phrase triggering (`cc`, `gg`, `n
 
 *   **Modify `handleEditorChange`:**
     *   This method will *no longer* handle the `<phrase><Enter>` detection.
-    *   It *will* retain/restore the logic for detecting `<phrase><space>` at the end of the last content line and using `setTimeout` to trigger the command after 500ms if the line remains unchanged. (This logic existed in the original version of the file).
-    *   It *will* retain the logic for detecting the `stopCommandSequence` during an active stream.
+    *   It *will* retain/restore the logic for detecting `<phrase><space>` at the end of the last content line and using `setTimeout` to trigger the command after 500ms if the line remains unchanged.
+    *   It will *only* check if a stream is active to *prevent* command phrase detection (`<phrase><space>`) during streaming. It will *not* actively look for any stop sequence within the content.
 *   **Add `triggerChatCommand`, `triggerArchiveCommand`, `triggerNewChatCommand` methods:**
     *   These public methods will be called by `handleKeyDown` (for `Enter`) or the `setTimeout` callback (for `space`).
     *   Each method will receive `editor`, `markdownView`, `settings`, and `commandLineIndex`.

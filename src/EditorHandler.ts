@@ -32,40 +32,16 @@ export class EditorHandler {
 			this.activationTimers.delete(filePath);
 		}
 
-		// --- Handle Stop Sequence during Active Stream ---
+		// --- Prevent Command Phrase Detection During Active Stream ---
+		// If a stream is active, we don't want to accidentally trigger
+		// command phrases like 'cc ' or 'gg<Enter>'. The stream can only
+		// be stopped via the Escape key (handled in main.ts).
 		if (this.plugin.chatService.isStreamActive(filePath)) {
-			const content = editor.getValue();
-			const stopSequence = settings.stopCommandSequence;
-
-			if (stopSequence && content.includes(stopSequence)) {
-				log.debug(`Stop sequence "${stopSequence}" detected in active stream file: ${filePath}`);
-				// Pass editor and settings to cancelStream
-				if (this.plugin.chatService.cancelStream(filePath, editor, settings)) {
-					const sequenceIndex = content.lastIndexOf(stopSequence);
-					if (sequenceIndex !== -1) {
-						const startPos = editor.offsetToPos(sequenceIndex);
-						const endPos = editor.offsetToPos(sequenceIndex + stopSequence.length);
-						editor.replaceRange('', startPos, endPos);
-						log.debug(`Removed stop sequence "${stopSequence}" from editor.`);
-
-						const endOfDoc = editor.offsetToPos(editor.getValue().length);
-						const interruptionMessage = "\n\n[Response Interrupted]\n\n";
-						editor.replaceRange(interruptionMessage, endOfDoc, endOfDoc);
-						const finalCursorPos = editor.offsetToPos(editor.posToOffset(endOfDoc) + interruptionMessage.length);
-						editor.setCursor(finalCursorPos);
-
-						new Notice("Stream stopped by sequence.");
-						return; // Stop further processing
-					} else {
-						log.warn("Stop sequence detected but could not find its index to remove.");
-					}
-				}
-			}
-			// Don't process command phrases if a stream is active but stop sequence wasn't found/handled
-			return;
+			return; // Don't process command phrases while streaming
 		}
 
-		// --- Detect Command Phrases (support <phrase><Enter>  OR  <phrase><space>[0.5s]) ---
+		// --- Detect Command Phrases (<phrase><space>[0.5s]) ---
+		// Note: <phrase><Enter> is now handled by handleKeyDown in main.ts
 
 		const lines = editor.getValue().split('\n');
 
