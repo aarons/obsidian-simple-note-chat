@@ -172,21 +172,43 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			}
 
 			const cursor = editor.getCursor();
-			const lineText = editor.getLine(cursor.line);
-			const trimmedLineText = lineText.trim();
-			log.debug(`Enter key pressed on line ${cursor.line}. Line text: "${lineText}", Trimmed: "${trimmedLineText}", Cursor ch: ${cursor.ch}, Line length: ${lineText.length}`);
+			let lineToCheck = cursor.line;
+			let lineText = editor.getLine(lineToCheck);
 
+			// Check if Enter likely moved cursor to start of a new line
+			if (cursor.ch === 0 && cursor.line > 0) {
+				// If cursor is at start of a line (not the first line),
+				// check the content of the PREVIOUS line.
+				const prevLineIndex = cursor.line - 1;
+				const prevLineText = editor.getLine(prevLineIndex);
+				log.debug(`Enter pressed, cursor at [${cursor.line}, 0]. Checking previous line (${prevLineIndex}): "${prevLineText}"`);
 
-			// Condition 1: Cursor must be at the end of the line content
-			// (i.e., cursor is at the length of the untrimmed line)
-			if (cursor.ch !== lineText.length) {
-				log.debug("Enter key ignored: Cursor not at end of line content.");
-				return;
+				// Check if the previous line isn't empty and cursor was likely at its end
+				// (We infer this by checking if the current line is empty)
+				if (lineText.trim() === '' && prevLineText.trim() !== '') {
+					// Assume Enter was pressed at the end of the previous line
+					lineToCheck = prevLineIndex;
+					lineText = prevLineText;
+					log.debug(`Identified line ${lineToCheck} ("${lineText}") as the target for command check.`);
+				} else {
+					log.debug(`Cursor at [${cursor.line}, 0], but previous line or current line state doesn't suggest command trigger.`);
+					return; // Not the scenario we're looking for
+				}
+			} else {
+				// Original check: Cursor might be at the end of the current line (before Enter moves it)
+				// This path might be less likely now based on observations, but keep for robustness.
+				log.debug(`Enter pressed, cursor at [${cursor.line}, ${cursor.ch}]. Checking current line (${lineToCheck}): "${lineText}"`);
+				if (cursor.ch !== lineText.length) {
+					log.debug("Enter key ignored: Cursor not at end of current line content.");
+					return;
+				}
 			}
 
-			// Condition 2: Check if the trimmed line content matches a command phrase
+			const trimmedLineText = lineText.trim();
+
+			// Check if the trimmed line content matches a command phrase
 			let commandHandler: (() => void) | null = null;
-			const commandLineIndex = cursor.line; // The line where Enter was pressed
+			const commandLineIndex = lineToCheck; // Use the determined line index
 
 			if (trimmedLineText === this.settings.chatCommandPhrase) {
 				commandHandler = () => this.editorHandler.triggerChatCommand(editor, activeView, this.settings, commandLineIndex);
@@ -197,7 +219,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			}
 
 			if (commandHandler) {
-				log.debug(`Enter key trigger conditions met for "${trimmedLineText}" on line ${cursor.line}. Executing command.`);
+				log.debug(`Enter key trigger conditions met for "${trimmedLineText}" on line ${commandLineIndex}. Executing command.`);
 				evt.preventDefault(); // IMPORTANT: Stop Enter from inserting a newline
 				evt.stopPropagation(); // Stop propagation
 				commandHandler(); // Execute the command
