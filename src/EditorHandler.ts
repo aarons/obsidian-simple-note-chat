@@ -137,36 +137,40 @@ export class EditorHandler {
 		editor.replaceRange(statusMessage, commandLineStartPos, rangeToRemoveEnd);
 
 		// Calculate the start and end positions *of the inserted status message*
-		// The status message starts where the command line started.
-		const statusMessageStartPos = commandLineStartPos;
-		// The end position is calculated *after* the replacement.
-		const statusMessageEndOffset = editor.posToOffset(statusMessageStartPos) + statusMessage.length;
+		// IMPORTANT: The statusMessage starts with '\n', so the actual text begins on the next line.
+		const actualStatusTextStartPos: EditorPosition = { line: commandLineStartPos.line + 1, ch: 0 };
+		// The end position is calculated relative to the *actual* start of the text.
+		// We need the length of the status message *excluding* the leading '\n'.
+		const statusTextLength = statusMessage.trimStart().length;
+		const statusMessageEndOffset = editor.posToOffset(actualStatusTextStartPos) + statusTextLength;
 		const statusMessageEndPos = editor.offsetToPos(statusMessageEndOffset);
 
-		// Set cursor to the beginning of the status message (ready for stream)
-		editor.setCursor(statusMessageStartPos);
-		log.debug(`Replaced command line ${commandLineIndex} with status. New End: [${statusMessageEndPos.line}, ${statusMessageEndPos.ch}]`);
 
-		// Call startChat. The range passed should be where the *status message* is,
+		// Set cursor to the beginning of the actual status text (ready for stream)
+		editor.setCursor(actualStatusTextStartPos);
+		log.debug(`Replaced command line ${commandLineIndex} with status. Status Range for ChatService: [${actualStatusTextStartPos.line}, ${actualStatusTextStartPos.ch}] to [${statusMessageEndPos.line}, ${statusMessageEndPos.ch}]`);
+
+		// Call startChat. The range passed should be where the *actual status text* is,
 		// so the ChatService knows where to replace it with the actual response.
 		this.plugin.chatService.startChat(
 			editor,
 			file,
 			settings,
-			statusMessageStartPos, // Position where status message starts
-			statusMessageEndPos    // Position where status message ends
+			actualStatusTextStartPos, // Position where actual status text starts
+			statusMessageEndPos       // Position where actual status text ends
 		).catch(error => {
 			log.error("Error starting chat:", error);
 			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 			try {
-				// Attempt to replace the status message range with the error
-				// Re-calculate the end position based on the *current* content if needed
-				const currentStatusEndOffset = editor.posToOffset(statusMessageStartPos) + statusMessage.length;
-				const currentStatusEndPos = editor.offsetToPos(currentStatusEndOffset);
-				editor.replaceRange(`\nError: ${errorMessage}\n`, statusMessageStartPos, currentStatusEndPos);
+				// Attempt to replace the *original* status message range with the error
+				// Use the same range that was passed to startChat
+				editor.replaceRange(`\nError: ${errorMessage}\n`, actualStatusTextStartPos, statusMessageEndPos);
 			} catch (replaceError) {
 				log.error("Failed to replace status message with error:", replaceError);
-				new Notice(`Chat Error: ${errorMessage}`); // Fallback notice
+				// Fallback: Insert error message at the cursor position if replacement fails
+				const currentCursor = editor.getCursor();
+				editor.replaceRange(`\nError: ${errorMessage}\n`, currentCursor);
+				new Notice(`Chat Error: ${errorMessage}. Failed to replace status message.`);
 			}
 		});
 	}

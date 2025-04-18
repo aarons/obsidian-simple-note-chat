@@ -167,16 +167,20 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		if (evt.key === 'Enter') {
 			// Check if a stream is active - don't trigger commands during streaming
 			if (this.chatService.isStreamActive(filePath)) {
+				// log.debug("Enter key ignored: Stream is active."); // Optional: uncomment for verbose logging
 				return;
 			}
 
 			const cursor = editor.getCursor();
 			const lineText = editor.getLine(cursor.line);
 			const trimmedLineText = lineText.trim();
+			log.debug(`Enter key pressed on line ${cursor.line}. Line text: "${lineText}", Trimmed: "${trimmedLineText}", Cursor ch: ${cursor.ch}, Line length: ${lineText.length}`);
+
 
 			// Condition 1: Cursor must be at the end of the line content
 			// (i.e., cursor is at the length of the untrimmed line)
 			if (cursor.ch !== lineText.length) {
+				log.debug("Enter key ignored: Cursor not at end of line content.");
 				return;
 			}
 
@@ -193,7 +197,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			}
 
 			if (commandHandler) {
-				log.debug(`Enter key pressed on line ${cursor.line} matching command phrase "${trimmedLineText}".`);
+				log.debug(`Enter key trigger conditions met for "${trimmedLineText}" on line ${cursor.line}. Executing command.`);
 				evt.preventDefault(); // IMPORTANT: Stop Enter from inserting a newline
 				evt.stopPropagation(); // Stop propagation
 				commandHandler(); // Execute the command
