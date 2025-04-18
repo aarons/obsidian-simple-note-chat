@@ -201,6 +201,9 @@ export default class SimpleNoteChatPlugin extends Plugin {
 				evt.preventDefault(); // IMPORTANT: Stop Enter from inserting a newline
 				evt.stopPropagation(); // Stop propagation
 				commandHandler(); // Execute the command
+			} else {
+				// Add logging here if no command handler was found after cursor check passed
+				log.debug(`Enter key trigger conditions NOT met: No command phrase matched "${trimmedLineText}". Settings: cc='${this.settings.chatCommandPhrase}', gg='${this.settings.archiveCommandPhrase}', nn='${this.settings.newChatCommandPhrase}'`);
 			}
 		}
 	}
