@@ -23,7 +23,7 @@ export class EditorHandler {
 		}
 		const filePath = file.path;
 
-		// cancel any pending 0.5‑second activations for this file
+		// Cancel any pending activations for this file
 		const pending = this.activationTimers.get(filePath);
 		if (pending) {
 			clearTimeout(pending);
@@ -31,20 +31,19 @@ export class EditorHandler {
 		}
 
 		// --- Prevent Command Phrase Detection During Active Stream ---
-		// If a stream is active, we don't want to accidentally trigger
-		// command phrases like 'cc ' or 'gg<Enter>'. The stream can only
-		// be stopped via the Escape key (handled in main.ts).
+		// Don't trigger command phrases during an active stream
+		// Stream can only be stopped via Escape key (handled in main.ts)
 		if (this.plugin.chatService.isStreamActive(filePath)) {
 			return; // Don't process command phrases while streaming
 		}
 
 		// --- Detect Command Phrases (<phrase><space>[0.5s]) ---
-		// This handles the case where the user types 'cc ' and pauses.
-		// The <phrase><Enter> case is handled by handleKeyDown in main.ts
+		// Handles space-triggered commands with 0.5s pause
+		// Enter-triggered commands are handled by handleKeyDown in main.ts
 
 		const lines = editor.getValue().split('\n');
 
-		// 1. Locate the last line containing non-whitespace content
+		// Find the last non-empty line in the document
 		let lastContentLineIdx = lines.length - 1;
 		while (lastContentLineIdx >= 0 && lines[lastContentLineIdx].trim() === '') {
 			lastContentLineIdx--;
@@ -52,8 +51,8 @@ export class EditorHandler {
 		if (lastContentLineIdx < 0) return; // whole file is blank
 		const lastContentLine = lines[lastContentLineIdx];
 
-		// 2. Check for <phrase><space> variant on the last content line
-		const trimmed = lastContentLine.trimEnd(); // drop right‑side spaces
+		// Check if last line ends with a space (command activation)
+		const trimmed = lastContentLine.trimEnd();
 		if (lastContentLine.endsWith(' ')) {
 			let commandHandler: (() => void) | null = null;
 
@@ -90,8 +89,8 @@ export class EditorHandler {
 	}
 
 	/**
-	 * Helper to set cursor to the end of the line *before* the command line (if possible)
-	 * or to the start of the document if the command was on the first line.
+	 * Sets cursor position after command execution - either at the end of the previous line
+	 * or at document start if command was on the first line.
 	 */
 	private _setCursorBeforeCommand(editor: Editor, commandLineIndex: number): void {
 		if (commandLineIndex > 0) {
@@ -105,8 +104,8 @@ export class EditorHandler {
 	}
 
 	/**
-	 * Triggered by Enter keydown or space-timeout on the chat command phrase.
-	 * Replaces the command phrase line with a status message and starts the chat.
+	 * Handles chat command activation.
+	 * Replaces command line with status message and initiates chat.
 	 */
 	public triggerChatCommand(
 		editor: Editor,
@@ -121,37 +120,31 @@ export class EditorHandler {
 			return;
 		}
 
-		// Define the range for the command line itself
+		// Define command line range
 		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
 		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: editor.getLine(commandLineIndex).length };
 
-		// Determine the end of the range to replace (command line + its newline, or just command line if last line)
+		// Handle line endings appropriately based on position in document
 		const rangeToRemoveEnd = (commandLineIndex < editor.lastLine())
-			? { line: commandLineIndex + 1, ch: 0 } // Remove the line and its newline
-			: commandLineEndPos; // Just remove the content if it's the last line
+			? { line: commandLineIndex + 1, ch: 0 } // Include newline if not last line
+			: commandLineEndPos; // Just the line content if last line
 
-		// Status message ends with a newline, but does NOT start with one.
 		const statusMessage = `Calling ${settings.defaultModel}...\n`;
 
-		// Replace the command line (and its newline if applicable) with the status message
+		// Replace command line with status message
 		editor.replaceRange(statusMessage, commandLineStartPos, rangeToRemoveEnd);
 
-		// Calculate the start and end positions *of the inserted status message*
-		// The status text now starts exactly where the command line started.
+		// Track status message position for later replacement
 		const actualStatusTextStartPos: EditorPosition = commandLineStartPos;
-		// The length is simply the length of the new status message.
 		const statusTextLength = statusMessage.length;
-		// The end position is calculated relative to the start position.
 		const statusMessageEndOffset = editor.posToOffset(actualStatusTextStartPos) + statusTextLength;
 		const statusMessageEndPos = editor.offsetToPos(statusMessageEndOffset);
 
-
-		// Set cursor AFTER the status message, on the new empty line (ready for stream)
+		// Position cursor for incoming stream
 		editor.setCursor(statusMessageEndPos);
 		log.debug(`Replaced command line ${commandLineIndex} with status. Status Range for ChatService: [${actualStatusTextStartPos.line}, ${actualStatusTextStartPos.ch}] to [${statusMessageEndPos.line}, ${statusMessageEndPos.ch}]. Cursor set to end.`);
 
-		// Call startChat. The range passed should be where the *status message text* is,
-		// so the ChatService knows where to replace it with the actual response.
+		// Start chat with status message range for replacement
 		this.plugin.chatService.startChat(
 			editor,
 			file,
@@ -176,8 +169,8 @@ export class EditorHandler {
 	}
 
 	/**
-	 * Triggered by Enter keydown or space-timeout on the archive command phrase.
-	 * Removes the command phrase line and initiates the archive process.
+	 * Handles archive command activation.
+	 * Removes command line and moves file to archive location.
 	 */
 	public triggerArchiveCommand(
 		editor: Editor,
@@ -196,13 +189,12 @@ export class EditorHandler {
 		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
 		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: editor.getLine(commandLineIndex).length };
 
-		// Check for separator *before* removing the command line
-		// We need to exclude the command line itself from the check
-		const tempContentBefore = editor.getRange({line: 0, ch: 0}, commandLineStartPos); // Content *before* the command line
+		// Check for chat separator, excluding the command line itself
+		const tempContentBefore = editor.getRange({line: 0, ch: 0}, commandLineStartPos);
 		const tempContentAfter = editor.getRange(
 			(commandLineIndex < editor.lastLine()) ? { line: commandLineIndex + 1, ch: 0 } : commandLineEndPos,
 			editor.offsetToPos(editor.getValue().length)
-		); // Content *after* the command line
+		);
 		const combinedContent = tempContentBefore + tempContentAfter;
 		const chatSeparatorGg = settings.chatSeparator;
 
@@ -244,8 +236,8 @@ export class EditorHandler {
 	}
 
 	/**
-	 * Triggered by Enter keydown or space-timeout on the new chat command phrase.
-	 * Removes the command phrase line and executes the new chat command.
+	 * Handles new chat command activation.
+	 * Removes command line and creates a new chat note.
 	 */
 	public triggerNewChatCommand(
 		editor: Editor,
