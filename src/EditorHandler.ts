@@ -107,8 +107,29 @@ export class EditorHandler {
 	}
 
 	/**
-	 * Handles chat command activation.
-	 * Replaces command line with status message and initiates chat.
+		* Appends the final archive status message to the content of the archived note.
+		*/
+	private async appendStatusToFile(filePath: string, noteName: string, folderName: string): Promise<void> {
+		try {
+			const archivedTFile = this.app.vault.getAbstractFileByPath(filePath);
+			if (archivedTFile instanceof TFile) {
+				const statusText = `\n\nrenamed to ${noteName}\nmoved to ${folderName}`;
+				await this.app.vault.append(archivedTFile, statusText);
+				log.debug(`Appended status to archived note: ${filePath}`);
+			} else {
+				log.error(`Could not find archived file TFile at path: ${filePath}`);
+				new Notice(`Failed to append status to archived note content.`);
+			}
+		} catch (appendError) {
+			log.error(`Error appending status to archived note ${filePath}:`, appendError);
+			new Notice(`Error appending status to archived note content.`);
+		}
+	}
+
+
+	/**
+		* Handles chat command activation.
+		* Replaces command line with status message and initiates chat.
 	 */
 	public triggerChatCommand(
 		editor: Editor,
@@ -218,6 +239,16 @@ export class EditorHandler {
 		// Set cursor position *before* the async operation
 		this._setCursorBeforeCommand(editor, commandLineIndex);
 
+		// Show status *before* calling the potentially slow archive function if using model
+		if (settings.enableArchiveRenameLlm) {
+			const titleModel = settings.llmRenameModel || settings.defaultModel;
+			if (titleModel && settings.apiKey) {
+				new Notice(`Calling ${titleModel} to generate title...`, 5000); // Temporary notice
+			} else {
+				log.warn("Archive rename with LLM enabled, but API key or model not set. Skipping notice.");
+			}
+		}
+
 		(async () => {
 			try {
 				const newPath = await this.plugin.fileSystemService.moveFileToArchive(
@@ -225,8 +256,18 @@ export class EditorHandler {
 					settings.archiveFolderName,
 					settings
 				);
-				if (newPath) { new Notice(`Note archived to: ${newPath}`); }
-				else {
+				if (newPath) {
+					// Parse new name and folder from the returned path
+					const newName = newPath.split('/').pop() || file.basename; // Fallback to original basename
+					const archiveFolder = settings.archiveFolderName; // Use the setting value
+
+					// Show persistent notice
+					new Notice(`Renamed to ${newName}\nMoved to ${archiveFolder}`);
+
+					// Append status to the *content* of the archived file
+					await this.appendStatusToFile(newPath, newName, archiveFolder);
+
+				} else {
 					new Notice("Failed to archive note.");
 					log.warn("FileSystemService.moveFileToArchive returned null.");
 					// Consider adding back the command line if archive fails? Might be complex.

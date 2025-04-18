@@ -71,17 +71,23 @@ export class FileSystemService {
                     if (llmTitle) {
                         log.debug(`FileSystemService: Received LLM title: "${llmTitle}"`);
                         const sanitizedTitle = llmTitle
-                            .replace(/[\\/:*?"<>|\n\r]+/g, '')
-                            .replace(/\s+/g, '_')
-                            .replace(/^_|_$/g, '')
-                            .substring(0, 100);
+                            .replace(/[\\/:*?"<>|\n\r]+/g, '') // Remove illegal chars
+                            .replace(/_/g, ' ')             // Replace underscores with spaces
+                            .trim()                         // Trim leading/trailing whitespace
+                            .replace(/\s+/g, ' ')           // Collapse multiple spaces to one
+                            .substring(0, 100);              // Limit length
 
                         if (sanitizedTitle) {
+                            const titleCasedSanitizedTitle = sanitizedTitle
+                                .split(' ')
+                                .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1) : '') // Handle potential empty strings from split
+                                .join(' ');
+
                             const filenameWithoutExt = baseFilename.substring(0, baseFilename.lastIndexOf('.'));
                             if (settings.enableArchiveRenameDate) {
-                                baseFilename = `${filenameWithoutExt}_${sanitizedTitle}${originalExtension}`;
+                                baseFilename = `${filenameWithoutExt} ${titleCasedSanitizedTitle}${originalExtension}`;
                             } else {
-                                baseFilename = `${sanitizedTitle}${originalExtension}`;
+                                baseFilename = `${titleCasedSanitizedTitle}${originalExtension}`;
                             }
                             log.debug(`FileSystemService: Updated baseFilename with LLM title: ${baseFilename}`);
                         } else {
@@ -104,7 +110,7 @@ export class FileSystemService {
 
             while (await this.app.vault.adapter.exists(targetPath)) {
                 counter++;
-                targetPath = normalizePath(`${normalizedArchivePath}/${targetBaseName}-${counter}${targetExtension}`);
+                targetPath = normalizePath(`${normalizedArchivePath}/${targetBaseName} ${counter}${targetExtension}`);
             }
 
             await this.app.fileManager.renameFile(file, targetPath);
