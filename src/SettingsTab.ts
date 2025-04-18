@@ -11,7 +11,7 @@ import {
 	CHAT_COMMAND_DEFAULT,
 	ARCHIVE_COMMAND_DEFAULT,
 	NEW_CHAT_COMMAND_DEFAULT,
-	MODEL_COMMAND_DEFAULT, // Added for model change
+	MODEL_COMMAND_DEFAULT,
 	CHAT_SEPARATOR_DEFAULT
 } from './constants';
 
@@ -35,7 +35,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		containerEl.createEl('h2', { text: 'Simple Note Chat - Settings' });
 
 		// ========== 1. LLM SETUP ==========
-		containerEl.createEl('h3', { text: 'LLM Setup' });
+		containerEl.createEl('h3', { text: 'LLM Setup', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'Configure connection to OpenRouter and select default models.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('OpenRouter API Key')
@@ -113,10 +114,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		});
 
 		// ========== 2. CHAT COMMAND (cc) ==========
-		containerEl.createEl('h3', { text: 'Chat Command (cc)' });
+		containerEl.createEl('h3', { text: 'Chat Command', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'Settings for the primary command to interact with the LLM in the current note.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
-			.setName('Chat Command Phrase')
+			.setName('Chat Phrase')
 			.setDesc(`Phrase to trigger chat completion (Default: ${CHAT_COMMAND_DEFAULT}).`)
 			.addText(text => text
 				.setPlaceholder(CHAT_COMMAND_DEFAULT)
@@ -173,10 +175,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		// ========== 3. MODEL CHANGE COMMAND (cm) ==========
-		containerEl.createEl('h3', { text: 'Model Change Command (cm)' });
+		containerEl.createEl('h3', { text: 'Change Model Command', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'Settings for the command to quickly change the active LLM.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
-			.setName('Model Command Phrase')
+			.setName('Change Model Phrase')
 			.setDesc(`Phrase that opens the model‑selection dialog (Default: ${MODEL_COMMAND_DEFAULT}).`)
 			.addText(t => t
 				.setPlaceholder(MODEL_COMMAND_DEFAULT)
@@ -194,10 +197,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		// ========== 4. ARCHIVE COMMAND (gg) ==========
-		containerEl.createEl('h3', { text: 'Archive Command (gg)' });
+		containerEl.createEl('h3', { text: 'Archive Command', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'Configure how completed chat notes are archived (location, renaming).', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
-			.setName('Archive Command Phrase')
+			.setName('Archive Phrase')
 			.setDesc(`Phrase to trigger archiving the current chat note (Default: ${ARCHIVE_COMMAND_DEFAULT}).`)
 			.addText(text => text
 				.setPlaceholder(ARCHIVE_COMMAND_DEFAULT)
@@ -328,10 +332,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		llmSettingsContainer.style.display = this.plugin.settings.enableArchiveRenameLlm ? 'block' : 'none';
 
 		// ========== 5. NEW CHAT COMMAND (nn) ==========
-		containerEl.createEl('h3', { text: 'New Chat Command (nn)' });
+		containerEl.createEl('h3', { text: 'New Chat Command', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'Settings for creating new chat notes and related actions.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
-			.setName('New Chat Command Phrase')
+			.setName('New Chat Phrase')
 			.setDesc(`Phrase to trigger creating a new chat note (Default: ${NEW_CHAT_COMMAND_DEFAULT}).`)
 			.addText(text => text
 				.setPlaceholder(NEW_CHAT_COMMAND_DEFAULT)
@@ -393,7 +398,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		// ========== 6. GENERAL INFORMATION ==========
-		containerEl.createEl('h3', { text: 'Additional Information' });
+		containerEl.createEl('h3', { text: 'Additional Information', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'General notes and reminders about plugin behavior.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('Command Phrases & Separators')
