@@ -5,7 +5,7 @@ import { OpenRouterService, OpenRouterModel, FormattedModelInfo, ModelSortOption
 import { PluginSettings } from './types';
 import { log } from './utils/logger';
 import {
-	DEFAULT_STOP_SEQUENCE,
+	// Removed DEFAULT_STOP_SEQUENCE
 	DEFAULT_ARCHIVE_FOLDER,
 	DEFAULT_NN_TITLE_FORMAT,
 	CHAT_COMMAND_DEFAULT,
@@ -141,25 +141,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					this.plugin.settings.enableCcShortcut = value;
 					await this.plugin.saveSettings();
 					new Notice(`Chat keyboard shortcut command ${value ? 'enabled' : 'disabled'}. Configure in Obsidian Hotkeys.`);
-				}));
+				})); // <-- Close onChange and addToggle
 
-		new Setting(containerEl)
-			.setName('Stop Sequence')
-			.setDesc('Type this sequence anywhere in the note while a response is streaming to stop it.')
-			.addText(text => text
-				.setPlaceholder(DEFAULT_STOP_SEQUENCE)
-				.setValue(this.plugin.settings.stopCommandSequence)
-				.onChange(async (value) => {
-					const trimmedValue = value.trim();
-					if (trimmedValue) {
-						this.plugin.settings.stopCommandSequence = trimmedValue;
-						await this.plugin.saveSettings();
-						new Notice('Stop sequence saved.');
-					} else {
-						new Notice('Stop sequence cannot be empty.');
-						text.setValue(this.plugin.settings.stopCommandSequence);
-					}
-				}));
+		// Removed Stop Sequence Setting
 
 		new Setting(containerEl)
 			.setName('Enable Viewport Scrolling')

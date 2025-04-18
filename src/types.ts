@@ -1,9 +1,9 @@
-import { DEFAULT_STOP_SEQUENCE, DEFAULT_ARCHIVE_FOLDER, DEFAULT_NN_TITLE_FORMAT } from './constants';
+import { DEFAULT_ARCHIVE_FOLDER, DEFAULT_NN_TITLE_FORMAT } from './constants'; // Removed DEFAULT_STOP_SEQUENCE import
 
 export interface PluginSettings {
   apiKey: string;
   defaultModel: string;
-  stopCommandSequence: string;
+  // stopCommandSequence: string; // Removed setting
   archiveFolderName: string;
   enableNnCommandPhrase: boolean;
   enableNnRibbonButton: boolean;
@@ -27,7 +27,7 @@ export interface PluginSettings {
 export const DEFAULT_SETTINGS: PluginSettings = {
 	apiKey: '',
 	defaultModel: 'openrouter/auto',
-	stopCommandSequence: DEFAULT_STOP_SEQUENCE,
+	// stopCommandSequence: DEFAULT_STOP_SEQUENCE, // Removed setting
 	archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
 	enableNnCommandPhrase: true,
 	enableNnRibbonButton: false,

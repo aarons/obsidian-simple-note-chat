@@ -132,25 +132,85 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	}
 
 	/**
-		* Handles keydown events globally to catch the Escape key for stream cancellation.
-		* @param evt The keyboard event.
-		*/
+	 * Handles keydown events globally for stream cancellation and command triggers.
+	 * @param evt The keyboard event.
+	 */
 	private handleKeyDown(evt: KeyboardEvent): void {
+		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!activeView || !activeView.file) {
+			return; // No active markdown editor
+		}
+		const editor = activeView.editor;
+		const filePath = activeView.file.path;
+
+		// Escape Key: Cancel active stream
 		if (evt.key === 'Escape') {
-			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-			// Removed duplicate declaration of activeView
-			if (activeView && activeView.file) {
-				const filePath = activeView.file.path;
-				if (this.chatService.isStreamActive(filePath)) {
-					log.debug(`Escape key pressed, attempting to cancel stream for: ${filePath}`);
-					// Pass editor and settings to cancelStream
-					if (this.chatService.cancelStream(filePath, activeView.editor, this.settings)) {
-						// Notice is now handled within cancelStream upon successful cancellation
-						log.debug("Stream cancellation initiated by Escape key.");
-					} else {
-						log.debug("Escape key pressed, but no active stream found or cancellation failed.");
-					}
+			if (this.chatService.isStreamActive(filePath)) {
+				log.debug(`Escape key pressed, attempting to cancel stream for: ${filePath}`);
+				if (this.chatService.cancelStream(filePath, editor, this.settings)) {
+					log.debug("Stream cancellation initiated by Escape key.");
+					evt.preventDefault();
+					evt.stopPropagation();
+				} else {
+					log.debug("Escape key pressed, but no active stream found or cancellation failed.");
 				}
+			}
+			return;
+		}
+
+		// Enter Key: Trigger command phrases
+		if (evt.key === 'Enter') {
+			if (this.chatService.isStreamActive(filePath)) {
+				return;
+			}
+
+			const cursor = editor.getCursor();
+			let lineToCheck = cursor.line;
+			let lineText = editor.getLine(lineToCheck);
+
+			// Handle cursor position after Enter press
+			if (cursor.ch === 0 && cursor.line > 0) {
+				const prevLineIndex = cursor.line - 1;
+				const prevLineText = editor.getLine(prevLineIndex);
+				log.debug(`Enter pressed, cursor at [${cursor.line}, 0]. Checking previous line (${prevLineIndex}): "${prevLineText}"`);
+
+				if (lineText.trim() === '' && prevLineText.trim() !== '') {
+					lineToCheck = prevLineIndex;
+					lineText = prevLineText;
+					log.debug(`Identified line ${lineToCheck} ("${lineText}") as the target for command check.`);
+				} else {
+					log.debug(`Cursor at [${cursor.line}, 0], but previous line or current line state doesn't suggest command trigger.`);
+					return;
+				}
+			} else {
+				log.debug(`Enter pressed, cursor at [${cursor.line}, ${cursor.ch}]. Checking current line (${lineToCheck}): "${lineText}"`);
+				if (cursor.ch !== lineText.length) {
+					log.debug("Enter key ignored: Cursor not at end of current line content.");
+					return;
+				}
+			}
+
+			const trimmedLineText = lineText.trim();
+
+			let commandHandler: (() => void) | null = null;
+			const commandLineIndex = lineToCheck;
+
+			if (trimmedLineText === this.settings.chatCommandPhrase) {
+				commandHandler = () => this.editorHandler.triggerChatCommand(editor, activeView, this.settings, commandLineIndex);
+			} else if (trimmedLineText === this.settings.archiveCommandPhrase) {
+				commandHandler = () => this.editorHandler.triggerArchiveCommand(editor, activeView, this.settings, commandLineIndex);
+			} else if (this.settings.enableNnCommandPhrase && trimmedLineText === this.settings.newChatCommandPhrase) {
+				commandHandler = () => this.editorHandler.triggerNewChatCommand(editor, activeView, this.settings, commandLineIndex);
+			}
+
+			if (commandHandler) {
+				log.debug(`Enter key trigger conditions met for "${trimmedLineText}" on line ${commandLineIndex}. Executing command.`);
+				evt.preventDefault();
+				evt.stopPropagation();
+				commandHandler();
+			} else {
+				// Add logging here if no command handler was found after cursor check passed
+				log.debug(`Enter key trigger conditions NOT met: No command phrase matched "${trimmedLineText}". Settings: cc='${this.settings.chatCommandPhrase}', gg='${this.settings.archiveCommandPhrase}', nn='${this.settings.newChatCommandPhrase}'`);
 			}
 		}
 	}

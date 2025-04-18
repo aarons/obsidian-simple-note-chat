@@ -21,7 +21,7 @@ export class ChatService {
 
     /**
      * Parses note content into ChatMessages.
-     * @param content The raw string content of the note.
+     * @param fullContent The raw string content of the note.
      * @param separator The separator used to divide messages.
      * @returns An array of ChatMessage objects.
      */
@@ -66,7 +66,6 @@ export class ChatService {
 
     /**
      * Handles the chat process from parsing to streaming and updating the editor.
-     * @param _noteContent The content of the note before the "Calling..." status was added.
      * @param editor The editor instance where the command was triggered.
      * @param file The file associated with the editor.
      * @param settings The current plugin settings.
@@ -156,24 +155,21 @@ export class ChatService {
 
                // --- After Stream Completion ---
                if (!isFirstChunk && lastPosition) { // Ensure stream actually inserted content
-                    // Content was added by the stream. Append the final separator and position cursor.
+                    // Append final separator and position cursor
                     lastPosition = this.insertSeparatorWithSpacing(
                         editor,
                         lastPosition,
                         settings.chatSeparator
                     );
-                    editor.setCursor(lastPosition); // Set cursor *after* the inserted separator block
+                    editor.setCursor(lastPosition); // Set cursor after the separator
                } else if (isFirstChunk) {
-                    // Stream finished, but no chunks were received. Status message might still be there.
+                    // No chunks received
                      this.removeStatusMessageAtPos(editor, settings, statusMessageStartPos, statusMessageEndPos, 'Stream ended with no content.');
-                     editor.setCursor(statusMessageStartPos); // Place cursor where status message was
-                } else if (lastPosition) { // Simplified condition: if lastPosition exists but isFirstChunk is false
-                     // Stream finished, content was received, but maybe the separator logic failed?
-                     // Place cursor at the end of the received content as a fallback.
+                     editor.setCursor(statusMessageStartPos);
+                } else if (lastPosition) {
                      log.warn("Stream finished, content likely received, placing cursor at end of content.");
                      editor.setCursor(lastPosition);
                 } else {
-                     // Fallback if state is unexpected (e.g., !isFirstChunk but no lastPosition)
                      log.error("Stream finished in an unexpected state. Placing cursor at status message start position.");
                      editor.setCursor(statusMessageStartPos);
                 }
@@ -239,8 +235,8 @@ export class ChatService {
     }
 
     /**
-     * Inserts the separator ensuring EXACTLY one blank line before and after.
-     * Returns the position right after the inserted block.
+     * Inserts the separator with exactly one blank line before and after.
+     * @returns The position right after the inserted block.
      */
     private insertSeparatorWithSpacing(
         editor: Editor,
