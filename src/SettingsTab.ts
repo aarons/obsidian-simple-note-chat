@@ -141,6 +141,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					this.plugin.settings.enableCcShortcut = value;
 					await this.plugin.saveSettings();
 					new Notice(`Chat keyboard shortcut command ${value ? 'enabled' : 'disabled'}. Configure in Obsidian Hotkeys.`);
+				})); // <-- Close onChange and addToggle
+
 		// Removed Stop Sequence Setting
 
 		new Setting(containerEl)
