@@ -2,6 +2,7 @@ import { App, Editor, MarkdownView, TFile, EditorPosition, Notice } from 'obsidi
 import SimpleNoteChat from './main'; // Assuming main exports the class as default
 import { PluginSettings } from './types';
 import { log } from './utils/logger';
+import { ModelSelectorModal } from './ModelSelectorModal'; // Added import
 
 export class EditorHandler {
 	private app: App;
@@ -62,6 +63,8 @@ export class EditorHandler {
 				commandHandler = () => this.triggerArchiveCommand(editor, markdownView, settings, lastContentLineIdx);
 			} else if (settings.enableNnCommandPhrase && trimmed === settings.newChatCommandPhrase) {
 				commandHandler = () => this.triggerNewChatCommand(editor, markdownView, settings, lastContentLineIdx);
+			} else if (trimmed === settings.modelCommandPhrase) {
+				commandHandler = () => this.triggerModelCommand(editor, markdownView, settings, lastContentLineIdx);
 			}
 
 			if (commandHandler) {
@@ -264,5 +267,35 @@ export class EditorHandler {
 		// @ts-ignore - Assuming 'commands' exists on app
 		this.app.commands.executeCommandById('simple-note-chat:create-new-chat-note');
 		new Notice("Creating new chat note...");
+	}
+
+	/**
+	 * Handles model selection command activation.
+	 * Removes command line and opens the model selector modal.
+	 */
+	public triggerModelCommand(
+		editor: Editor,
+		markdownView: MarkdownView,
+		settings: PluginSettings,
+		commandLineIndex: number
+	): void {
+		// Define the range for the command line itself
+		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
+		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: editor.getLine(commandLineIndex).length };
+
+		// Determine the end of the range to remove (command line + its newline, or just command line if last line)
+		const rangeToRemoveEnd = (commandLineIndex < editor.lastLine())
+			? { line: commandLineIndex + 1, ch: 0 } // Remove the line and its newline
+			: commandLineEndPos; // Just remove the content if it's the last line
+
+		// Remove the command line (and its newline if applicable)
+		editor.replaceRange('', commandLineStartPos, rangeToRemoveEnd);
+
+		// Set cursor position *before* opening the modal
+		this._setCursorBeforeCommand(editor, commandLineIndex);
+
+		// Open the modal
+		new ModelSelectorModal(this.plugin).open();
+		log.debug(`Executed model command ('${settings.modelCommandPhrase}') on line ${commandLineIndex}. Opening modal.`);
 	}
 }

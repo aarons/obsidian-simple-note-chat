@@ -11,11 +11,13 @@ import {
 	CHAT_COMMAND_DEFAULT,
 	ARCHIVE_COMMAND_DEFAULT,
 	NEW_CHAT_COMMAND_DEFAULT,
-	CHAT_SEPARATOR_DEFAULT
+	CHAT_SEPARATOR_DEFAULT,
+	MODEL_COMMAND_DEFAULT
 } from './constants';
 DEFAULT_SETTINGS.chatCommandPhrase = CHAT_COMMAND_DEFAULT;
 DEFAULT_SETTINGS.archiveCommandPhrase = ARCHIVE_COMMAND_DEFAULT;
 DEFAULT_SETTINGS.newChatCommandPhrase = NEW_CHAT_COMMAND_DEFAULT;
+DEFAULT_SETTINGS.modelCommandPhrase = MODEL_COMMAND_DEFAULT;
 DEFAULT_SETTINGS.chatSeparator = CHAT_SEPARATOR_DEFAULT;
 
 export default class SimpleNoteChatPlugin extends Plugin {
@@ -201,6 +203,8 @@ export default class SimpleNoteChatPlugin extends Plugin {
 				commandHandler = () => this.editorHandler.triggerArchiveCommand(editor, activeView, this.settings, commandLineIndex);
 			} else if (this.settings.enableNnCommandPhrase && trimmedLineText === this.settings.newChatCommandPhrase) {
 				commandHandler = () => this.editorHandler.triggerNewChatCommand(editor, activeView, this.settings, commandLineIndex);
+			} else if (trimmedLineText === this.settings.modelCommandPhrase) {
+				commandHandler = () => this.editorHandler.triggerModelCommand(editor, activeView, this.settings, commandLineIndex);
 			}
 
 			if (commandHandler) {

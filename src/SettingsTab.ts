@@ -11,6 +11,7 @@ import {
 	CHAT_COMMAND_DEFAULT,
 	ARCHIVE_COMMAND_DEFAULT,
 	NEW_CHAT_COMMAND_DEFAULT,
+	MODEL_COMMAND_DEFAULT, // Added for model change
 	CHAT_SEPARATOR_DEFAULT
 } from './constants';
 
@@ -171,7 +172,28 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
-		// ========== 3. ARCHIVE COMMAND (gg) ==========
+		// ========== 3. MODEL CHANGE COMMAND (cm) ==========
+		containerEl.createEl('h3', { text: 'Model Change Command (cm)' });
+
+		new Setting(containerEl)
+			.setName('Model Command Phrase')
+			.setDesc(`Phrase that opens the model‑selection dialog (Default: ${MODEL_COMMAND_DEFAULT}).`)
+			.addText(t => t
+				.setPlaceholder(MODEL_COMMAND_DEFAULT)
+				.setValue(this.plugin.settings.modelCommandPhrase)
+				.onChange(async (v) => {
+					const trimmed = v.trim();
+					if (trimmed && this.plugin.settings.modelCommandPhrase !== trimmed) {
+						this.plugin.settings.modelCommandPhrase = trimmed;
+						await this.plugin.saveSettings();
+						new Notice('Model command phrase saved.');
+					} else if (!trimmed) {
+						new Notice('Command phrase cannot be empty.');
+						t.setValue(this.plugin.settings.modelCommandPhrase); // Revert if empty
+					}
+				}));
+
+		// ========== 4. ARCHIVE COMMAND (gg) ==========
 		containerEl.createEl('h3', { text: 'Archive Command (gg)' });
 
 		new Setting(containerEl)
@@ -305,7 +327,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		llmSettingsContainer.style.display = this.plugin.settings.enableArchiveRenameLlm ? 'block' : 'none';
 
-		// ========== 4. NEW CHAT COMMAND (nn) ==========
+		// ========== 5. NEW CHAT COMMAND (nn) ==========
 		containerEl.createEl('h3', { text: 'New Chat Command (nn)' });
 
 		new Setting(containerEl)
@@ -370,9 +392,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					new Notice(`Archive on New Chat ${value ? 'enabled' : 'disabled'}.`);
 				}));
 
-		// ========== GENERAL INFORMATION ==========
+		// ========== 6. GENERAL INFORMATION ==========
 		containerEl.createEl('h3', { text: 'Additional Information' });
-		
+
 		new Setting(containerEl)
 			.setName('Command Phrases & Separators')
 			.setDesc('Changing command phrases or the separator may require Obsidian to be reloaded for the changes to take full effect in the editor detection.');

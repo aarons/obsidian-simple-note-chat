@@ -21,6 +21,7 @@ export interface PluginSettings {
   chatCommandPhrase: string;
   archiveCommandPhrase: string;
   newChatCommandPhrase: string;
+  modelCommandPhrase: string; // Added for model change
   chatSeparator: string;
 }
 
@@ -45,6 +46,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	chatCommandPhrase: '', // Will be set from constants in main.ts
 	archiveCommandPhrase: '', // Will be set from constants in main.ts
 	newChatCommandPhrase: '', // Will be set from constants in main.ts
+	modelCommandPhrase: '', // Will be set from constants in main.ts - Added
 	chatSeparator: '' // Will be set from constants in main.ts
 };
 
