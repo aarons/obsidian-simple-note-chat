@@ -1,4 +1,4 @@
-import { DEFAULT_ARCHIVE_FOLDER, DEFAULT_NN_TITLE_FORMAT } from './constants'; // Removed DEFAULT_STOP_SEQUENCE import
+import { DEFAULT_ARCHIVE_FOLDER, DEFAULT_NN_TITLE_FORMAT } from './constants';
 
 export interface PluginSettings {
   apiKey: string;
@@ -14,21 +14,19 @@ export interface PluginSettings {
   llmRenameIncludeEmojis: boolean;
   llmRenameModel: string; // Stores the ID of the model to use for titling
   enableViewportScrolling: boolean;
-  modelSortOrder: string; // Added for model sorting
-  enableCcShortcut: boolean; // Keep this name as it relates to the specific command ID
+  modelSortOrder: string;
+  enableCcShortcut: boolean; // Relates to specific command ID
   chatCommandPhrase: string;
   archiveCommandPhrase: string;
   newChatCommandPhrase: string;
-  modelCommandPhrase: string; // Added for model change
+  modelCommandPhrase: string;
   chatSeparator: string;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
 	apiKey: '',
 	defaultModel: 'openrouter/auto',
-	// stopCommandSequence: DEFAULT_STOP_SEQUENCE, // Removed setting
 	archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
-	// enableNnCommandPhrase: true, // Removed
 	enableNnRibbonButton: false,
 	enableNnKeyboardShortcut: false,
 	archivePreviousNoteOnNn: false,
@@ -37,15 +35,15 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	enableArchiveRenameLlm: false,
 	llmRenameWordLimit: 5,
 	llmRenameIncludeEmojis: false,
-	llmRenameModel: '', // Default to empty, maybe use `defaultModel` later if empty?
+	llmRenameModel: '',
 	enableViewportScrolling: false,
 	modelSortOrder: 'alphabetical',
 	enableCcShortcut: false,
-	chatCommandPhrase: '', // Will be set from constants in main.ts
-	archiveCommandPhrase: '', // Will be set from constants in main.ts
-	newChatCommandPhrase: '', // Will be set from constants in main.ts
-	modelCommandPhrase: '', // Will be set from constants in main.ts
-	chatSeparator: '' // Will be set from constants in main.ts
+	chatCommandPhrase: '',
+	archiveCommandPhrase: '',
+	newChatCommandPhrase: '',
+	modelCommandPhrase: '',
+	chatSeparator: ''
 };
 
 export interface ChatMessage {
