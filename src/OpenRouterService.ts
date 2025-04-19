@@ -188,6 +188,7 @@ export class OpenRouterService {
                     // Update the cache
                     this.availableModels = data.data as OpenRouterModel[];
                     this.modelsLastFetched = Date.now();
+                    log.debug(`Model cache updated at: ${this.modelsLastFetched}`)
                     return this.availableModels;
                 } else {
                     log.error('Unexpected response structure from OpenRouter API:', data);
