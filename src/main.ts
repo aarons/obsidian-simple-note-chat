@@ -61,19 +61,18 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		// Register/unregister keydown handler based on active leaf
 		this.registerEvent(this.app.workspace.on('active-leaf-change', (leaf) => {
-			this.unregisterScopedKeyDownHandler(); // Clean up previous listener first
+			this.unregisterScopedKeyDownHandler();
 
 			if (leaf?.view instanceof MarkdownView) {
 				const view = leaf.view;
-				const target = view.containerEl; // Listen on the view's container
+				const target = view.containerEl;
 
-				// Bind the handler first
 				const boundHandler = this.handleKeyDown.bind(this, view);
-				this.boundKeyDownHandler = boundHandler; // Store it
-				target.addEventListener('keydown', boundHandler); // Use the non-null bound handler
+				this.boundKeyDownHandler = boundHandler;
+				target.addEventListener('keydown', boundHandler);
 
-				this.activeMarkdownView = view; // Store for potential use and cleanup
-				this.activeEditorKeyDownTarget = target; // Store for cleanup
+				this.activeMarkdownView = view;
+				this.activeEditorKeyDownTarget = target;
 				log.debug("Registered scoped keydown handler for active MarkdownView");
 			}
 		}));
@@ -83,10 +82,9 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		if (currentLeaf?.view instanceof MarkdownView) {
 			const view = currentLeaf.view;
 			const target = view.containerEl;
-			// Bind the handler first
 			const boundHandler = this.handleKeyDown.bind(this, view);
-			this.boundKeyDownHandler = boundHandler; // Store it
-			target.addEventListener('keydown', boundHandler); // Use the non-null bound handler
+			this.boundKeyDownHandler = boundHandler;
+			target.addEventListener('keydown', boundHandler);
 			this.activeMarkdownView = view;
 			this.activeEditorKeyDownTarget = target;
 			log.debug("Registered initial scoped keydown handler");
@@ -97,7 +95,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			id: 'create-new-chat-note',
 			name: 'Create New Chat Note',
 			callback: async () => {
-				// Store the reference to the *current* active file *before* creating the new one
 				const previousActiveFile = this.app.workspace.getActiveFile();
 
 				try {
@@ -249,20 +246,17 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	 * @param evt The keyboard event.
 	 */
 	private handleKeyDown(view: MarkdownView, evt: KeyboardEvent): void {
-	 	// --- Early Exit ---
-	 	// Only proceed if Escape or Enter was pressed
 		if (evt.key !== 'Escape' && evt.key !== 'Enter') {
 	 		return;
 	 	}
 
-		// Ensure we have a file context
 		const file = view.file;
 		if (!file) {
 			log.debug("Keydown ignored: No file associated with the view.");
 			return;
 		}
 		const filePath = file.path;
-		const editor = view.editor; // Get editor from the view passed in
+		const editor = view.editor;
 
 		log.debug(`handleKeyDown triggered for key: ${evt.key}, file: ${filePath}`);
 
@@ -277,22 +271,19 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			} else if (isActive) {
 				log.debug("Stream cancellation failed.");
 			}
-			return; // We're done with this event regardless of outcome
+			return;
 		}
 
 	 	// --- Enter Key: Trigger command phrases ---
-		// Note: evt.key === 'Enter' is implicitly true here due to the early exit logic
 		if (this.chatService.isStreamActive(filePath)) {
 			log.debug("Enter key ignored: Stream active.");
-			return; // Don't trigger commands if a stream is writing
+			return;
 		}
 
 		const cursor = editor.getCursor();
 		const commandLine = cursor.line - 1;
 
 		// --- Command Matching ---
-		// The first line of a document is indexed at 0 (cursor.line == 0)
-		// We check for command phrases on the previous line, so the cursor.line needs to be >= 1
 		if (cursor.line >= 1) {
 			// Check if settings have changed
 			const currentSettingsHash = this.getSettingsHash();
