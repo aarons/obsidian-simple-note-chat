@@ -50,6 +50,9 @@ export interface FormattedModelInfo {
 
 
 export class OpenRouterService {
+    private availableModels: OpenRouterModel[] = [];
+    private modelsLastFetched: number = 0;
+    private cacheValidityDuration: number = 1000 * 60 * 60 * 24; // 24 hours in milliseconds
     /**
      * Formats a price string (representing price per token) into price per million tokens.
      * @param price The price string (e.g., "0.0000015") or undefined/null.
@@ -92,11 +95,45 @@ export class OpenRouterService {
     }
 
     /**
-     * Fetches models from the OpenRouter API.
+     * Checks if the model cache is valid.
+     * @returns true if models are cached and the cache hasn't expired.
+     */
+    isCacheValid(): boolean {
+        return this.availableModels.length > 0 && 
+               (Date.now() - this.modelsLastFetched) < this.cacheValidityDuration;
+    }
+
+    /**
+     * Gets cached models or fetches them if not available.
      * @param apiKey The OpenRouter API key.
+     * @returns A promise that resolves to the cached models.
+     */
+    async getCachedModels(apiKey: string): Promise<OpenRouterModel[]> {
+        return this.fetchModels(apiKey, false);
+    }
+
+    /**
+     * Clears the model cache and forces a refresh.
+     * @param apiKey The OpenRouter API key.
+     * @returns A promise that resolves to the newly fetched models.
+     */
+    async refreshModels(apiKey: string): Promise<OpenRouterModel[]> {
+        return this.fetchModels(apiKey, true);
+    }
+
+    /**
+     * Fetches models from the OpenRouter API or returns cached models if available.
+     * @param apiKey The OpenRouter API key.
+     * @param forceRefresh Whether to force a refresh from the API instead of using cache.
      * @returns A promise that resolves to an array of models or an empty array in case of error.
      */
-    async fetchModels(apiKey: string): Promise<OpenRouterModel[]> {
+    async fetchModels(apiKey: string, forceRefresh: boolean = false): Promise<OpenRouterModel[]> {
+        // Return cached models if available and cache is still valid
+        if (!forceRefresh && this.isCacheValid()) {
+            log.debug('OpenRouterService: Using cached models');
+            return this.availableModels;
+        }
+
         if (!apiKey) {
             log.warn('OpenRouter API key is missing.');
             return []; // Don't show notice, just return empty
@@ -114,7 +151,10 @@ export class OpenRouterService {
             if (response.status === 200) {
                 const data = response.json;
                 if (data && Array.isArray(data.data)) {
-                    return data.data as OpenRouterModel[];
+                    // Update the cache
+                    this.availableModels = data.data as OpenRouterModel[];
+                    this.modelsLastFetched = Date.now();
+                    return this.availableModels;
                 } else {
                     log.error('Unexpected response structure from OpenRouter API:', data);
                     new Notice('Failed to parse model list from OpenRouter. Unexpected format.');

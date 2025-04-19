@@ -31,7 +31,8 @@ export class ModelSelectorModal extends Modal {
 				return;
 			}
 
-			let models = await this.ors.fetchModels(apiKey);
+			// Use cached models if available
+			let models = await this.ors.getCachedModels(apiKey);
 			if (models.length === 0) {
 				contentEl.createEl('p', { text: 'No models loaded. Check your API key or network connection.' });
 				notice.hide();

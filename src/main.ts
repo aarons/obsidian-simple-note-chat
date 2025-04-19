@@ -42,6 +42,13 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		this.lastSettingsHash = this.getSettingsHash();
 
 		this.openRouterService = new OpenRouterService();
+		
+		// Silently preload models when plugin loads if API key is set
+		if (this.settings.apiKey) {
+			this.openRouterService.getCachedModels(this.settings.apiKey)
+				.then(() => log.debug('Models prefetched on plugin load'))
+				.catch(err => log.error('Error prefetching models:', err));
+		}
 		this.chatService = new ChatService(this, this.openRouterService);
 		this.fileSystemService = new FileSystemService(this.app, this.openRouterService);
 		this.editorHandler = new EditorHandler(this.app, this);
