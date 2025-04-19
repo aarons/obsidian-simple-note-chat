@@ -27,6 +27,10 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	editorHandler: EditorHandler;
 	fileSystemService: FileSystemService;
 
+	private activeMarkdownView: MarkdownView | null = null;
+	private activeEditorKeyDownTarget: EventTarget | null = null;
+	private boundKeyDownHandler: ((evt: KeyboardEvent) => void) | null = null;
+
 	async onload() {
 		log.debug('Loading Simple Note Chat plugin');
 		await this.loadSettings();
@@ -42,7 +46,39 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			this.app.workspace.on('editor-change', this.editorHandler.handleEditorChange)
 		);
 
-		this.registerDomEvent(document, 'keydown', this.handleKeyDown.bind(this));
+		// Register/unregister keydown handler based on active leaf
+		this.registerEvent(this.app.workspace.on('active-leaf-change', (leaf) => {
+			this.unregisterScopedKeyDownHandler(); // Clean up previous listener first
+
+			if (leaf?.view instanceof MarkdownView) {
+				const view = leaf.view;
+				const target = view.containerEl; // Listen on the view's container
+
+				// Bind the handler first
+				const boundHandler = this.handleKeyDown.bind(this, view);
+				this.boundKeyDownHandler = boundHandler; // Store it
+				target.addEventListener('keydown', boundHandler); // Use the non-null bound handler
+
+				this.activeMarkdownView = view; // Store for potential use and cleanup
+				this.activeEditorKeyDownTarget = target; // Store for cleanup
+				log.debug("Registered scoped keydown handler for active MarkdownView");
+			}
+		}));
+
+		// Initial check in case a markdown view is already active on load
+		const currentLeaf = this.app.workspace.activeLeaf;
+		if (currentLeaf?.view instanceof MarkdownView) {
+			const view = currentLeaf.view;
+			const target = view.containerEl;
+			// Bind the handler first
+			const boundHandler = this.handleKeyDown.bind(this, view);
+			this.boundKeyDownHandler = boundHandler; // Store it
+			target.addEventListener('keydown', boundHandler); // Use the non-null bound handler
+			this.activeMarkdownView = view;
+			this.activeEditorKeyDownTarget = target;
+			log.debug("Registered initial scoped keydown handler");
+		}
+
 
 		this.addCommand({
 			id: 'create-new-chat-note',
@@ -123,7 +159,21 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 	onunload() {
 		log.debug('Unloading Simple Note Chat plugin');
+		// Ensure the listener is removed when the plugin unloads
+		this.unregisterScopedKeyDownHandler();
 	}
+
+	// Helper to remove the active keydown listener
+	private unregisterScopedKeyDownHandler() {
+		if (this.activeEditorKeyDownTarget && this.boundKeyDownHandler) {
+			this.activeEditorKeyDownTarget.removeEventListener('keydown', this.boundKeyDownHandler);
+			log.debug("Unregistered scoped keydown handler");
+		}
+		this.activeMarkdownView = null;
+		this.activeEditorKeyDownTarget = null;
+		this.boundKeyDownHandler = null;
+	}
+
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -134,89 +184,91 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	}
 
 	/**
-	 * Handles keydown events globally for stream cancellation and command triggers.
+	 * Handles keydown events within an active Markdown view for stream cancellation and command triggers.
+	 * This handler is now attached directly to the active view's container.
+	 * @param view The MarkdownView instance where the event occurred.
 	 * @param evt The keyboard event.
 	 */
-	private handleKeyDown(evt: KeyboardEvent): void {
-		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (!activeView || !activeView.file) {
-			return; // No active markdown editor
-		}
-		const editor = activeView.editor;
-		const filePath = activeView.file.path;
+	private handleKeyDown(view: MarkdownView, evt: KeyboardEvent): void {
+	 // --- Early Exit ---
+	 // Only proceed if Escape or Enter was pressed
+	 if (evt.key !== 'Escape' && evt.key !== 'Enter') {
+	 	return;
+	 }
 
-		// Escape Key: Cancel active stream
-		if (evt.key === 'Escape') {
-			if (this.chatService.isStreamActive(filePath)) {
-				log.debug(`Escape key pressed, attempting to cancel stream for: ${filePath}`);
-				if (this.chatService.cancelStream(filePath, editor, this.settings)) {
-					log.debug("Stream cancellation initiated by Escape key.");
-					evt.preventDefault();
-					evt.stopPropagation();
-				} else {
-					log.debug("Escape key pressed, but no active stream found or cancellation failed.");
-				}
-			}
-			return;
-		}
+	 // Ensure we have a file context
+	 const file = view.file;
+	 if (!file) {
+	 	log.debug("Keydown ignored: No file associated with the view.");
+	 	return;
+	 }
+	 const filePath = file.path;
+	 const editor = view.editor; // Get editor from the view passed in
 
-		// Enter Key: Trigger command phrases
-		if (evt.key === 'Enter') {
-			if (this.chatService.isStreamActive(filePath)) {
-				return;
-			}
+	 log.debug(`handleKeyDown triggered for key: ${evt.key}, file: ${filePath}`);
 
-			const cursor = editor.getCursor();
-			let lineToCheck = cursor.line;
-			let lineText = editor.getLine(lineToCheck);
+	 // --- Escape Key: Cancel active stream ---
+	 if (evt.key === 'Escape') {
+	 	if (this.chatService.isStreamActive(filePath)) {
+	 		log.debug(`Escape key pressed, attempting to cancel stream for: ${filePath}`);
+	 		// Pass the specific editor instance
+	 		if (this.chatService.cancelStream(filePath, editor, this.settings)) {
+	 			log.debug("Stream cancellation initiated by Escape key.");
+	 			evt.preventDefault();
+	 			evt.stopPropagation();
+	 		} else {
+	 			log.debug("Escape key pressed, but stream cancellation failed.");
+	 		}
+	 	} else {
+	 		log.debug("Escape key pressed, but no stream active for this file.");
+	 	}
+	 	// We handled Escape, so we are done with this event.
+	 	return;
+	 }
 
-			// Handle cursor position after Enter press
-			if (cursor.ch === 0 && cursor.line > 0) {
-				const prevLineIndex = cursor.line - 1;
-				const prevLineText = editor.getLine(prevLineIndex);
-				log.debug(`Enter pressed, cursor at [${cursor.line}, 0]. Checking previous line (${prevLineIndex}): "${prevLineText}"`);
+	 // --- Enter Key: Trigger command phrases ---
+	 // Note: evt.key === 'Enter' is implicitly true here due to the early exit logic
+	 if (this.chatService.isStreamActive(filePath)) {
+	 	log.debug("Enter key ignored: Stream active.");
+	 	return; // Don't trigger commands if a stream is writing
+	 }
 
-				if (lineText.trim() === '' && prevLineText.trim() !== '') {
-					lineToCheck = prevLineIndex;
-					lineText = prevLineText;
-					log.debug(`Identified line ${lineToCheck} ("${lineText}") as the target for command check.`);
-				} else {
-					log.debug(`Cursor at [${cursor.line}, 0], but previous line or current line state doesn't suggest command trigger.`);
-					return;
-				}
-			} else {
-				log.debug(`Enter pressed, cursor at [${cursor.line}, ${cursor.ch}]. Checking current line (${lineToCheck}): "${lineText}"`);
-				if (cursor.ch !== lineText.length) {
-					log.debug("Enter key ignored: Cursor not at end of current line content.");
-					return;
-				}
-			}
+	 const cursor = editor.getCursor();
+	 const lineToCheck = cursor.line - 1;
 
-			const trimmedLineText = lineText.trim();
+	 // --- Command Matching ---
+	 // If we identified a line to check (lineToCheck >= 0)
+	 if (lineToCheck >= 1) {
+		const prevLineText = editor.getLine(lineToCheck);
+	 	const trimmedLineText = prevLineText.trim();
+	 	let commandHandler: (() => void) | null = null;
+	 	const commandLineIndex = lineToCheck; // Use the identified line index
 
-			let commandHandler: (() => void) | null = null;
-			const commandLineIndex = lineToCheck;
+	 	// Match against known command phrases
+	 	if (trimmedLineText === this.settings.chatCommandPhrase) {
+	 		commandHandler = () => this.editorHandler.triggerChatCommand(editor, view, this.settings, commandLineIndex);
+	 	} else if (trimmedLineText === this.settings.archiveCommandPhrase) {
+	 		commandHandler = () => this.editorHandler.triggerArchiveCommand(editor, view, this.settings, commandLineIndex);
+	 	} else if (this.settings.enableNnCommandPhrase && trimmedLineText === this.settings.newChatCommandPhrase) {
+	 		commandHandler = () => this.editorHandler.triggerNewChatCommand(editor, view, this.settings, commandLineIndex);
+	 	} else if (trimmedLineText === this.settings.modelCommandPhrase) {
+	 		commandHandler = () => this.editorHandler.triggerModelCommand(editor, view, this.settings, commandLineIndex);
+	 	}
 
-			if (trimmedLineText === this.settings.chatCommandPhrase) {
-				commandHandler = () => this.editorHandler.triggerChatCommand(editor, activeView, this.settings, commandLineIndex);
-			} else if (trimmedLineText === this.settings.archiveCommandPhrase) {
-				commandHandler = () => this.editorHandler.triggerArchiveCommand(editor, activeView, this.settings, commandLineIndex);
-			} else if (this.settings.enableNnCommandPhrase && trimmedLineText === this.settings.newChatCommandPhrase) {
-				commandHandler = () => this.editorHandler.triggerNewChatCommand(editor, activeView, this.settings, commandLineIndex);
-			} else if (trimmedLineText === this.settings.modelCommandPhrase) {
-				commandHandler = () => this.editorHandler.triggerModelCommand(editor, activeView, this.settings, commandLineIndex);
-			}
-
-			if (commandHandler) {
-				log.debug(`Enter key trigger conditions met for "${trimmedLineText}" on line ${commandLineIndex}. Executing command.`);
-				evt.preventDefault();
-				evt.stopPropagation();
-				commandHandler();
-			} else {
-				// Add logging here if no command handler was found after cursor check passed
-				log.debug(`Enter key trigger conditions NOT met: No command phrase matched "${trimmedLineText}". Settings: cc='${this.settings.chatCommandPhrase}', gg='${this.settings.archiveCommandPhrase}', nn='${this.settings.newChatCommandPhrase}'`);
-			}
-		}
+	 	// Execute if a command matched
+	 	if (commandHandler) {
+	 		// log.debug(`Enter key trigger conditions met for "${trimmedLineText}" on line ${commandLineIndex}. Executing command.`);
+	 		evt.preventDefault(); // Prevent default Enter behavior (new line)
+	 		evt.stopPropagation(); // Stop event propagation
+	 		// Execute the command handler
+	 		commandHandler();
+	 	} else {
+	 		// log.debug(`Enter key trigger conditions NOT met: No command phrase matched "${trimmedLineText}".`);
+	 		// Let Enter proceed with its default behavior (insert newline) if no command matched
+	 	}
+	 }
+	 // If lineToCheck remained -1, it means neither trigger scenario was met,
+	 // so Enter proceeds normally by default (no return needed here).
 	}
 }
 
