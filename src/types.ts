@@ -3,9 +3,7 @@ import { DEFAULT_ARCHIVE_FOLDER, DEFAULT_NN_TITLE_FORMAT } from './constants'; /
 export interface PluginSettings {
   apiKey: string;
   defaultModel: string;
-  // stopCommandSequence: string; // Removed setting
   archiveFolderName: string;
-  enableNnCommandPhrase: boolean;
   enableNnRibbonButton: boolean;
   enableNnKeyboardShortcut: boolean;
   archivePreviousNoteOnNn: boolean;
@@ -30,7 +28,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	defaultModel: 'openrouter/auto',
 	// stopCommandSequence: DEFAULT_STOP_SEQUENCE, // Removed setting
 	archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
-	enableNnCommandPhrase: true,
+	// enableNnCommandPhrase: true, // Removed
 	enableNnRibbonButton: false,
 	enableNnKeyboardShortcut: false,
 	archivePreviousNoteOnNn: false,

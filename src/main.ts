@@ -97,37 +97,45 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			id: 'create-new-chat-note',
 			name: 'Create New Chat Note',
 			callback: async () => {
+				// Store the reference to the *current* active file *before* creating the new one
+				const previousActiveFile = this.app.workspace.getActiveFile();
+
 				try {
-					if (this.settings.archivePreviousNoteOnNn) {
-						const activeFile = this.app.workspace.getActiveFile();
-						if (activeFile) {
-							try {
-								const content = await this.app.vault.read(activeFile);
-								if (content.includes(this.settings.chatSeparator)) {
-									const archiveResult = await this.fileSystemService.moveFileToArchive(activeFile, this.settings.archiveFolderName, this.settings);
-									if (archiveResult === null) {
-										new Notice(`Failed to archive previous note '${activeFile.name}'. Continuing to create new note.`);
-									} else {
-										new Notice(`Archived '${activeFile.name}'.`);
-									}
-								} else {
-									new Notice(`Previous note '${activeFile.name}' not archived because it lacks a chat separator.`);
-								}
-							} catch (archiveError) {
-								log.error(`Error during pre-nn archive attempt for ${activeFile.name}:`, archiveError);
-								new Notice(`Error trying to archive previous note '${activeFile.name}'. Continuing to create new note.`);
-							}
-						}
-					}
-					// Ensure the archive folder name doesn't have leading/trailing slashes for path joining
+					// 1. Create and open the new note immediately
 					const archiveFolder = this.settings.archiveFolderName.replace(/^\/|\/$/g, '');
 					const title = moment().format(DEFAULT_NN_TITLE_FORMAT);
-					// Construct the path directly within the archive folder
-					const fullPath = `${archiveFolder}/${title}.md`;
+					const fullPath = `${archiveFolder}/${title}.md`; // Create directly in archive for now
 
 					const newFile = await this.app.vault.create(fullPath, '');
-					this.app.workspace.openLinkText(newFile.path, '', false);
+					await this.app.workspace.openLinkText(newFile.path, '', false); // Ensure leaf is open before notice
 					new Notice(`Created new chat note: ${title}.md`);
+
+					// 2. Archive the *previous* note in the background (if applicable)
+					if (this.settings.archivePreviousNoteOnNn && previousActiveFile) {
+						// Run archiving asynchronously without awaiting it here
+						(async () => {
+							try {
+								const content = await this.app.vault.cachedRead(previousActiveFile); // Use cachedRead for potentially faster access
+								if (content.includes(this.settings.chatSeparator)) {
+									const archiveResult = await this.fileSystemService.moveFileToArchive(previousActiveFile, this.settings.archiveFolderName, this.settings);
+									if (archiveResult === null) {
+										new Notice(`Failed to archive previous note '${previousActiveFile.name}'.`);
+										log.warn(`Failed background archive for ${previousActiveFile.name}`);
+									} else {
+										new Notice(`Archived previous note '${previousActiveFile.name}'.`);
+										log.info(`Background archive successful for ${previousActiveFile.name}`);
+									}
+								} else {
+									// No notice needed here, it wasn't a chat note
+									log.info(`Previous note '${previousActiveFile.name}' not archived (no separator).`);
+								}
+							} catch (archiveError) {
+								log.error(`Error during background archive attempt for ${previousActiveFile.name}:`, archiveError);
+								new Notice(`Error trying to archive previous note '${previousActiveFile.name}'.`);
+							}
+						})(); // IIFE to run async task
+					}
+
 				} catch (error) {
 					log.error("Error creating new chat note:", error);
 					new Notice("Error creating new chat note. Check console for details.");
@@ -210,7 +218,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			this.settings.chatCommandPhrase,
 			this.settings.archiveCommandPhrase,
 			this.settings.modelCommandPhrase,
-			this.settings.enableNnCommandPhrase ? this.settings.newChatCommandPhrase : '',
+			this.settings.newChatCommandPhrase, // Always include NN command phrase
 		].join('|');
 	}
 
@@ -229,10 +237,9 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		this.commandMap[this.settings.modelCommandPhrase] =
 			(editor, view, line) => this.editorHandler.triggerModelCommand(editor, view, this.settings, line);
 
-		if (this.settings.enableNnCommandPhrase) {
-			this.commandMap[this.settings.newChatCommandPhrase] =
-				(editor, view, line) => this.editorHandler.triggerNewChatCommand(editor, view, this.settings, line);
-		}
+		// Always map the new chat command phrase
+		this.commandMap[this.settings.newChatCommandPhrase] =
+			(editor, view, line) => this.editorHandler.triggerNewChatCommand(editor, view, this.settings, line);
 	}
 
 	/**

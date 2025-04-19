@@ -353,16 +353,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
-		new Setting(containerEl)
-			.setName('Enable New Chat Phrase Trigger')
-			.setDesc(`Type the New Chat phrase at the end of any note to trigger the 'Create New Chat Note' command.`)
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableNnCommandPhrase)
-				.onChange(async (value) => {
-					this.plugin.settings.enableNnCommandPhrase = value;
-					await this.plugin.saveSettings();
-					new Notice(`New Chat phrase trigger ${value ? 'enabled' : 'disabled'}.`);
-				}));
+		// Removed 'Enable New Chat Phrase Trigger' setting as the phrase is always active
 
 		new Setting(containerEl)
 			.setName('Enable Ribbon Button Trigger')
@@ -388,7 +379,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Archive Current Note on New Chat')
-			.setDesc('Automatically archive the current note before creating a new one when using the New Chat command.')
+			.setDesc('Automatically archive the current note when creating a new one. This will only archive notes that have chat separators in them, non-chat notes will be safely ignored.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.archivePreviousNoteOnNn)
 				.onChange(async (value) => {
