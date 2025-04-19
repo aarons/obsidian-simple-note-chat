@@ -538,8 +538,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		try {
 			// Use forceRefresh=true when "Refresh Models" button is clicked
 			const models = await this.openRouterService.fetchModels(
-				this.plugin.settings.apiKey, 
-				showNotices // showNotices indicates user-requested refresh
+				this.plugin.settings.apiKey,
+				showNotices // showNotices indicates user-requested refresh, sets the forceRefresh parameter to true
 			);
 			this.availableModels = models;
 
