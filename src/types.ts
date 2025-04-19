@@ -35,16 +35,16 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	enableArchiveRenameDate: false,
 	archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT,
 	enableArchiveRenameLlm: false,
-	llmRenameWordLimit: 5, // Default word limit
+	llmRenameWordLimit: 5,
 	llmRenameIncludeEmojis: false,
 	llmRenameModel: '', // Default to empty, maybe use `defaultModel` later if empty?
 	enableViewportScrolling: false,
-	modelSortOrder: 'alphabetical', // Default sort order
+	modelSortOrder: 'alphabetical',
 	enableCcShortcut: false,
 	chatCommandPhrase: '', // Will be set from constants in main.ts
 	archiveCommandPhrase: '', // Will be set from constants in main.ts
 	newChatCommandPhrase: '', // Will be set from constants in main.ts
-	modelCommandPhrase: '', // Will be set from constants in main.ts - Added
+	modelCommandPhrase: '', // Will be set from constants in main.ts
 	chatSeparator: '' // Will be set from constants in main.ts
 };
 
