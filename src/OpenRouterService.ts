@@ -104,6 +104,40 @@ export class OpenRouterService {
     }
 
     /**
+     * Checks if a refresh is needed (cache expired) but we still have cached models.
+     * Used to determine if we should trigger a background refresh.
+     * @returns true if we have cached models but they're stale
+     */
+    isRefreshNeeded(): boolean {
+        return this.availableModels.length > 0 && 
+               (Date.now() - this.modelsLastFetched) >= this.cacheValidityDuration;
+    }
+
+    /**
+     * Performs a background refresh of the model cache if needed.
+     * This method doesn't await the result and handles errors silently.
+     * @param apiKey The OpenRouter API key.
+     */
+    backgroundRefreshIfNeeded(apiKey: string): void {
+        // Only proceed if refresh is needed and we have an API key
+        if (!this.isRefreshNeeded() || !apiKey) {
+            return;
+        }
+
+        log.debug('OpenRouterService: Starting background model refresh');
+        
+        // Start the refresh in the background without awaiting
+        this.fetchModels(apiKey, true)
+            .then(models => {
+                log.debug(`OpenRouterService: Background refresh completed, loaded ${models.length} models`);
+            })
+            .catch(error => {
+                // Just log the error - don't show notices or disturb the user
+                log.error('OpenRouterService: Background refresh failed:', error);
+            });
+    }
+
+    /**
      * Gets cached models or fetches them if not available.
      * @param apiKey The OpenRouter API key.
      * @returns A promise that resolves to the cached models.
@@ -301,6 +335,9 @@ export class OpenRouterService {
             log.error('OpenRouterService: API key is missing.');
             throw new Error("OpenRouter API key is not set");
         }
+        
+        // Check if we should refresh the model cache in the background
+        this.backgroundRefreshIfNeeded(apiKey);
         if (!defaultModel) {
             log.error('OpenRouterService: Default model is not set.');
             throw new Error("Default model is not set");
@@ -455,6 +492,9 @@ export class OpenRouterService {
             new Notice('OpenRouter API key is not set. Please configure it in the plugin settings.');
             return null;
         }
+        
+        // Check if we should refresh the model cache in the background
+        this.backgroundRefreshIfNeeded(apiKey);
         if (!model) {
              log.error('OpenRouterService: Model is missing for getChatCompletion.');
              // This case might indicate a programming error if model isn't passed correctly
