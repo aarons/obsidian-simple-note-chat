@@ -34,15 +34,6 @@ Settings loading (`main.ts:loadSettings`) was found to be efficient, using Obsid
     *   **Targeted Content Read:** Modify `handleEditorChange` to avoid reading the *entire* document content (`editor.getValue()`). Instead, focus only on the line(s) relevant to command phrase detection (likely the last non-empty line). The `editor` object provides methods to get specific lines or ranges (e.g., `editor.getLine(editor.lastLine())`).
     *   **Optimize Timeout Callback:** The `setTimeout` callback (Lines 73-88) currently re-reads the entire document. This check should also be optimized to only re-read the relevant line to confirm it hasn't changed, avoiding another full `editor.getValue()`.
 
-### Recommendation 2: Optimize Global Keydown Handling (`src/main.ts`)
-
-*   **Description:** Reduce the scope and overhead of the `handleKeyDown` function.
-*   **Files & Sections:**
-    *   `src/main.ts`: Modify the registration of `handleKeyDown` (Line 45) and the function itself (Lines 140-219).
-*   **Context & Reasoning:**
-    *   **Scoped Listener:** Instead of registering `handleKeyDown` globally on `document`, register it specifically on the active editor instance when a markdown view becomes active, and unregister it when the view is inactive. Obsidian's workspace events (`active-leaf-change`, potentially `editor-change` for context) can manage this. This prevents the handler from running unnecessarily for key presses outside the editor.
-    *   **Early Exit:** Inside `handleKeyDown`, perform the key check (`evt.key === 'Escape'` or `evt.key === 'Enter'`) *first*. If the key isn't relevant, exit immediately before performing any other checks (getting active view, editor, file, stream status).
-    *   **Efficient Line Access (Enter Key):** Optimize the Enter key logic (Lines 164-218). Avoid redundant `editor.getLine()` calls if possible. Check `cursor.ch === lineText.length` *before* potentially reading the previous line to exit early if the cursor isn't at the end.
 
 ### Recommendation 3: Optimize Command Implementations (`src/main.ts`)
 
