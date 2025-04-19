@@ -187,12 +187,12 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-		
+
 		// Update command map when settings change
 		this.updateCommandMap();
 		this.lastSettingsHash = this.getSettingsHash();
 	}
-	
+
 	/**
 	 * Creates a hash string representing the current command phrase settings.
 	 * Used to efficiently detect when settings change.
@@ -212,17 +212,17 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	 */
 	private updateCommandMap() {
 		this.commandMap = {};
-		
+
 		// Add all command mappings
-		this.commandMap[this.settings.chatCommandPhrase] = 
+		this.commandMap[this.settings.chatCommandPhrase] =
 			(editor, view, line) => this.editorHandler.triggerChatCommand(editor, view, this.settings, line);
-		this.commandMap[this.settings.archiveCommandPhrase] = 
+		this.commandMap[this.settings.archiveCommandPhrase] =
 			(editor, view, line) => this.editorHandler.triggerArchiveCommand(editor, view, this.settings, line);
-		this.commandMap[this.settings.modelCommandPhrase] = 
+		this.commandMap[this.settings.modelCommandPhrase] =
 			(editor, view, line) => this.editorHandler.triggerModelCommand(editor, view, this.settings, line);
-		
+
 		if (this.settings.enableNnCommandPhrase) {
-			this.commandMap[this.settings.newChatCommandPhrase] = 
+			this.commandMap[this.settings.newChatCommandPhrase] =
 				(editor, view, line) => this.editorHandler.triggerNewChatCommand(editor, view, this.settings, line);
 		}
 	}
@@ -278,11 +278,12 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	 }
 
 	 const cursor = editor.getCursor();
-	 const lineToCheck = cursor.line - 1;
+	 const commandLine = cursor.line - 1;
 
-	 // --- Command Matching ---
-	 // If we identified a line to check (lineToCheck >= 0)
-	 if (lineToCheck >= 1) {
+	// --- Command Matching ---
+	// The first line of a document is indexed at 0 (cursor.line == 0)
+	// We check for command phrases on the previous line, so the cursor.line needs to be >= 1
+	 if (cursor.line >= 1) {
 	 	// Check if settings have changed
 	 	const currentSettingsHash = this.getSettingsHash();
 	 	if (this.lastSettingsHash !== currentSettingsHash) {
@@ -290,25 +291,22 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	 		this.lastSettingsHash = currentSettingsHash;
 	 	}
 
-		const prevLineText = editor.getLine(lineToCheck);
-	 	const trimmedLineText = prevLineText.trim();
-	 	
+		const possibleCommand = editor.getLine(commandLine).trim();
+
 	 	// Look up the command handler directly from the map
-	 	const commandHandler = this.commandMap[trimmedLineText];
+	 	const commandHandler = this.commandMap[possibleCommand];
 
 	 	// Execute if a command matched
 	 	if (commandHandler) {
 	 		evt.preventDefault(); // Prevent default Enter behavior (new line)
 	 		evt.stopPropagation(); // Stop event propagation
 	 		// Execute the command handler with appropriate parameters
-	 		commandHandler(editor, view, lineToCheck);
+	 		commandHandler(editor, view, commandLine);
 	 	} else {
-	 		// log.debug(`Enter key trigger conditions NOT met: No command phrase matched "${trimmedLineText}".`);
+	 		// log.debug(`Enter key trigger conditions NOT met: No command phrase matched "${possibleCommand}".`);
 	 		// Let Enter proceed with its default behavior (insert newline) if no command matched
 	 	}
 	 }
-	 // If lineToCheck remained -1, it means neither trigger scenario was met,
-	 // so Enter proceeds normally by default (no return needed here).
 	}
 }
 
