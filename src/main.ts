@@ -42,7 +42,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		this.lastSettingsHash = this.getSettingsHash();
 
 		this.openRouterService = new OpenRouterService();
-		
+
 		// Silently preload models when plugin loads if API key is set
 		if (this.settings.apiKey) {
 			this.openRouterService.getCachedModels(this.settings.apiKey)
@@ -119,10 +119,11 @@ export default class SimpleNoteChatPlugin extends Plugin {
 							}
 						}
 					}
-					const parentPath = this.app.fileManager.getNewFileParent(this.app.workspace.getActiveFile()?.path || '').path;
+					// Ensure the archive folder name doesn't have leading/trailing slashes for path joining
+					const archiveFolder = this.settings.archiveFolderName.replace(/^\/|\/$/g, '');
 					const title = moment().format(DEFAULT_NN_TITLE_FORMAT);
-					const separator = parentPath === '/' ? '' : '/';
-					const fullPath = `${parentPath}${separator}${title}.md`;
+					// Construct the path directly within the archive folder
+					const fullPath = `${archiveFolder}/${title}.md`;
 
 					const newFile = await this.app.vault.create(fullPath, '');
 					this.app.workspace.openLinkText(newFile.path, '', false);
