@@ -234,79 +234,72 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	 * @param evt The keyboard event.
 	 */
 	private handleKeyDown(view: MarkdownView, evt: KeyboardEvent): void {
-	 // --- Early Exit ---
-	 // Only proceed if Escape or Enter was pressed
-	 if (evt.key !== 'Escape' && evt.key !== 'Enter') {
-	 	return;
-	 }
-
-	 // Ensure we have a file context
-	 const file = view.file;
-	 if (!file) {
-	 	log.debug("Keydown ignored: No file associated with the view.");
-	 	return;
-	 }
-	 const filePath = file.path;
-	 const editor = view.editor; // Get editor from the view passed in
-
-	 log.debug(`handleKeyDown triggered for key: ${evt.key}, file: ${filePath}`);
-
-	 // --- Escape Key: Cancel active stream ---
-	 if (evt.key === 'Escape') {
-	 	if (this.chatService.isStreamActive(filePath)) {
-	 		log.debug(`Escape key pressed, attempting to cancel stream for: ${filePath}`);
-	 		// Pass the specific editor instance
-	 		if (this.chatService.cancelStream(filePath, editor, this.settings)) {
-	 			log.debug("Stream cancellation initiated by Escape key.");
-	 			evt.preventDefault();
-	 			evt.stopPropagation();
-	 		} else {
-	 			log.debug("Escape key pressed, but stream cancellation failed.");
-	 		}
-	 	} else {
-	 		log.debug("Escape key pressed, but no stream active for this file.");
-	 	}
-	 	// We handled Escape, so we are done with this event.
-	 	return;
-	 }
-
-	 // --- Enter Key: Trigger command phrases ---
-	 // Note: evt.key === 'Enter' is implicitly true here due to the early exit logic
-	 if (this.chatService.isStreamActive(filePath)) {
-	 	log.debug("Enter key ignored: Stream active.");
-	 	return; // Don't trigger commands if a stream is writing
-	 }
-
-	 const cursor = editor.getCursor();
-	 const commandLine = cursor.line - 1;
-
-	// --- Command Matching ---
-	// The first line of a document is indexed at 0 (cursor.line == 0)
-	// We check for command phrases on the previous line, so the cursor.line needs to be >= 1
-	 if (cursor.line >= 1) {
-	 	// Check if settings have changed
-	 	const currentSettingsHash = this.getSettingsHash();
-	 	if (this.lastSettingsHash !== currentSettingsHash) {
-	 		this.updateCommandMap();
-	 		this.lastSettingsHash = currentSettingsHash;
+	 	// --- Early Exit ---
+	 	// Only proceed if Escape or Enter was pressed
+		if (evt.key !== 'Escape' && evt.key !== 'Enter') {
+	 		return;
 	 	}
 
-		const possibleCommand = editor.getLine(commandLine).trim();
+		// Ensure we have a file context
+		const file = view.file;
+		if (!file) {
+			log.debug("Keydown ignored: No file associated with the view.");
+			return;
+		}
+		const filePath = file.path;
+		const editor = view.editor; // Get editor from the view passed in
 
-	 	// Look up the command handler directly from the map
-	 	const commandHandler = this.commandMap[possibleCommand];
+		log.debug(`handleKeyDown triggered for key: ${evt.key}, file: ${filePath}`);
 
-	 	// Execute if a command matched
-	 	if (commandHandler) {
-	 		evt.preventDefault(); // Prevent default Enter behavior (new line)
-	 		evt.stopPropagation(); // Stop event propagation
-	 		// Execute the command handler with appropriate parameters
-	 		commandHandler(editor, view, commandLine);
-	 	} else {
-	 		// log.debug(`Enter key trigger conditions NOT met: No command phrase matched "${possibleCommand}".`);
-	 		// Let Enter proceed with its default behavior (insert newline) if no command matched
-	 	}
-	 }
+		// --- Escape Key: Cancel active stream ---
+		if (evt.key === 'Escape') {
+			const isActive = this.chatService.isStreamActive(filePath);
+			log.debug(`Escape key pressed. Active stream for ${filePath}: ${isActive}`);
+			if (isActive && this.chatService.cancelStream(filePath, editor, this.settings)) {
+				log.debug("Stream cancellation successful.");
+				evt.preventDefault();
+				evt.stopPropagation();
+			} else if (isActive) {
+				log.debug("Stream cancellation failed.");
+			}
+			return; // We're done with this event regardless of outcome
+		}
+
+	 	// --- Enter Key: Trigger command phrases ---
+		// Note: evt.key === 'Enter' is implicitly true here due to the early exit logic
+		if (this.chatService.isStreamActive(filePath)) {
+			log.debug("Enter key ignored: Stream active.");
+			return; // Don't trigger commands if a stream is writing
+		}
+
+		const cursor = editor.getCursor();
+		const commandLine = cursor.line - 1;
+
+		// --- Command Matching ---
+		// The first line of a document is indexed at 0 (cursor.line == 0)
+		// We check for command phrases on the previous line, so the cursor.line needs to be >= 1
+		if (cursor.line >= 1) {
+			// Check if settings have changed
+			const currentSettingsHash = this.getSettingsHash();
+			if (this.lastSettingsHash !== currentSettingsHash) {
+				this.updateCommandMap();
+				this.lastSettingsHash = currentSettingsHash;
+			}
+
+			const possibleCommand = editor.getLine(commandLine).trim();
+
+			// Look up the command handler directly from the map
+			const commandHandler = this.commandMap[possibleCommand];
+
+			// Execute if a command matched
+			if (commandHandler) {
+				evt.preventDefault(); // Prevent default Enter behavior (new line)
+				evt.stopPropagation(); // Stop event propagation
+				// Execute the command handler with appropriate parameters
+				commandHandler(editor, view, commandLine);
+			}
+			// Otherwise don't do anything :)
+	  	}
 	}
 }
 
