@@ -99,7 +99,7 @@ export class OpenRouterService {
      * @returns true if models are cached and the cache hasn't expired.
      */
     isCacheValid(): boolean {
-        return this.availableModels.length > 0 && 
+        return this.availableModels.length > 0 &&
                (Date.now() - this.modelsLastFetched) < this.cacheValidityDuration;
     }
 
@@ -109,7 +109,7 @@ export class OpenRouterService {
      * @returns true if we have cached models but they're stale
      */
     isRefreshNeeded(): boolean {
-        return this.availableModels.length > 0 && 
+        return this.availableModels.length > 0 &&
                (Date.now() - this.modelsLastFetched) >= this.cacheValidityDuration;
     }
 
@@ -125,7 +125,7 @@ export class OpenRouterService {
         }
 
         log.debug('OpenRouterService: Starting background model refresh');
-        
+
         // Start the refresh in the background without awaiting
         this.fetchModels(apiKey, true)
             .then(models => {
@@ -213,7 +213,7 @@ export class OpenRouterService {
     /**
      * Sorts an array of models based on specified criteria.
      * @param models The array of models to sort.
-     * @param sortCriteria The sorting criteria ('alphabetical', 'prompt_price_asc', 'prompt_price_desc', 
+     * @param sortCriteria The sorting criteria ('alphabetical', 'prompt_price_asc', 'prompt_price_desc',
      * @param sortCriteria The sorting criteria enum value. Defaults to `ModelSortOption.ALPHABETICAL`.
      * @returns The sorted array of models.
      */
@@ -335,7 +335,7 @@ export class OpenRouterService {
             log.error('OpenRouterService: API key is missing.');
             throw new Error("OpenRouter API key is not set");
         }
-        
+
         // Check if we should refresh the model cache in the background
         this.backgroundRefreshIfNeeded(apiKey);
         if (!defaultModel) {
@@ -491,15 +491,6 @@ export class OpenRouterService {
             log.error('OpenRouterService: API key is missing for getChatCompletion.');
             new Notice('OpenRouter API key is not set. Please configure it in the plugin settings.');
             return null;
-        }
-        
-        // Check if we should refresh the model cache in the background
-        this.backgroundRefreshIfNeeded(apiKey);
-        if (!model) {
-             log.error('OpenRouterService: Model is missing for getChatCompletion.');
-             // This case might indicate a programming error if model isn't passed correctly
-             new Notice('Error: No model specified for chat completion.');
-             return null;
         }
 
         const requestBody: any = {
