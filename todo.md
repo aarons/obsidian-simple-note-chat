@@ -7,6 +7,8 @@ Before release:
 - add github release management
 - fix the archive note string that gets appended
 - fix settings menu getting disordered when enabling llm note titling
+- if creating a new note and the filename already exists -> increment it
+    - should be using same file creation code pathway as other bits
 
 Desired Updates:
 - better attribution method for user/ai messages (maybe use html tags?)
