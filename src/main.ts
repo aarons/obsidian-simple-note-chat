@@ -30,10 +30,16 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	private activeMarkdownView: MarkdownView | null = null;
 	private activeEditorKeyDownTarget: EventTarget | null = null;
 	private boundKeyDownHandler: ((evt: KeyboardEvent) => void) | null = null;
+	private commandMap: Record<string, ((editor: Editor, view: MarkdownView, line: number) => void) | undefined> = {};
+	private lastSettingsHash: string = '';
 
 	async onload() {
 		log.debug('Loading Simple Note Chat plugin');
 		await this.loadSettings();
+
+		// Initialize the command map
+		this.updateCommandMap();
+		this.lastSettingsHash = this.getSettingsHash();
 
 		this.openRouterService = new OpenRouterService();
 		this.chatService = new ChatService(this, this.openRouterService);
@@ -181,6 +187,44 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+		
+		// Update command map when settings change
+		this.updateCommandMap();
+		this.lastSettingsHash = this.getSettingsHash();
+	}
+	
+	/**
+	 * Creates a hash string representing the current command phrase settings.
+	 * Used to efficiently detect when settings change.
+	 */
+	private getSettingsHash(): string {
+		return [
+			this.settings.chatCommandPhrase,
+			this.settings.archiveCommandPhrase,
+			this.settings.modelCommandPhrase,
+			this.settings.enableNnCommandPhrase ? this.settings.newChatCommandPhrase : '',
+		].join('|');
+	}
+
+	/**
+	 * Updates the command map based on current settings.
+	 * Called when plugin loads or settings change.
+	 */
+	private updateCommandMap() {
+		this.commandMap = {};
+		
+		// Add all command mappings
+		this.commandMap[this.settings.chatCommandPhrase] = 
+			(editor, view, line) => this.editorHandler.triggerChatCommand(editor, view, this.settings, line);
+		this.commandMap[this.settings.archiveCommandPhrase] = 
+			(editor, view, line) => this.editorHandler.triggerArchiveCommand(editor, view, this.settings, line);
+		this.commandMap[this.settings.modelCommandPhrase] = 
+			(editor, view, line) => this.editorHandler.triggerModelCommand(editor, view, this.settings, line);
+		
+		if (this.settings.enableNnCommandPhrase) {
+			this.commandMap[this.settings.newChatCommandPhrase] = 
+				(editor, view, line) => this.editorHandler.triggerNewChatCommand(editor, view, this.settings, line);
+		}
 	}
 
 	/**
@@ -239,29 +283,25 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	 // --- Command Matching ---
 	 // If we identified a line to check (lineToCheck >= 0)
 	 if (lineToCheck >= 1) {
+	 	// Check if settings have changed
+	 	const currentSettingsHash = this.getSettingsHash();
+	 	if (this.lastSettingsHash !== currentSettingsHash) {
+	 		this.updateCommandMap();
+	 		this.lastSettingsHash = currentSettingsHash;
+	 	}
+
 		const prevLineText = editor.getLine(lineToCheck);
 	 	const trimmedLineText = prevLineText.trim();
-	 	let commandHandler: (() => void) | null = null;
-	 	const commandLineIndex = lineToCheck; // Use the identified line index
-
-	 	// Match against known command phrases
-	 	if (trimmedLineText === this.settings.chatCommandPhrase) {
-	 		commandHandler = () => this.editorHandler.triggerChatCommand(editor, view, this.settings, commandLineIndex);
-	 	} else if (trimmedLineText === this.settings.archiveCommandPhrase) {
-	 		commandHandler = () => this.editorHandler.triggerArchiveCommand(editor, view, this.settings, commandLineIndex);
-	 	} else if (this.settings.enableNnCommandPhrase && trimmedLineText === this.settings.newChatCommandPhrase) {
-	 		commandHandler = () => this.editorHandler.triggerNewChatCommand(editor, view, this.settings, commandLineIndex);
-	 	} else if (trimmedLineText === this.settings.modelCommandPhrase) {
-	 		commandHandler = () => this.editorHandler.triggerModelCommand(editor, view, this.settings, commandLineIndex);
-	 	}
+	 	
+	 	// Look up the command handler directly from the map
+	 	const commandHandler = this.commandMap[trimmedLineText];
 
 	 	// Execute if a command matched
 	 	if (commandHandler) {
-	 		// log.debug(`Enter key trigger conditions met for "${trimmedLineText}" on line ${commandLineIndex}. Executing command.`);
 	 		evt.preventDefault(); // Prevent default Enter behavior (new line)
 	 		evt.stopPropagation(); // Stop event propagation
-	 		// Execute the command handler
-	 		commandHandler();
+	 		// Execute the command handler with appropriate parameters
+	 		commandHandler(editor, view, lineToCheck);
 	 	} else {
 	 		// log.debug(`Enter key trigger conditions NOT met: No command phrase matched "${trimmedLineText}".`);
 	 		// Let Enter proceed with its default behavior (insert newline) if no command matched
