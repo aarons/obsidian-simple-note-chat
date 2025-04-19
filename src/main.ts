@@ -37,13 +37,12 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		log.debug('Loading Simple Note Chat plugin');
 		await this.loadSettings();
 
-		// Initialize the command map
 		this.updateCommandMap();
 		this.lastSettingsHash = this.getSettingsHash();
 
 		this.openRouterService = new OpenRouterService();
 
-		// Silently preload models when plugin loads if API key is set
+		// Preload models if API key is set
 		if (this.settings.apiKey) {
 			this.openRouterService.getCachedModels(this.settings.apiKey)
 				.then(() => log.debug('Models prefetched on plugin load'))
@@ -59,7 +58,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			this.app.workspace.on('editor-change', this.editorHandler.handleEditorChange)
 		);
 
-		// Register/unregister keydown handler based on active leaf
 		this.registerEvent(this.app.workspace.on('active-leaf-change', (leaf) => {
 			this.unregisterScopedKeyDownHandler();
 
@@ -77,7 +75,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			}
 		}));
 
-		// Initial check in case a markdown view is already active on load
+		// Check for active markdown view on plugin load
 		const currentLeaf = this.app.workspace.activeLeaf;
 		if (currentLeaf?.view instanceof MarkdownView) {
 			const view = currentLeaf.view;
@@ -98,21 +96,19 @@ export default class SimpleNoteChatPlugin extends Plugin {
 				const previousActiveFile = this.app.workspace.getActiveFile();
 
 				try {
-					// 1. Create and open the new note immediately
 					const archiveFolder = this.settings.archiveFolderName.replace(/^\/|\/$/g, '');
 					const title = moment().format(DEFAULT_NN_TITLE_FORMAT);
-					const fullPath = `${archiveFolder}/${title}.md`; // Create directly in archive for now
+					const fullPath = `${archiveFolder}/${title}.md`;
 
 					const newFile = await this.app.vault.create(fullPath, '');
 					await this.app.workspace.openLinkText(newFile.path, '', false); // Ensure leaf is open before notice
 					new Notice(`Created new chat note: ${title}.md`);
 
-					// 2. Archive the *previous* note in the background (if applicable)
+					// Archive the previous note in the background if enabled
 					if (this.settings.archivePreviousNoteOnNn && previousActiveFile) {
-						// Run archiving asynchronously without awaiting it here
 						(async () => {
 							try {
-								const content = await this.app.vault.cachedRead(previousActiveFile); // Use cachedRead for potentially faster access
+								const content = await this.app.vault.cachedRead(previousActiveFile);
 								if (content.includes(this.settings.chatSeparator)) {
 									const archiveResult = await this.fileSystemService.moveFileToArchive(previousActiveFile, this.settings.archiveFolderName, this.settings);
 									if (archiveResult === null) {
@@ -123,14 +119,13 @@ export default class SimpleNoteChatPlugin extends Plugin {
 										log.info(`Background archive successful for ${previousActiveFile.name}`);
 									}
 								} else {
-									// No notice needed here, it wasn't a chat note
 									log.info(`Previous note '${previousActiveFile.name}' not archived (no separator).`);
 								}
 							} catch (archiveError) {
 								log.error(`Error during background archive attempt for ${previousActiveFile.name}:`, archiveError);
 								new Notice(`Error trying to archive previous note '${previousActiveFile.name}'.`);
 							}
-						})(); // IIFE to run async task
+						})();
 					}
 
 				} catch (error) {
@@ -182,7 +177,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		this.unregisterScopedKeyDownHandler();
 	}
 
-	// Helper to remove the active keydown listener
 	private unregisterScopedKeyDownHandler() {
 		if (this.activeEditorKeyDownTarget && this.boundKeyDownHandler) {
 			this.activeEditorKeyDownTarget.removeEventListener('keydown', this.boundKeyDownHandler);
@@ -207,8 +201,8 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	}
 
 	/**
-	 * Creates a hash string representing the current command phrase settings.
-	 * Used to efficiently detect when settings change.
+	 * Creates a hash string representing the current command phrase settings
+	 * to detect when settings change.
 	 */
 	private getSettingsHash(): string {
 		return [
@@ -221,12 +215,10 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 	/**
 	 * Updates the command map based on current settings.
-	 * Called when plugin loads or settings change.
 	 */
 	private updateCommandMap() {
 		this.commandMap = {};
 
-		// Add all command mappings
 		this.commandMap[this.settings.chatCommandPhrase] =
 			(editor, view, line) => this.editorHandler.triggerChatCommand(editor, view, this.settings, line);
 		this.commandMap[this.settings.archiveCommandPhrase] =
@@ -234,14 +226,12 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		this.commandMap[this.settings.modelCommandPhrase] =
 			(editor, view, line) => this.editorHandler.triggerModelCommand(editor, view, this.settings, line);
 
-		// Always map the new chat command phrase
 		this.commandMap[this.settings.newChatCommandPhrase] =
 			(editor, view, line) => this.editorHandler.triggerNewChatCommand(editor, view, this.settings, line);
 	}
 
 	/**
-	 * Handles keydown events within an active Markdown view for stream cancellation and command triggers.
-	 * This handler is now attached directly to the active view's container.
+	 * Handles keydown events for stream cancellation and command triggers.
 	 * @param view The MarkdownView instance where the event occurred.
 	 * @param evt The keyboard event.
 	 */
@@ -260,7 +250,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		log.debug(`handleKeyDown triggered for key: ${evt.key}, file: ${filePath}`);
 
-		// --- Escape Key: Cancel active stream ---
+		// Escape Key: Cancel active stream
 		if (evt.key === 'Escape') {
 			const isActive = this.chatService.isStreamActive(filePath);
 			log.debug(`Escape key pressed. Active stream for ${filePath}: ${isActive}`);
@@ -274,7 +264,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			return;
 		}
 
-	 	// --- Enter Key: Trigger command phrases ---
+	 	// Enter Key: Trigger command phrases
 		if (this.chatService.isStreamActive(filePath)) {
 			log.debug("Enter key ignored: Stream active.");
 			return;
@@ -283,7 +273,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		const cursor = editor.getCursor();
 		const commandLine = cursor.line - 1;
 
-		// --- Command Matching ---
+		// Command Matching
 		if (cursor.line >= 1) {
 			// Check if settings have changed
 			const currentSettingsHash = this.getSettingsHash();
@@ -294,17 +284,13 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 			const possibleCommand = editor.getLine(commandLine).trim();
 
-			// Look up the command handler directly from the map
 			const commandHandler = this.commandMap[possibleCommand];
 
-			// Execute if a command matched
 			if (commandHandler) {
 				evt.preventDefault(); // Prevent default Enter behavior (new line)
 				evt.stopPropagation(); // Stop event propagation
-				// Execute the command handler with appropriate parameters
 				commandHandler(editor, view, commandLine);
 			}
-			// Otherwise don't do anything :)
 	  	}
 	}
 }
