@@ -1,13 +1,16 @@
-
-Some planned updates:
-
-- remove context about separators at the bottom of settings, show when modifying a setting that needs it
+Before release:
 - chat command shortcut key should not modify the note (plus it's broken)
-- blank phrase == no activation
+- blank phrase == no phrase activation
 - always enable the keyboard shortcuts; don't have settings for them
+- add Keyboard Shortcut Triggers for new note and archive note and change model
+- update plugin description fields, version
+- add github release management
+- fix the archive note string that gets appended
+- fix settings menu getting disordered when enabling llm note titling
+
+Desired Updates:
 - better attribution method for user/ai messages (maybe use html tags?)
 - styling of messages (pro feature)
-- Enable Keyboard Shortcut Trigger for new note and archive note and change model
 
 Cursor Management:
 - move cursor to the bottom of the viewport, if it's within view (how to tell?), regardless of scroll viewport setting
@@ -16,4 +19,4 @@ Cursor Management:
 - leave alone if not
 - when codeblocks are being streamed, scrolling gets messed up; anyway to fix that?
 
-Feature: when archiving a note, we append a string (moved not to: folder/note-name.md), allow users to suppress that
+Feature: when archiving a note, we append a string (moved not to: folder/note-name.md), allow users to suppress that string

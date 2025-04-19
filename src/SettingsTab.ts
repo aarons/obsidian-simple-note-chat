@@ -259,8 +259,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
-		const llmSettingsContainer = containerEl.createDiv('llm-archive-rename-settings');
-
 		new Setting(containerEl)
 			.setName('Generate a contextual title (LLM Title)')
 			.setDesc(`This will use an LLM to generate a title based on the note's content. This is added after the date if both are enabled.`)
@@ -272,6 +270,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					new Notice(`LLM title renaming ${value ? 'enabled' : 'disabled'}.`);
 					llmSettingsContainer.style.display = value ? 'block' : 'none';
 				}));
+
+		const llmSettingsContainer = containerEl.createDiv('llm-archive-rename-settings');
 
 		new Setting(llmSettingsContainer)
 			.setName('Title Word Limit')
@@ -300,7 +300,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(llmSettingsContainer)
 			.setName('Allow Emojis in LLM Title?')
-			.setDesc('For those that like to live dangerously.')
+			.setDesc(`For those that like the occasional flair. This feature works on MacOS, I'm unsure about: iOS, Android, Linux, and Windows. Note that this doesn't actually ask for emojis; so you will only see them if the model likes to use them.`)
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.llmRenameIncludeEmojis)
 				.onChange(async (value) => {
