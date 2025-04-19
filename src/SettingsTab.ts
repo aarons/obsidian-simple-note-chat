@@ -36,11 +36,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		// ========== 1. LLM SETUP ==========
 		containerEl.createEl('h3', { text: 'LLM Setup', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'Configure connection to OpenRouter and select default models.', cls: 'snc-setting-section-description' });
+		containerEl.createEl('p', { text: 'Configure connection to OpenRouter and select default chat models.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('OpenRouter API Key')
-			.setDesc('Enter your OpenRouter API key. Get one from openrouter.ai')
+			.setDesc('Enter your OpenRouter API key; you can get one from openrouter.ai')
 			.addText(text => {
 				text
 					.setPlaceholder('sk-or-v1-...')
@@ -60,17 +60,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName('Refresh Model List')
-			.setDesc('Fetch the latest available models from OpenRouter using your API key.')
-			.addButton(button => button
-				.setButtonText('Refresh Models')
-				.setCta()
-				.onClick(async () => {
-					await this.fetchAndStoreModels(true);
-				}));
-
-		new Setting(containerEl)
-			.setName('Sort Model Lists By')
+			.setName('Model Sorting')
 			.setDesc('Choose how to sort the OpenRouter model lists in the dropdowns below.')
 			.addDropdown(dropdown => {
 				this.sortDropdown = dropdown;
@@ -113,13 +103,23 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			});
 		});
 
+		new Setting(containerEl)
+		.setName('Refresh Model List')
+		.setDesc('Fetch the latest available models from OpenRouter. The list automatically refreshes once every 24 hours in the background, as well as when the plugin first starts with Obsidian; so the list should stay pretty current on its own.')
+		.addButton(button => button
+			.setButtonText('Refresh Models')
+			.setCta()
+			.onClick(async () => {
+				await this.fetchAndStoreModels(true);
+			}));
+
 		// ========== 2. CHAT COMMAND (cc) ==========
-		containerEl.createEl('h3', { text: 'Chat Command', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'Settings for the primary command to interact with the LLM in the current note.', cls: 'snc-setting-section-description' });
+		containerEl.createEl('h3', { text: 'Initiating a Chat', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: `These settings control how you chat with the LLM. Phrases are typed into a note on their own line, and will activate after you hit the <enter> key. For example, type: cc<enter>`, cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('Chat Phrase')
-			.setDesc(`Phrase to trigger chat completion (Default: ${CHAT_COMMAND_DEFAULT}).`)
+			.setDesc(`Use this phrase to trigger chat completion (Default: ${CHAT_COMMAND_DEFAULT}). The phrase needs to be on it's own line without any other text.`)
 			.addText(text => text
 				.setPlaceholder(CHAT_COMMAND_DEFAULT)
 				.setValue(this.plugin.settings.chatCommandPhrase)
@@ -136,8 +136,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Enable Chat Keyboard Shortcut')
-			.setDesc(`Make the 'Trigger Chat Completion (${CHAT_COMMAND_DEFAULT})' command available for assigning a keyboard shortcut in Obsidian's hotkey settings.`)
+			.setName('Enable Keyboard Shortcut')
+			.setDesc(`This lets you assign a shortcut key to initate a chat, in case you prefer that over a phrase. This will list the 'chat comamnd' in Obsidian's hotkey settings, where you can set the hotkey shortcut to use (Settings -> Hotkeys -> Search for 'simple note chat').`)
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableCcShortcut) // Keep internal setting name for command ID link
 				.onChange(async (value) => {
@@ -146,11 +146,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					new Notice(`Chat keyboard shortcut command ${value ? 'enabled' : 'disabled'}. Configure in Obsidian Hotkeys.`);
 				})); // <-- Close onChange and addToggle
 
-		// Removed Stop Sequence Setting
-
 		new Setting(containerEl)
 			.setName('Enable Viewport Scrolling')
-			.setDesc('Automatically scroll the note to the bottom as the chat response streams in.')
+			.setDesc(`Automatically scroll the note to the bottom as the chat response streams in. This feature is in beta; it works but has room for improvement.`)
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableViewportScrolling)
 				.onChange(async (value) => {
@@ -161,7 +159,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Chat Separator')
-			.setDesc(`Markdown or text used to separate messages in chat notes. Default: ${CHAT_SEPARATOR_DEFAULT}`)
+			.setDesc(`This is the text used in notes to indicate separate messages between the user and AI. It is recommended to use something uncommon such as an html element, as LLMs are unlikely to use them in chat responses. If you use something more common, such as '---', and the LLM returns messages with those strings, then the parsing might get confused (not a big deal, but just FYI). Default: ${CHAT_SEPARATOR_DEFAULT}`)
 			.addText(text => text
 				.setPlaceholder(CHAT_SEPARATOR_DEFAULT)
 				.setValue(this.plugin.settings.chatSeparator)
@@ -174,13 +172,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
-		// ========== 3. MODEL CHANGE COMMAND (cm) ==========
-		containerEl.createEl('h3', { text: 'Change Model Command', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'Settings for the command to quickly change the active LLM.', cls: 'snc-setting-section-description' });
-
 		new Setting(containerEl)
 			.setName('Change Model Phrase')
-			.setDesc(`Phrase that opens the model‑selection dialog (Default: ${MODEL_COMMAND_DEFAULT}).`)
+			.setDesc(`This will open a quick model selection dialog, to enable changing the model used for chats. (Default: ${MODEL_COMMAND_DEFAULT}).`)
 			.addText(t => t
 				.setPlaceholder(MODEL_COMMAND_DEFAULT)
 				.setValue(this.plugin.settings.modelCommandPhrase)
@@ -197,12 +191,12 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		// ========== 4. ARCHIVE COMMAND (gg) ==========
-		containerEl.createEl('h3', { text: 'Archive Command', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'Configure how completed chat notes are archived (location, renaming).', cls: 'snc-setting-section-description' });
+		containerEl.createEl('h3', { text: 'Chat Archiving', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'This configures an optional shortcut for archiving notes when you are done.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('Archive Phrase')
-			.setDesc(`Phrase to trigger archiving the current chat note (Default: ${ARCHIVE_COMMAND_DEFAULT}).`)
+			.setDesc(`This phrase will move the current note to your archive folder, and optionally update the title. (Default: ${ARCHIVE_COMMAND_DEFAULT}).`)
 			.addText(text => text
 				.setPlaceholder(ARCHIVE_COMMAND_DEFAULT)
 				.setValue(this.plugin.settings.archiveCommandPhrase)
@@ -220,7 +214,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Archive Folder')
-			.setDesc('Folder where notes will be moved when using the archive command (relative to vault root).')
+			.setDesc('This is where notes will be moved when the archive command is used.')
 			.addText(text => text
 				.setPlaceholder(DEFAULT_ARCHIVE_FOLDER)
 				.setValue(this.plugin.settings.archiveFolderName)
@@ -238,7 +232,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Rename Note on Archive (Date/Time)')
-			.setDesc('Rename the note using a date/time format when archiving.')
+			.setDesc('When this is enabled, the note will be renamed using a date/time format at the moment of archival.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableArchiveRenameDate)
 				.onChange(async (value) => {
@@ -249,7 +243,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Date/Time Format')
-			.setDesc('Moment.js format string for renaming archived notes (e.g., YYYY-MM-DD-HH-mm).')
+			.setDesc('Moment.js format string for renaming archived notes. (Default: YYYY-MM-DD-HH-mm)')
 			.addText(text => text
 				.setPlaceholder(DEFAULT_NN_TITLE_FORMAT)
 				.setValue(this.plugin.settings.archiveRenameDateFormat)
@@ -268,8 +262,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		const llmSettingsContainer = containerEl.createDiv('llm-archive-rename-settings');
 
 		new Setting(containerEl)
-			.setName('Rename Note on Archive (LLM Title)')
-			.setDesc('Use an LLM to generate a title based on note content when archiving. This happens *after* date renaming if both are enabled.')
+			.setName('Generate a contextual title (LLM Title)')
+			.setDesc(`This will use an LLM to generate a title based on the note's content. This is added after the date if both are enabled.`)
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableArchiveRenameLlm)
 				.onChange(async (value) => {
@@ -280,10 +274,10 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		new Setting(llmSettingsContainer)
-			.setName('LLM Title Word Limit')
-			.setDesc('Approximate maximum words for the generated title.')
+			.setName('Title Word Limit')
+			.setDesc('The maximum number of words allowed for the generated title.')
 			.addText(text => text
-				.setPlaceholder('5')
+				.setPlaceholder('3')
 				.setValue(String(this.plugin.settings.llmRenameWordLimit))
 				.onChange(async (value) => {
 					const numValue = parseInt(value, 10);
@@ -305,8 +299,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			});
 
 		new Setting(llmSettingsContainer)
-			.setName('Include Emojis in LLM Title')
-			.setDesc('Allow the LLM to include relevant emojis in the title.')
+			.setName('Allow Emojis in LLM Title?')
+			.setDesc('For those that like to live dangerously.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.llmRenameIncludeEmojis)
 				.onChange(async (value) => {
@@ -316,8 +310,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		const llmModelSetting = new Setting(llmSettingsContainer)
-			.setName('LLM Title Model')
-			.setDesc('Model to use for generating the title. Uses default chat model if left blank.');
+			.setName('Model for Titling Notes')
+			.setDesc('This is the model to use for generating the note title. Uses the current chat model if left blank.');
 
 		llmModelSetting.addDropdown(dropdown => {
 			this.llmModelDropdown = dropdown;
@@ -333,11 +327,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		// ========== 5. NEW CHAT COMMAND (nn) ==========
 		containerEl.createEl('h3', { text: 'New Chat Command', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'Settings for creating new chat notes and related actions.', cls: 'snc-setting-section-description' });
+		containerEl.createEl('p', { text: 'This enables quickly starting a new chat note from anywhere. It will be created in your chat archive folder.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
-			.setName('New Chat Phrase')
-			.setDesc(`Phrase to trigger creating a new chat note (Default: ${NEW_CHAT_COMMAND_DEFAULT}).`)
+			.setName('New Note')
+			.setDesc(`Phrase to trigger creating a new note for chatting (Default: ${NEW_CHAT_COMMAND_DEFAULT}).`)
 			.addText(text => text
 				.setPlaceholder(NEW_CHAT_COMMAND_DEFAULT)
 				.setValue(this.plugin.settings.newChatCommandPhrase)
@@ -353,17 +347,15 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
-		// Removed 'Enable New Chat Phrase Trigger' setting as the phrase is always active
-
 		new Setting(containerEl)
-			.setName('Enable Ribbon Button Trigger')
-			.setDesc('Add a button to the left ribbon bar to trigger the New Chat command.')
+			.setName('Enable Ribbon Button')
+			.setDesc('This adds a button the the left ribbon bar for triggering the command.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableNnRibbonButton)
 				.onChange(async (value) => {
 					this.plugin.settings.enableNnRibbonButton = value;
 					await this.plugin.saveSettings();
-					new Notice(`Ribbon button trigger ${value ? 'enabled' : 'disabled'}. Reload Obsidian for the change to take full effect.`);
+					new Notice(`Ribbon button trigger ${value ? 'enabled' : 'disabled'}. Please reload Obsidian for the change to take effect.`);
 				}));
 
 		new Setting(containerEl)
@@ -378,8 +370,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Archive Current Note on New Chat')
-			.setDesc('Automatically archive the current note when creating a new one. This will only archive notes that have chat separators in them, non-chat notes will be safely ignored.')
+			.setName('Automatically Archive Current Note on New Chat')
+			.setDesc(`When starting a new note, this will archive the old note if it has any chat messages (triggering all the steps in the Archive Chat section). Notes that don't have any chat separators in them will be left alone.`)
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.archivePreviousNoteOnNn)
 				.onChange(async (value) => {
@@ -387,14 +379,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 					new Notice(`Archive on New Chat ${value ? 'enabled' : 'disabled'}.`);
 				}));
-
-		// ========== 6. GENERAL INFORMATION ==========
-		containerEl.createEl('h3', { text: 'Additional Information', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'General notes and reminders about plugin behavior.', cls: 'snc-setting-section-description' });
-
-		new Setting(containerEl)
-			.setName('Command Phrases & Separators')
-			.setDesc('Changing command phrases or the separator may require Obsidian to be reloaded for the changes to take full effect in the editor detection.');
 
 		// Load models if API key is set
 		if (this.plugin.settings.apiKey) {
