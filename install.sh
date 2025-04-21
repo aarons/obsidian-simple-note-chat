@@ -66,20 +66,30 @@ HOT_RELOAD_MANIFEST_URL="$HOT_RELOAD_BASE_URL/manifest.json"
 echo "Ensuring hot-reload plugin directory exists: $HOT_RELOAD_DIR"
 mkdir -p "$HOT_RELOAD_DIR"
 
-echo "Downloading hot-reload main.js ($LATEST_TAG)..."
-curl -L "$HOT_RELOAD_MAIN_URL" -o "$HOT_RELOAD_DIR/main.js"
-if [ $? -ne 0 ]; then
-  echo "Failed to download hot-reload main.js. Please check the URL or network connection."
-  # Optionally exit here if hot-reload is critical
-  # exit 1
+# Check if main.js already exists
+if [ -f "$HOT_RELOAD_DIR/main.js" ]; then
+  echo "hot-reload main.js already exists. Skipping download."
+else
+  echo "Downloading hot-reload main.js ($LATEST_TAG)..."
+  curl -L "$HOT_RELOAD_MAIN_URL" -o "$HOT_RELOAD_DIR/main.js"
+  if [ $? -ne 0 ]; then
+    echo "Failed to download hot-reload main.js. Please check the URL or network connection."
+    # Optionally exit here if hot-reload is critical
+    # exit 1
+  fi
 fi
 
-echo "Downloading hot-reload manifest.json ($LATEST_TAG)..."
-curl -L "$HOT_RELOAD_MANIFEST_URL" -o "$HOT_RELOAD_DIR/manifest.json"
-if [ $? -ne 0 ]; then
-  echo "Failed to download hot-reload manifest.json. Please check the URL or network connection."
-  # Optionally exit here if hot-reload is critical
-  # exit 1
+# Check if manifest.json already exists
+if [ -f "$HOT_RELOAD_DIR/manifest.json" ]; then
+  echo "hot-reload manifest.json already exists. Skipping download."
+else
+  echo "Downloading hot-reload manifest.json ($LATEST_TAG)..."
+  curl -L "$HOT_RELOAD_MANIFEST_URL" -o "$HOT_RELOAD_DIR/manifest.json"
+  if [ $? -ne 0 ]; then
+    echo "Failed to download hot-reload manifest.json. Please check the URL or network connection."
+    # Optionally exit here if hot-reload is critical
+    # exit 1
+  fi
 fi
 
 echo "Hot-reload plugin installed/updated."

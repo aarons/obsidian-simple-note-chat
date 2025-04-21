@@ -61,7 +61,7 @@ export class EditorHandler {
 				commandHandler = () => this.triggerChatCommand(editor, markdownView, settings, lastContentLineIdx);
 			} else if (trimmed === settings.archiveCommandPhrase) {
 				commandHandler = () => this.triggerArchiveCommand(editor, markdownView, settings, lastContentLineIdx);
-			} else if (settings.enableNnCommandPhrase && trimmed === settings.newChatCommandPhrase) {
+			} else if (settings.newChatCommandPhrase && trimmed === settings.newChatCommandPhrase) {
 				commandHandler = () => this.triggerNewChatCommand(editor, markdownView, settings, lastContentLineIdx);
 			} else if (trimmed === settings.modelCommandPhrase) {
 				commandHandler = () => this.triggerModelCommand(editor, markdownView, settings, lastContentLineIdx);
@@ -113,7 +113,7 @@ export class EditorHandler {
 		try {
 			const archivedTFile = this.app.vault.getAbstractFileByPath(filePath);
 			if (archivedTFile instanceof TFile) {
-				const statusText = `\n\nrenamed to ${noteName}\nmoved to ${folderName}`;
+				const statusText = `note moved to: ${folderName}${noteName}\n`;
 				await this.app.vault.append(archivedTFile, statusText);
 				log.debug(`Appended status to archived note: ${filePath}`);
 			} else {
