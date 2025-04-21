@@ -91,12 +91,27 @@ export class FileSystemService {
 
                     if (llmTitle) {
                         log.debug(`FileSystemService: Received LLM title: "${llmTitle}"`);
-                        const sanitizedTitle = llmTitle
-                            .replace(/[\\/:*?"<>|\n\r,]+/g, '') // Remove illegal chars
-                            .replace(/_/g, ' ')             // Replace underscores with spaces
+                        // Whitelist approach for sanitization
+                        const basicWhitelistRegex = /[^a-zA-Z0-9 ]/g;
+                        // Regex to keep alphanumeric characters, spaces, and common emoji ranges (requires 'u' flag)
+                        const emojiWhitelistRegex = /[^a-zA-Z0-9 \u{1F300}-\u{1F5FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/gu;
+
+                        let sanitizedTitle = llmTitle; // Start with the raw title
+
+                        // Apply the appropriate whitelist regex based on settings
+                        if (settings.llmRenameIncludeEmojis) {
+                            sanitizedTitle = sanitizedTitle.replace(emojiWhitelistRegex, '');
+                            log.debug(`Sanitizing with emoji whitelist. Before: "${llmTitle}", After: "${sanitizedTitle}"`);
+                        } else {
+                            sanitizedTitle = sanitizedTitle.replace(basicWhitelistRegex, '');
+                             log.debug(`Sanitizing with basic whitelist. Before: "${llmTitle}", After: "${sanitizedTitle}"`);
+                        }
+
+                        // Continue with existing post-processing
+                        sanitizedTitle = sanitizedTitle
                             .trim()                         // Trim leading/trailing whitespace
                             .replace(/\s+/g, ' ')           // Collapse multiple spaces to one
-                            .substring(0, 100);              // Limit length
+                            .substring(0, 100);             // Limit length
 
                         if (sanitizedTitle) {
                             const titleCasedSanitizedTitle = sanitizedTitle
