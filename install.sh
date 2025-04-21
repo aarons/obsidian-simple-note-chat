@@ -38,6 +38,52 @@ else
   fi
 fi
 
+# Install hot-reload plugin
+HOT_RELOAD_REPO="pjeby/hot-reload"
+HOT_RELOAD_DIR="$TARGET_VAULT_PATH/.obsidian/plugins/hot-reload"
+GITHUB_API_URL="https://api.github.com/repos/$HOT_RELOAD_REPO/releases/latest"
+
+echo "Fetching latest hot-reload release tag from GitHub API..."
+# Use curl to fetch, grep to find the tag_name line, sed to extract the version string
+LATEST_TAG=$(curl -s "$GITHUB_API_URL" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+
+if [ -z "$LATEST_TAG" ]; then
+  echo "Error: Could not fetch the latest release tag for $HOT_RELOAD_REPO."
+  echo "Please check network connection or if the repository exists and has releases."
+  # Decide if you want to exit or fallback to a default version
+  # exit 1 # Uncomment to exit if fetching fails
+  echo "Falling back to default version 0.2.1 (this might be outdated)."
+  LATEST_TAG="0.2.1" # Fallback version
+fi
+
+echo "Latest hot-reload tag: $LATEST_TAG"
+
+# Construct download URLs using the latest tag
+HOT_RELOAD_BASE_URL="https://github.com/$HOT_RELOAD_REPO/releases/download/$LATEST_TAG"
+HOT_RELOAD_MAIN_URL="$HOT_RELOAD_BASE_URL/main.js"
+HOT_RELOAD_MANIFEST_URL="$HOT_RELOAD_BASE_URL/manifest.json"
+
+echo "Ensuring hot-reload plugin directory exists: $HOT_RELOAD_DIR"
+mkdir -p "$HOT_RELOAD_DIR"
+
+echo "Downloading hot-reload main.js ($LATEST_TAG)..."
+curl -L "$HOT_RELOAD_MAIN_URL" -o "$HOT_RELOAD_DIR/main.js"
+if [ $? -ne 0 ]; then
+  echo "Failed to download hot-reload main.js. Please check the URL or network connection."
+  # Optionally exit here if hot-reload is critical
+  # exit 1
+fi
+
+echo "Downloading hot-reload manifest.json ($LATEST_TAG)..."
+curl -L "$HOT_RELOAD_MANIFEST_URL" -o "$HOT_RELOAD_DIR/manifest.json"
+if [ $? -ne 0 ]; then
+  echo "Failed to download hot-reload manifest.json. Please check the URL or network connection."
+  # Optionally exit here if hot-reload is critical
+  # exit 1
+fi
+
+echo "Hot-reload plugin installed/updated."
+
 # Run the development build/watch process defined in esbuild.config.mjs
 # Pass the target vault path as an environment variable
 # This will build, copy to the target vault, and watch for changes.

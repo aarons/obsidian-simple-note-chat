@@ -1,11 +1,9 @@
-// src/SettingsTab.ts
 import { App, PluginSettingTab, Setting, Notice, DropdownComponent } from 'obsidian';
 import SimpleNoteChatPlugin from './main';
 import { OpenRouterService, OpenRouterModel, FormattedModelInfo, ModelSortOption } from './OpenRouterService'; // Import FormattedModelInfo and ModelSortOption
 import { PluginSettings } from './types';
 import { log } from './utils/logger';
 import {
-	// Removed DEFAULT_STOP_SEQUENCE
 	DEFAULT_ARCHIVE_FOLDER,
 	DEFAULT_NN_TITLE_FORMAT,
 	CHAT_COMMAND_DEFAULT,

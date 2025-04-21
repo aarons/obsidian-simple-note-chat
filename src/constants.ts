@@ -1,14 +1,13 @@
 export const CHAT_COMMAND_DEFAULT = 'cc';
 export const ARCHIVE_COMMAND_DEFAULT = 'gg';
 export const NEW_CHAT_COMMAND_DEFAULT = 'nn';
-export const MODEL_COMMAND_DEFAULT = 'cm'; // Added for model change
-// Removed DEFAULT_STOP_SEQUENCE
+export const MODEL_COMMAND_DEFAULT = 'cm';
 
 export const COMMAND_PHRASES_DEFAULTS = [
     CHAT_COMMAND_DEFAULT,
     ARCHIVE_COMMAND_DEFAULT,
     NEW_CHAT_COMMAND_DEFAULT,
-    MODEL_COMMAND_DEFAULT, // Added for model change
+    MODEL_COMMAND_DEFAULT,
 ];
 
 export const CHAT_SEPARATOR_DEFAULT = '<hr>';

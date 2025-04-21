@@ -410,6 +410,7 @@ export class OpenRouterService {
                 try {
                     readResult = await reader.read();
                     done = readResult.done;
+                    log.debug('OpenRouterService: Raw stream chunk received:', readResult.value); // Log the raw chunk
                 } catch (readError: any) {
                      // Catch errors during reader.read() itself
                      log.error('OpenRouterService: Error reading stream chunk:', readError);
