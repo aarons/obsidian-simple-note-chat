@@ -24,7 +24,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	constructor(app: App, plugin: SimpleNoteChatPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
-		this.openRouterService = plugin.openRouterService || new OpenRouterService();
+		// Pass app, settings, and manifest.id to the service constructor
+		this.openRouterService = plugin.openRouterService || new OpenRouterService(app, plugin.settings, plugin.manifest.id);
 	}
 
 	display(): void {
@@ -36,26 +37,60 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		containerEl.createEl('h3', { text: 'LLM Setup', cls: 'snc-section-header' });
 		containerEl.createEl('p', { text: 'Configure connection to OpenRouter and select default chat models.', cls: 'snc-setting-section-description' });
 
-		new Setting(containerEl)
-			.setName('OpenRouter API Key')
-			.setDesc('Enter your OpenRouter API key; you can get one from openrouter.ai')
-			.addText(text => {
-				text
-					.setPlaceholder('sk-or-v1-...')
-					.setValue(this.plugin.settings.apiKey)
-					.onChange(async (value) => {
-						const trimmedValue = value.trim();
-						if (this.plugin.settings.apiKey !== trimmedValue) {
-							this.plugin.settings.apiKey = trimmedValue;
-							await this.plugin.saveSettings();
-							new Notice('API Key saved. Refreshing models...');
-							this.availableModels = [];
-							this.populateModelDropdowns();
-							await this.fetchAndStoreModels(false);
-						}
-					});
-				text.inputEl.setAttribute('type', 'password');
-			});
+		// Placeholder for Authentication Status
+		// Authentication Section
+		const authSection = containerEl.createDiv('snc-auth-section');
+
+		// Authentication Status Display
+		const authStatusEl = authSection.createDiv('snc-auth-status');
+		// We'll update this dynamically below
+
+		// Authentication Buttons Container
+		const authButtonsContainer = authSection.createDiv('snc-auth-buttons');
+
+		// Function to update auth UI elements
+		const updateAuthUI = () => {
+			const isAuthenticated = this.plugin.openRouterService.isOAuthAuthenticated();
+			authStatusEl.setText(`Authentication Status: ${isAuthenticated ? 'Authenticated' : 'Not Authenticated'}`);
+			authButtonsContainer.empty(); // Clear previous buttons
+
+			if (isAuthenticated) {
+				// Show Log Out button
+				new Setting(authButtonsContainer)
+					.setName('Log Out')
+					.setDesc('Disconnect this plugin from your OpenRouter account.')
+					.addButton(button => button
+						.setButtonText('Log Out')
+						.setWarning() // Use warning style for logout
+						.onClick(async () => {
+							await this.plugin.openRouterService.logout(
+								() => this.plugin.saveSettings(),
+								() => {
+									this.handleOAuthLogout(); // Update settings tab UI
+									updateAuthUI(); // Re-render auth buttons/status
+								}
+							);
+						}));
+			} else {
+				// Show Authenticate button
+				new Setting(authButtonsContainer)
+					.setName('Authenticate with OpenRouter')
+					.setDesc('Click the button to authorize this plugin with your OpenRouter account using OAuth.')
+					.addButton(button => button
+						.setButtonText('Authenticate')
+						.setCta()
+						.onClick(async () => {
+							// Initiate OAuth flow via the service
+							await this.plugin.openRouterService.initiateOAuthFlow();
+						}));
+			}
+		};
+
+		updateAuthUI(); // Initial UI setup
+
+		// Add a horizontal rule after auth section for visual separation
+		containerEl.createEl('hr');
+
 
 		new Setting(containerEl)
 			.setName('Model Sorting')
@@ -378,11 +413,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					new Notice(`Archive on New Chat ${value ? 'enabled' : 'disabled'}.`);
 				}));
 
-		// Load models if API key is set
-		if (this.plugin.settings.apiKey) {
-			this.fetchAndStoreModels(false);
+		// Load models if authenticated, otherwise just populate (which will show disabled)
+		if (this.plugin.openRouterService.isOAuthAuthenticated()) {
+			this.fetchAndStoreModels(false); // Fetch models on initial display if authenticated
 		} else {
-			this.populateModelDropdowns();
+			this.populateModelDropdowns(); // Ensure dropdowns are in the correct initial state
 		}
 	}
 
@@ -398,7 +433,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		dropdown: DropdownComponent | null,
 		formattedModels: FormattedModelInfo[],
 		settingKey: keyof PluginSettings,
-		noApiKeyText: string,
+		noAuthText: string,
 		placeholderText: string
 	): void {
 		if (!dropdown) {
@@ -409,17 +444,33 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		const currentSelectedValue = dropdown.getValue();
 		dropdown.selectEl.empty();
 
-		if (!this.plugin.settings.apiKey) {
-			dropdown.addOption('', noApiKeyText);
+		// Use the service method to check authentication status
+		const isAuthenticated = this.plugin.openRouterService.isOAuthAuthenticated();
+
+		if (!isAuthenticated) {
+			dropdown.addOption('', noAuthText);
 			dropdown.setDisabled(true);
 			dropdown.setValue('');
 			return;
 		}
 
+		// If authenticated but no models fetched yet (e.g., during initial load)
+		if (this.availableModels.length === 0) {
+			dropdown.addOption('', 'Fetching models...');
+			dropdown.setDisabled(true); // Disable until models are loaded
+			dropdown.setValue('');
+			// Trigger fetch if not already in progress
+			if (isAuthenticated) { // Double check auth before fetching
+				this.fetchAndStoreModels(false);
+			}
+			return;
+		}
+
+
 		dropdown.setDisabled(false);
 
 		if (formattedModels.length === 0) {
-			dropdown.addOption('', 'No models found or API key invalid');
+			dropdown.addOption('', 'No models found or error loading');
 			dropdown.setValue('');
 			return;
 		}
@@ -449,7 +500,10 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	 */
 	private populateModelDropdowns(): void {
 		let formattedModels: FormattedModelInfo[] = [];
-		if (this.plugin.settings.apiKey && this.availableModels.length > 0) {
+		// Use the service method to check authentication status
+		const isAuthenticated = this.plugin.openRouterService.isOAuthAuthenticated();
+
+		if (isAuthenticated && this.availableModels.length > 0) {
 			try {
 				// 1. Sort the raw models
 				const sortedModels = this.openRouterService.sortModels(
@@ -477,29 +531,28 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			this.modelDropdown,
 			formattedModels,
 			'defaultModel',
-			'Enter API Key to load models',
+			'Authenticate to load models',
 			'-- Select a model --'
 		);
 		this.populateModelDropdown(
 			this.llmModelDropdown,
 			formattedModels,
 			'llmRenameModel',
-			'Enter API Key to load models',
+			'Authenticate to load models',
 			'Use Default Chat Model'
 		);
 	}
 
 
-	/**
-	 * @param showNotices If true, displays loading and result notices
-	 */
 	private async fetchAndStoreModels(showNotices: boolean = true): Promise<void> {
-		if (!this.plugin.settings.apiKey) {
+		// Use the service method to check authentication status
+		const isAuthenticated = this.plugin.openRouterService.isOAuthAuthenticated();
+		if (!isAuthenticated) {
 			if (showNotices) {
-				new Notice('Please enter your OpenRouter API key first.');
+				new Notice('Please authenticate with OpenRouter first.');
 			}
 			this.availableModels = [];
-			this.populateModelDropdowns();
+			this.populateModelDropdowns(); // Ensure dropdowns reflect lack of auth
 			return;
 		}
 
@@ -509,9 +562,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		}
 
 		try {
-			// Use forceRefresh=true when "Refresh Models" button is clicked
+			// fetchModels will now internally get the key/token
 			const models = await this.openRouterService.fetchModels(
-				this.plugin.settings.apiKey,
+				// No longer pass API key directly
 				showNotices // showNotices indicates user-requested refresh, sets the forceRefresh parameter to true
 			);
 			this.availableModels = models;
@@ -521,13 +574,21 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			if (showNotices) {
 				if (this.availableModels.length > 0) {
 					new Notice('Model list updated successfully.');
+				} else {
+					new Notice('Model list fetched, but no models were returned. Check OpenRouter status or your account.');
 				}
 			}
 
 		} catch (error) {
 			log.error("SettingsTab: Error fetching or storing models:", error);
 			if (showNotices) {
-				new Notice('An unexpected error occurred while updating model list.');
+				if (error instanceof Error && error.message.includes('401')) {
+					new Notice('Authentication failed. Please re-authenticate.');
+					// Trigger UI update to show "Authenticate" button again
+					this.handleOAuthLogout(); // Treat 401 as logout for UI purposes
+				} else {
+					new Notice('An unexpected error occurred while updating model list.');
+				}
 			}
 			this.availableModels = [];
 			this.populateModelDropdowns();
@@ -538,5 +599,92 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 	public async refreshModels(): Promise<void> {
 		await this.fetchAndStoreModels(true);
+	}
+	// Expose a method to be called after successful OAuth callback
+	// Called by main.ts after successful OAuth callback
+	public handleOAuthSuccess(): void {
+		const authSection = this.containerEl.querySelector('.snc-auth-section');
+		if (authSection) {
+			const authStatusEl = authSection.querySelector('.snc-auth-status') as HTMLDivElement;
+			const authButtonsContainer = authSection.querySelector('.snc-auth-buttons') as HTMLDivElement;
+			if (authStatusEl && authButtonsContainer) {
+				// Re-run the UI update logic
+				const updateAuthUI = () => {
+					const isAuthenticated = this.plugin.openRouterService.isOAuthAuthenticated();
+					authStatusEl.setText(`Authentication Status: ${isAuthenticated ? 'Authenticated' : 'Not Authenticated'}`);
+					authButtonsContainer.empty(); // Clear previous buttons
+
+					if (isAuthenticated) {
+						// Show Log Out button
+						new Setting(authButtonsContainer)
+							.setName('Log Out')
+							.setDesc('Disconnect this plugin from your OpenRouter account.')
+							.addButton(button => button
+								.setButtonText('Log Out')
+								.setWarning()
+								.onClick(async () => {
+									await this.plugin.openRouterService.logout(
+										() => this.plugin.saveSettings(),
+										() => {
+											this.handleOAuthLogout(); // Update settings tab UI
+											updateAuthUI(); // Re-render auth buttons/status
+										}
+									);
+								}));
+					} else {
+						// Show Authenticate button (shouldn't happen right after success, but for completeness)
+						new Setting(authButtonsContainer)
+							.setName('Authenticate with OpenRouter')
+							.setDesc('Click the button to authorize this plugin with your OpenRouter account using OAuth.')
+							.addButton(button => button
+								.setButtonText('Authenticate')
+								.setCta()
+								.onClick(async () => {
+									await this.plugin.openRouterService.initiateOAuthFlow();
+								}));
+					}
+				};
+				updateAuthUI();
+			}
+		}
+		// Fetch models now that we are authenticated
+		this.fetchAndStoreModels(true);
+	}
+
+	// Expose a method to handle OAuth failure/logout
+	// Called by main.ts or internally after logout or auth failure
+	public handleOAuthLogout(): void {
+		// Notice is handled by the caller (service or main.ts)
+		// Re-render the auth section to show "Authenticate"
+		const authSection = this.containerEl.querySelector('.snc-auth-section');
+		if (authSection) {
+			const authStatusEl = authSection.querySelector('.snc-auth-status') as HTMLDivElement;
+			const authButtonsContainer = authSection.querySelector('.snc-auth-buttons') as HTMLDivElement;
+			if (authStatusEl && authButtonsContainer) {
+				// Re-run the UI update logic (similar to handleOAuthSuccess, but will show Authenticate)
+				const updateAuthUI = () => {
+					const isAuthenticated = this.plugin.openRouterService.isOAuthAuthenticated(); // Should be false now
+					authStatusEl.setText(`Authentication Status: ${isAuthenticated ? 'Authenticated' : 'Not Authenticated'}`);
+					authButtonsContainer.empty();
+
+					if (!isAuthenticated) {
+						// Show Authenticate button
+						new Setting(authButtonsContainer)
+							.setName('Authenticate with OpenRouter')
+							.setDesc('Click the button to authorize this plugin with your OpenRouter account using OAuth.')
+							.addButton(button => button
+								.setButtonText('Authenticate')
+								.setCta()
+								.onClick(async () => {
+									await this.plugin.openRouterService.initiateOAuthFlow();
+								}));
+					}
+					// No else needed as logout button shouldn't be shown
+				};
+				updateAuthUI();
+			}
+		}
+		this.availableModels = []; // Clear models
+		this.populateModelDropdowns(); // Update dropdowns to show "Authenticate..."
 	}
 }

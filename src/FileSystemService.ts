@@ -83,10 +83,10 @@ export class FileSystemService {
 
                     log.debug(`FileSystemService: Requesting LLM title with model ${titleModel}`);
                     const llmTitle = await this.openRouterService.getChatCompletion(
-                        settings.apiKey,
-                        titleModel,
-                        messages,
-                        wordLimit * 5 // Estimate max tokens based on word limit
+                    	// settings.apiKey, // Removed apiKey argument
+                    	titleModel,
+                    	messages,
+                    	wordLimit * 5 // Estimate max tokens based on word limit
                     );
 
                     if (llmTitle) {

@@ -32,6 +32,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	private boundKeyDownHandler: ((evt: KeyboardEvent) => void) | null = null;
 	private commandMap: Record<string, ((editor: Editor, view: MarkdownView, line: number) => void) | undefined> = {};
 	private lastSettingsHash: string = '';
+	private settingsTabInstance: SimpleNoteChatSettingsTab | null = null; // Store settings tab instance
 
 	async onload() {
 		log.debug('Loading Simple Note Chat plugin');
@@ -40,19 +41,44 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		this.updateCommandMap();
 		this.lastSettingsHash = this.getSettingsHash();
 
-		this.openRouterService = new OpenRouterService();
-
-		// Preload models if API key is set
-		if (this.settings.apiKey) {
-			this.openRouterService.getCachedModels(this.settings.apiKey)
-				.then(() => log.debug('Models prefetched on plugin load'))
-				.catch(err => log.error('Error prefetching models:', err));
-		}
+		// Instantiate services with necessary dependencies
+		this.openRouterService = new OpenRouterService(this.app, this.settings, this.manifest.id);
 		this.chatService = new ChatService(this, this.openRouterService);
 		this.fileSystemService = new FileSystemService(this.app, this.openRouterService);
 		this.editorHandler = new EditorHandler(this.app, this);
 
-		this.addSettingTab(new SimpleNoteChatSettingsTab(this.app, this));
+		// Preload models if already authenticated
+		if (this.openRouterService.isOAuthAuthenticated()) {
+			this.openRouterService.getCachedModels() // No API key needed
+				.then(() => log.debug('Models prefetched on plugin load (authenticated)'))
+				.catch(err => log.error('Error prefetching models:', err));
+		}
+
+		// Store settings tab instance
+		this.settingsTabInstance = new SimpleNoteChatSettingsTab(this.app, this);
+		this.addSettingTab(this.settingsTabInstance);
+
+		// Register OAuth callback handler
+		this.registerObsidianProtocolHandler("oauth-callback", async (params) => {
+			log.debug("OAuth Callback received:", params);
+			const code = params.code;
+			if (code) {
+				await this.openRouterService.handleOAuthCallback(
+					code,
+					() => this.saveSettings(), // Pass saveSettings method
+					() => { // Pass settings tab update method
+						if (this.settingsTabInstance) {
+							this.settingsTabInstance.handleOAuthSuccess();
+						} else {
+							log.warn("Settings tab instance not available for OAuth success update.");
+						}
+					}
+				);
+			} else {
+				log.error("OAuth callback missing 'code' parameter.");
+				new Notice("Authentication failed: Invalid response from OpenRouter.");
+			}
+		});
 
 		this.registerEvent(
 			this.app.workspace.on('editor-change', this.editorHandler.handleEditorChange)
