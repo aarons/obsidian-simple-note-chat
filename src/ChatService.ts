@@ -184,10 +184,6 @@ export class ChatService {
                         );
                     }
 
-                    // Scroll into view if enabled
-                    if (settings.enableViewportScrolling && lastPosition) {
-                        editor.scrollIntoView({ from: lastPosition, to: lastPosition }, true);
-                    }
                 }
             } // End for await loop
 

@@ -211,17 +211,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		containerEl.createEl('p', { text: 'Configure how the plugin behaves in various situations.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
-			.setName('Enable Viewport Scrolling')
-			.setDesc(`Automatically scroll the note to the bottom as the chat response streams in. This feature is in beta; it works but has room for improvement.`)
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableViewportScrolling)
-				.onChange(async (value) => {
-					this.plugin.settings.enableViewportScrolling = value;
-					await this.plugin.saveSettings();
-					new Notice(`Viewport scrolling ${value ? 'enabled' : 'disabled'}.`);
-				}));
-
-		new Setting(containerEl)
 			.setName('Chat Separator')
 			.setDesc(`This is the text used in notes to indicate separate messages between the user and AI. It is recommended to use something uncommon such as an html element, as LLMs are unlikely to use them in chat responses. If you use something more common, such as '---', and the LLM returns messages with those strings, then the parsing might get confused (not a big deal, but just FYI). Default: ${CHAT_SEPARATOR_DEFAULT}`)
 			.addText(text => text
@@ -334,17 +323,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		llmSettingsContainer.style.display = this.plugin.settings.enableArchiveRenameLlm ? 'block' : 'none';
-
-		new Setting(containerEl)
-			.setName('Enable Ribbon Button')
-			.setDesc('This adds a button the the left ribbon bar for triggering the command.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableNnRibbonButton)
-				.onChange(async (value) => {
-					this.plugin.settings.enableNnRibbonButton = value;
-					await this.plugin.saveSettings();
-					new Notice(`Ribbon button trigger ${value ? 'enabled' : 'disabled'}. Please reload Obsidian for the change to take effect.`);
-				}));
 
 		new Setting(containerEl)
 			.setName('Automatically Archive Current Note on New Chat')

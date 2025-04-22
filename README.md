@@ -155,44 +155,11 @@ The command phrases (`cc`, `gg`, `nn`) and shortcut keys can be customized in th
 
 `cc` stands for 'call chat'
 
+`cm` change model
+
 `gg` stands for 'good game' and signifies the chat is over. Other phrases considered were `ac` for archive chat, `ta` for thanks, or `aa` for aarchive
 
 `nn` new-note wooooo
-
-
-## Settings
-
-Configure the plugin via the Obsidian settings panel (`Settings` -> `Community Plugins` -> `Simple Note Chat`):
-
-### LLM Setup
-- **OpenRouter API Key**: Enter your API key from OpenRouter.ai
-- **Refresh Model List**: Update the available models from OpenRouter
-- **Sort Model Lists By**: Choose how to organize models (alphabetical or by price)
-- **Default Chat Model**: Select which model to use for new chats
-
-### Chat Command (cc)
-- **Chat Command Phrase**: The text that triggers a chat completion (default: `cc`)
-- **Enable Chat Keyboard Shortcut**: Make the command available for hotkey assignment
-- **Stop Sequence**: Text to type during streaming to stop the response (default: `stop`)
-- **Enable Viewport Scrolling**: Automatically scroll to follow the AI response
-- **Chat Separator**: Markdown used to separate messages (default: `<hr>`)
-
-### Archive Command (gg)
-- **Archive Command Phrase**: Text that triggers archiving (default: `gg`)
-- **Archive Folder**: Where archived notes are stored (default: `archived/`)
-- **Rename Note on Archive**: Options for renaming notes when archived
-  - Date/Time format (e.g., YYYY-MM-DD-HH-mm)
-  - LLM-generated title based on note content
-  - Word limit for generated titles
-  - Option to include emojis
-  - Model to use for title generation
-
-### New Chat Command (nn)
-- **New Chat Command Phrase**: Text that creates a new chat note (default: `nn`)
-- **Enable New Chat Phrase Trigger**: Activate the command by typing the phrase
-- **Enable Ribbon Button**: Add a button to the Obsidian sidebar
-- **Enable Keyboard Shortcut**: Make the command available for hotkey assignment
-- **Archive Current Note on New Chat**: Automatically archive the current note before creating a new one
 
 ## License
 

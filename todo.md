@@ -13,10 +13,7 @@ Desired Updates:
 - styling of messages (pro feature)
 
 Cursor Management:
-- move cursor to the bottom of the viewport, if it's within view (how to tell?), regardless of scroll viewport setting
-- otherwise, if content scrolls beyond viewport, leave cursor in current position
-    - or move it, but don't shift the viewport down, it's jarring
-- leave alone if not
+- if content scrolls beyond viewport, leave cursor in current position
 - when codeblocks are being streamed, scrolling gets messed up; anyway to fix that?
 
 Feature: when archiving a note, we append a string (moved not to: folder/note-name.md), allow users to suppress that string

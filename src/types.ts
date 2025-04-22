@@ -4,7 +4,6 @@ export interface PluginSettings {
   apiKey: string;
   defaultModel: string;
   archiveFolderName: string;
-  enableNnRibbonButton: boolean;
   archivePreviousNoteOnNn: boolean;
   enableArchiveRenameDate: boolean;
   archiveRenameDateFormat: string;
@@ -12,7 +11,6 @@ export interface PluginSettings {
   llmRenameWordLimit: number;
   llmRenameIncludeEmojis: boolean;
   llmRenameModel: string; // Stores the ID of the model to use for titling
-  enableViewportScrolling: boolean;
   modelSortOrder: string;
   chatCommandPhrase: string;
   archiveCommandPhrase: string;
@@ -25,7 +23,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	apiKey: '',
 	defaultModel: 'openrouter/auto',
 	archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
-	enableNnRibbonButton: false,
 	archivePreviousNoteOnNn: false,
 	enableArchiveRenameDate: false,
 	archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT,
@@ -33,7 +30,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	llmRenameWordLimit: 5,
 	llmRenameIncludeEmojis: false,
 	llmRenameModel: '',
-	enableViewportScrolling: false,
 	modelSortOrder: 'alphabetical',
 	chatCommandPhrase: '',
 	archiveCommandPhrase: '',
