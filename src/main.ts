@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, moment } from 'obsidian';
+import { Editor, MarkdownView, Notice, Plugin, moment } from 'obsidian';
 import { SimpleNoteChatSettingsTab } from './SettingsTab';
 import { ChatService } from './ChatService';
 import { OpenRouterService } from './OpenRouterService';
@@ -138,14 +138,20 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			id: 'trigger-chat-completion-cc',
 			name: 'Trigger Chat Completion (cc)',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				const docEnd = editor.offsetToPos(editor.getValue().length);
-				const currentContent = editor.getValue();
-				const textToInsert = (currentContent.endsWith('\n') ? '' : '\n') + this.settings.chatCommandPhrase + '\n';
-				editor.replaceRange(textToInsert, docEnd, docEnd);
-				const newEndPos = editor.offsetToPos(editor.posToOffset(docEnd) + textToInsert.length);
-				editor.setCursor(newEndPos);
-
-				log.debug("Executed 'cc' shortcut command via hotkey, inserted phrase.");
+				const file = view.file;
+				if (!file) {
+					new Notice("Cannot trigger chat: No active file.");
+					log.error("Trigger chat completion hotkey failed: No active file.");
+					return;
+				}
+				log.debug(`Triggering chat completion via hotkey for file: ${file.path}`);
+				const cursor = editor.getCursor(); // Get cursor position
+				this.chatService.startChat(editor, file, this.settings, cursor) // Use startChat with cursor
+					.catch((error: Error) => { // Add type Error
+						// Basic error handling, ChatService should show more specific notices
+						log.error("Error starting chat from hotkey:", error);
+						new Notice("Failed to start chat. See console for details.");
+					});
 			}
 		});
 		if (this.settings.enableNnRibbonButton) {
@@ -243,7 +249,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			(editor, view, line) => this.editorHandler.triggerArchiveCommand(editor, view, this.settings, line);
 		this.commandMap[this.settings.modelCommandPhrase] =
 			(editor, view, line) => this.editorHandler.triggerModelCommand(editor, view, this.settings, line);
-
 		this.commandMap[this.settings.newChatCommandPhrase] =
 			(editor, view, line) => this.editorHandler.triggerNewChatCommand(editor, view, this.settings, line);
 	}

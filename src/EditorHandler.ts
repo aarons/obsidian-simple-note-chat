@@ -144,7 +144,7 @@ export class EditorHandler {
 			return;
 		}
 
-		// Define command line range
+		// I think we should rename this to CommandPhraseStartPos etcc.
 		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
 		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: editor.getLine(commandLineIndex).length };
 
@@ -153,42 +153,24 @@ export class EditorHandler {
 			? { line: commandLineIndex + 1, ch: 0 } // Include newline if not last line
 			: commandLineEndPos; // Just the line content if last line
 
-		const statusMessage = `Calling ${settings.defaultModel}...\n`;
-
-		// Replace command line with status message
-		editor.replaceRange(statusMessage, commandLineStartPos, rangeToRemoveEnd);
-
-		// Track status message position for later replacement
-		const actualStatusTextStartPos: EditorPosition = commandLineStartPos;
-		const statusTextLength = statusMessage.length;
-		const statusMessageEndOffset = editor.posToOffset(actualStatusTextStartPos) + statusTextLength;
-		const statusMessageEndPos = editor.offsetToPos(statusMessageEndOffset);
+		// Remove the command phrase
+		editor.replaceRange('', commandLineStartPos, rangeToRemoveEnd);
 
 		// Position cursor for incoming stream
-		editor.setCursor(statusMessageEndPos);
-		log.debug(`Replaced command line ${commandLineIndex} with status. Status Range for ChatService: [${actualStatusTextStartPos.line}, ${actualStatusTextStartPos.ch}] to [${statusMessageEndPos.line}, ${statusMessageEndPos.ch}]. Cursor set to end.`);
+		// editor.setCursor(statusMessageEndPos);
 
-		// Start chat with status message range for replacement
+		// Start chat, providing the position where the status message started
 		this.plugin.chatService.startChat(
 			editor,
 			file,
 			settings,
-			actualStatusTextStartPos, // Position where actual status text starts
-			statusMessageEndPos       // Position where actual status text ends
-		).catch(error => {
-			log.error("Error starting chat:", error);
+			commandLineStartPos // Position where status message was inserted
+		).catch((error: Error) => { // Add type to error
+			log.error("Error starting chat from command phrase:", error);
 			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-			try {
-				// Attempt to replace the *original* status message range with the error
-				// Use the same range that was passed to startChat
-				editor.replaceRange(`\nError: ${errorMessage}\n`, actualStatusTextStartPos, statusMessageEndPos);
-			} catch (replaceError) {
-				log.error("Failed to replace status message with error:", replaceError);
-				// Fallback: Insert error message at the cursor position if replacement fails
-				const currentCursor = editor.getCursor();
-				editor.replaceRange(`\nError: ${errorMessage}\n`, currentCursor);
-				new Notice(`Chat Error: ${errorMessage}. Failed to replace status message.`);
-			}
+			// Log the error. startChat handles cleanup and user notification.
+			log.error(`Chat Error from command phrase: ${errorMessage}. Relying on startChat cleanup.`);
+			// No need for fallback insertion here, startChat handles its errors internally.
 		});
 	}
 

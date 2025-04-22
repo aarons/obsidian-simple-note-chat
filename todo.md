@@ -1,7 +1,6 @@
 Before release:
 - chat command shortcut key should not modify the note (plus it's broken)
 - blank phrase == no phrase activation
-- add Keyboard Shortcut Triggers for new note and archive note and change model
 - update plugin description fields, version
 - add github release management
 - fix the archive note string that gets appended
@@ -21,3 +20,6 @@ Cursor Management:
 - when codeblocks are being streamed, scrolling gets messed up; anyway to fix that?
 
 Feature: when archiving a note, we append a string (moved not to: folder/note-name.md), allow users to suppress that string
+
+Behavior Section
+- archiving moves the content, not the base note - allows for a persistent notes to act as chat areas, when done, the history is moved to the archive as a new note.
