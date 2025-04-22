@@ -137,21 +137,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		this.addCommand({
 			id: 'trigger-chat-completion-cc',
 			name: 'Trigger Chat Completion (cc)',
-			checkCallback: (checking: boolean) => {
-				if (!this.settings.enableCcShortcut) {
-					return false; // Command is disabled if setting is off
-				}
-
-				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (!activeView) {
-					return false; // No active markdown view
-				}
-
-				if (checking) {
-					return true;
-				}
-
-				const editor = activeView.editor;
+			editorCallback: (editor: Editor, view: MarkdownView) => {
 				const docEnd = editor.offsetToPos(editor.getValue().length);
 				const currentContent = editor.getValue();
 				const textToInsert = (currentContent.endsWith('\n') ? '' : '\n') + this.settings.chatCommandPhrase + '\n';
@@ -159,8 +145,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 				const newEndPos = editor.offsetToPos(editor.posToOffset(docEnd) + textToInsert.length);
 				editor.setCursor(newEndPos);
 
-				log.debug("Executed 'cc' shortcut command, inserted phrase.");
-				return true;
+				log.debug("Executed 'cc' shortcut command via hotkey, inserted phrase.");
 			}
 		});
 		if (this.settings.enableNnRibbonButton) {

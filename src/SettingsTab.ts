@@ -134,17 +134,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Enable Keyboard Shortcut')
-			.setDesc(`This lets you assign a shortcut key to initate a chat, in case you prefer that over a phrase. This will list the 'chat comamnd' in Obsidian's hotkey settings, where you can set the hotkey shortcut to use (Settings -> Hotkeys -> Search for 'simple note chat').`)
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableCcShortcut) // Keep internal setting name for command ID link
-				.onChange(async (value) => {
-					this.plugin.settings.enableCcShortcut = value;
-					await this.plugin.saveSettings();
-					new Notice(`Chat keyboard shortcut command ${value ? 'enabled' : 'disabled'}. Configure in Obsidian Hotkeys.`);
-				})); // <-- Close onChange and addToggle
-
-		new Setting(containerEl)
 			.setName('Enable Viewport Scrolling')
 			.setDesc(`Automatically scroll the note to the bottom as the chat response streams in. This feature is in beta; it works but has room for improvement.`)
 			.addToggle(toggle => toggle
@@ -354,17 +343,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					this.plugin.settings.enableNnRibbonButton = value;
 					await this.plugin.saveSettings();
 					new Notice(`Ribbon button trigger ${value ? 'enabled' : 'disabled'}. Please reload Obsidian for the change to take effect.`);
-				}));
-
-		new Setting(containerEl)
-			.setName('Enable Keyboard Shortcut Trigger')
-			.setDesc('Allow assigning a keyboard shortcut in Obsidian\'s hotkey settings for the New Chat command.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableNnKeyboardShortcut)
-				.onChange(async (value) => {
-					this.plugin.settings.enableNnKeyboardShortcut = value;
-					await this.plugin.saveSettings();
-					new Notice(`Keyboard shortcut availability ${value ? 'enabled' : 'disabled'}. Configure the shortcut in Obsidian Hotkeys.`);
 				}));
 
 		new Setting(containerEl)

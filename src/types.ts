@@ -5,7 +5,6 @@ export interface PluginSettings {
   defaultModel: string;
   archiveFolderName: string;
   enableNnRibbonButton: boolean;
-  enableNnKeyboardShortcut: boolean;
   archivePreviousNoteOnNn: boolean;
   enableArchiveRenameDate: boolean;
   archiveRenameDateFormat: string;
@@ -15,7 +14,6 @@ export interface PluginSettings {
   llmRenameModel: string; // Stores the ID of the model to use for titling
   enableViewportScrolling: boolean;
   modelSortOrder: string;
-  enableCcShortcut: boolean; // Relates to specific command ID
   chatCommandPhrase: string;
   archiveCommandPhrase: string;
   newChatCommandPhrase: string;
@@ -28,7 +26,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	defaultModel: 'openrouter/auto',
 	archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
 	enableNnRibbonButton: false,
-	enableNnKeyboardShortcut: false,
 	archivePreviousNoteOnNn: false,
 	enableArchiveRenameDate: false,
 	archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT,
@@ -38,7 +35,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	llmRenameModel: '',
 	enableViewportScrolling: false,
 	modelSortOrder: 'alphabetical',
-	enableCcShortcut: false,
 	chatCommandPhrase: '',
 	archiveCommandPhrase: '',
 	newChatCommandPhrase: '',
