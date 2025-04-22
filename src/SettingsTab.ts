@@ -206,24 +206,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
-		// ========== 4. BEHAVIORAL OPTIONS ==========
-		containerEl.createEl('h3', { text: 'Behavioral Options', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'Configure how the plugin behaves in various situations.', cls: 'snc-setting-section-description' });
-
-		new Setting(containerEl)
-			.setName('Chat Separator')
-			.setDesc(`This is the text used in notes to indicate separate messages between the user and AI. It is recommended to use something uncommon such as an html element, as LLMs are unlikely to use them in chat responses. If you use something more common, such as '---', and the LLM returns messages with those strings, then the parsing might get confused (not a big deal, but just FYI). Default: ${CHAT_SEPARATOR_DEFAULT}`)
-			.addText(text => text
-				.setPlaceholder(CHAT_SEPARATOR_DEFAULT)
-				.setValue(this.plugin.settings.chatSeparator)
-				.onChange(async (value) => {
-					const trimmedValue = value.trim();
-					if (this.plugin.settings.chatSeparator !== trimmedValue) {
-						this.plugin.settings.chatSeparator = trimmedValue;
-						await this.plugin.saveSettings();
-						new Notice('Chat separator saved.');
-					}
-				}));
+		// ========== 4. CHAT ARCHIVE SETTINGS ==========
+		containerEl.createEl('h3', { text: 'Chat Archive Settings', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'Configure how notes are archived and renamed.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('Archive Folder')
@@ -333,6 +318,25 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					this.plugin.settings.archivePreviousNoteOnNn = value;
 					await this.plugin.saveSettings();
 					new Notice(`Archive on New Chat ${value ? 'enabled' : 'disabled'}.`);
+				}));
+				
+		// ========== 5. STYLE OPTIONS ==========
+		containerEl.createEl('h3', { text: 'Style Options', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'Configure visual and formatting elements of the chat.', cls: 'snc-setting-section-description' });
+
+		new Setting(containerEl)
+			.setName('Chat Separator')
+			.setDesc(`This is the text used in notes to indicate separate messages between the user and AI. It is recommended to use something uncommon such as an html element, as LLMs are unlikely to use them in chat responses. If you use something more common, such as '---', and the LLM returns messages with those strings, then the parsing might get confused (not a big deal, but just FYI). Default: ${CHAT_SEPARATOR_DEFAULT}`)
+			.addText(text => text
+				.setPlaceholder(CHAT_SEPARATOR_DEFAULT)
+				.setValue(this.plugin.settings.chatSeparator)
+				.onChange(async (value) => {
+					const trimmedValue = value.trim();
+					if (this.plugin.settings.chatSeparator !== trimmedValue) {
+						this.plugin.settings.chatSeparator = trimmedValue;
+						await this.plugin.saveSettings();
+						new Notice('Chat separator saved.');
+					}
 				}));
 
 		// Load models if API key is set
