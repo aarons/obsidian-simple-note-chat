@@ -32,9 +32,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.createEl('h2', { text: 'Simple Note Chat - Settings' });
 
-		// ========== 1. LLM SETUP ==========
-		containerEl.createEl('h3', { text: 'LLM Setup', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'Configure connection to OpenRouter and select default chat models.', cls: 'snc-setting-section-description' });
+		// ========== 1. CONNECTIONS ==========
+		containerEl.createEl('h3', { text: 'Connections', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'Configure connection to LLM providers.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('OpenRouter API Key')
@@ -56,6 +56,10 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					});
 				text.inputEl.setAttribute('type', 'password');
 			});
+
+		// ========== 2. MODEL MANAGEMENT ==========
+		containerEl.createEl('h3', { text: 'Model Management', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'Configure model selection and sorting options.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('Model Sorting')
@@ -101,6 +105,21 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			});
 		});
 
+		// Move the LLM model setting for titles here from below
+		const llmModelSetting = new Setting(containerEl)
+			.setName('Model for Titling Notes')
+			.setDesc('This is the model to use for generating the note title. Uses the current chat model if left blank.');
+
+		llmModelSetting.addDropdown(dropdown => {
+			this.llmModelDropdown = dropdown;
+			dropdown.addOption('', 'Use Default Chat Model');
+			dropdown.setValue(this.plugin.settings.llmRenameModel);
+			dropdown.onChange(async (value) => {
+				this.plugin.settings.llmRenameModel = value;
+				await this.plugin.saveSettings();
+			});
+		});
+
 		new Setting(containerEl)
 		.setName('Refresh Model List')
 		.setDesc('Fetch the latest available models from OpenRouter. The list automatically refreshes once every 24 hours in the background, as well as when the plugin first starts with Obsidian; so the list should stay pretty current on its own.')
@@ -111,9 +130,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				await this.fetchAndStoreModels(true);
 			}));
 
-		// ========== 2. CHAT COMMAND (cc) ==========
-		containerEl.createEl('h3', { text: 'Initiating a Chat', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: `These settings control how you chat with the LLM. Phrases are typed into a note on their own line, and will activate after you hit the <enter> key. For example, type: cc<enter>`, cls: 'snc-setting-section-description' });
+		// ========== 3. PHRASES ==========
+		containerEl.createEl('h3', { text: 'Command Phrases', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'Configure the various command phrases used by the plugin. Phrases are typed into a note on their own line, and will activate after you hit the <enter> key.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('Chat Phrase')
@@ -132,6 +151,64 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 						text.setValue(this.plugin.settings.chatCommandPhrase); // Revert if empty
 					}
 				}));
+
+		new Setting(containerEl)
+			.setName('Change Model Phrase')
+			.setDesc(`This will open a quick model selection dialog, to enable changing the model used for chats. (Default: ${MODEL_COMMAND_DEFAULT}).`)
+			.addText(t => t
+				.setPlaceholder(MODEL_COMMAND_DEFAULT)
+				.setValue(this.plugin.settings.modelCommandPhrase)
+				.onChange(async (v) => {
+					const trimmed = v.trim();
+					if (trimmed && this.plugin.settings.modelCommandPhrase !== trimmed) {
+						this.plugin.settings.modelCommandPhrase = trimmed;
+						await this.plugin.saveSettings();
+						new Notice('Model command phrase saved.');
+					} else if (!trimmed) {
+						new Notice('Command phrase cannot be empty.');
+						t.setValue(this.plugin.settings.modelCommandPhrase); // Revert if empty
+					}
+				}));
+
+		new Setting(containerEl)
+			.setName('Archive Phrase')
+			.setDesc(`This phrase will move the current note to your archive folder, and optionally update the title. (Default: ${ARCHIVE_COMMAND_DEFAULT}).`)
+			.addText(text => text
+				.setPlaceholder(ARCHIVE_COMMAND_DEFAULT)
+				.setValue(this.plugin.settings.archiveCommandPhrase)
+				.onChange(async (value) => {
+					const trimmedValue = value.trim();
+					if (trimmedValue && this.plugin.settings.archiveCommandPhrase !== trimmedValue) {
+						this.plugin.settings.archiveCommandPhrase = trimmedValue;
+						await this.plugin.saveSettings();
+						new Notice('Archive command phrase saved.');
+					} else if (!trimmedValue) {
+						new Notice('Command phrase cannot be empty.');
+						text.setValue(this.plugin.settings.archiveCommandPhrase); // Revert if empty
+					}
+				}));
+
+		new Setting(containerEl)
+			.setName('New Note')
+			.setDesc(`Phrase to trigger creating a new note for chatting (Default: ${NEW_CHAT_COMMAND_DEFAULT}).`)
+			.addText(text => text
+				.setPlaceholder(NEW_CHAT_COMMAND_DEFAULT)
+				.setValue(this.plugin.settings.newChatCommandPhrase)
+				.onChange(async (value) => {
+					const trimmedValue = value.trim();
+					if (trimmedValue && this.plugin.settings.newChatCommandPhrase !== trimmedValue) {
+						this.plugin.settings.newChatCommandPhrase = trimmedValue;
+						await this.plugin.saveSettings();
+						new Notice('New chat command phrase saved.');
+					} else if (!trimmedValue) {
+						new Notice('Command phrase cannot be empty.');
+						text.setValue(this.plugin.settings.newChatCommandPhrase); // Revert if empty
+					}
+				}));
+
+		// ========== 4. BEHAVIORAL OPTIONS ==========
+		containerEl.createEl('h3', { text: 'Behavioral Options', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'Configure how the plugin behaves in various situations.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('Enable Viewport Scrolling')
@@ -156,46 +233,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 						this.plugin.settings.chatSeparator = trimmedValue;
 						await this.plugin.saveSettings();
 						new Notice('Chat separator saved.');
-					}
-				}));
-
-		new Setting(containerEl)
-			.setName('Change Model Phrase')
-			.setDesc(`This will open a quick model selection dialog, to enable changing the model used for chats. (Default: ${MODEL_COMMAND_DEFAULT}).`)
-			.addText(t => t
-				.setPlaceholder(MODEL_COMMAND_DEFAULT)
-				.setValue(this.plugin.settings.modelCommandPhrase)
-				.onChange(async (v) => {
-					const trimmed = v.trim();
-					if (trimmed && this.plugin.settings.modelCommandPhrase !== trimmed) {
-						this.plugin.settings.modelCommandPhrase = trimmed;
-						await this.plugin.saveSettings();
-						new Notice('Model command phrase saved.');
-					} else if (!trimmed) {
-						new Notice('Command phrase cannot be empty.');
-						t.setValue(this.plugin.settings.modelCommandPhrase); // Revert if empty
-					}
-				}));
-
-		// ========== 4. ARCHIVE COMMAND (gg) ==========
-		containerEl.createEl('h3', { text: 'Chat Archiving', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'This configures an optional shortcut for archiving notes when you are done.', cls: 'snc-setting-section-description' });
-
-		new Setting(containerEl)
-			.setName('Archive Phrase')
-			.setDesc(`This phrase will move the current note to your archive folder, and optionally update the title. (Default: ${ARCHIVE_COMMAND_DEFAULT}).`)
-			.addText(text => text
-				.setPlaceholder(ARCHIVE_COMMAND_DEFAULT)
-				.setValue(this.plugin.settings.archiveCommandPhrase)
-				.onChange(async (value) => {
-					const trimmedValue = value.trim();
-					if (trimmedValue && this.plugin.settings.archiveCommandPhrase !== trimmedValue) {
-						this.plugin.settings.archiveCommandPhrase = trimmedValue;
-						await this.plugin.saveSettings();
-						new Notice('Archive command phrase saved.');
-					} else if (!trimmedValue) {
-						new Notice('Command phrase cannot be empty.');
-						text.setValue(this.plugin.settings.archiveCommandPhrase); // Revert if empty
 					}
 				}));
 
@@ -296,43 +333,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					new Notice(`LLM title emoji inclusion ${value ? 'enabled' : 'disabled'}.`);
 				}));
 
-		const llmModelSetting = new Setting(llmSettingsContainer)
-			.setName('Model for Titling Notes')
-			.setDesc('This is the model to use for generating the note title. Uses the current chat model if left blank.');
-
-		llmModelSetting.addDropdown(dropdown => {
-			this.llmModelDropdown = dropdown;
-			dropdown.addOption('', 'Use Default Chat Model');
-			dropdown.setValue(this.plugin.settings.llmRenameModel);
-			dropdown.onChange(async (value) => {
-				this.plugin.settings.llmRenameModel = value;
-				await this.plugin.saveSettings();
-			});
-		});
-
 		llmSettingsContainer.style.display = this.plugin.settings.enableArchiveRenameLlm ? 'block' : 'none';
-
-		// ========== 5. NEW CHAT COMMAND (nn) ==========
-		containerEl.createEl('h3', { text: 'New Chat Command', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'This enables quickly starting a new chat note from anywhere. It will be created in your chat archive folder.', cls: 'snc-setting-section-description' });
-
-		new Setting(containerEl)
-			.setName('New Note')
-			.setDesc(`Phrase to trigger creating a new note for chatting (Default: ${NEW_CHAT_COMMAND_DEFAULT}).`)
-			.addText(text => text
-				.setPlaceholder(NEW_CHAT_COMMAND_DEFAULT)
-				.setValue(this.plugin.settings.newChatCommandPhrase)
-				.onChange(async (value) => {
-					const trimmedValue = value.trim();
-					if (trimmedValue && this.plugin.settings.newChatCommandPhrase !== trimmedValue) {
-						this.plugin.settings.newChatCommandPhrase = trimmedValue;
-						await this.plugin.saveSettings();
-						new Notice('New chat command phrase saved.');
-					} else if (!trimmedValue) {
-						new Notice('Command phrase cannot be empty.');
-						text.setValue(this.plugin.settings.newChatCommandPhrase); // Revert if empty
-					}
-				}));
 
 		new Setting(containerEl)
 			.setName('Enable Ribbon Button')
