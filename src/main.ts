@@ -168,43 +168,23 @@ export default class SimpleNoteChatPlugin extends Plugin {
 					return true; // Command is available if there's an active file
 				}
 
-				// Execute the archive logic directly
-				(async () => {
-					try {
-						const archiveResult = await this.fileSystemService.moveFileToArchive(activeFile, this.settings.archiveFolderName, this.settings);
-						if (archiveResult === null) {
-							new Notice(`Failed to archive note '${activeFile.name}'.`);
-							log.warn(`Failed archive command for ${activeFile.name}`);
-						} else {
-							new Notice(`Archived note '${activeFile.name}'.`);
-							log.info(`Archive command successful for ${activeFile.name}`);
-						}
-					} catch (error) {
-						log.error(`Error executing archive command for ${activeFile.name}:`, error);
-						new Notice(`Error trying to archive note '${activeFile.name}'.`);
-					}
-				})();
+				// Execute the archive logic - moveFileToArchive handles notifications
+				this.fileSystemService.moveFileToArchive(
+					activeFile,
+					this.settings.archiveFolderName,
+					this.settings
+				);
 
-				return true; // Indicate command was handled
+				return true;
 			}
 		});
 
 		this.addCommand({
 			id: 'change-chat-model',
 			name: 'Change Chat Model',
-			checkCallback: (checking: boolean) => {
-				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (!activeView) {
-					return false; // Requires an active markdown view
-				}
-
-				if (checking) {
-					return true; // Command is available
-				}
-
+			callback: () => {
 				this.editorHandler.openModelSelectorModal();
 				log.debug("Executed 'change model' command via hotkey.");
-				return true;
 			}
 		});
 	}
