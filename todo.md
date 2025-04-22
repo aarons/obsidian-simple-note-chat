@@ -1,7 +1,6 @@
 Before release:
 - chat command shortcut key should not modify the note (plus it's broken)
 - blank phrase == no phrase activation
-- always enable the keyboard shortcuts; don't have settings for them
 - add Keyboard Shortcut Triggers for new note and archive note and change model
 - update plugin description fields, version
 - add github release management

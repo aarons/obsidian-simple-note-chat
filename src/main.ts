@@ -154,6 +154,59 @@ export default class SimpleNoteChatPlugin extends Plugin {
 				this.app.commands.executeCommandById('simple-note-chat:create-new-chat-note');
 			});
 		}
+
+		this.addCommand({
+			id: 'archive-current-note',
+			name: 'Archive Current Note',
+			checkCallback: (checking: boolean) => {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (!activeFile) {
+					return false; // No active file to archive
+				}
+
+				if (checking) {
+					return true; // Command is available if there's an active file
+				}
+
+				// Execute the archive logic directly
+				(async () => {
+					try {
+						const archiveResult = await this.fileSystemService.moveFileToArchive(activeFile, this.settings.archiveFolderName, this.settings);
+						if (archiveResult === null) {
+							new Notice(`Failed to archive note '${activeFile.name}'.`);
+							log.warn(`Failed archive command for ${activeFile.name}`);
+						} else {
+							new Notice(`Archived note '${activeFile.name}'.`);
+							log.info(`Archive command successful for ${activeFile.name}`);
+						}
+					} catch (error) {
+						log.error(`Error executing archive command for ${activeFile.name}:`, error);
+						new Notice(`Error trying to archive note '${activeFile.name}'.`);
+					}
+				})();
+
+				return true; // Indicate command was handled
+			}
+		});
+
+		this.addCommand({
+			id: 'change-chat-model',
+			name: 'Change Chat Model',
+			checkCallback: (checking: boolean) => {
+				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (!activeView) {
+					return false; // Requires an active markdown view
+				}
+
+				if (checking) {
+					return true; // Command is available
+				}
+
+				this.editorHandler.openModelSelectorModal();
+				log.debug("Executed 'change model' command via hotkey.");
+				return true;
+			}
+		});
 	}
 
 	onunload() {

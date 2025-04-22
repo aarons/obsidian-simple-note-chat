@@ -339,4 +339,13 @@ export class EditorHandler {
 		new ModelSelectorModal(this.plugin).open();
 		log.debug(`Executed model command ('${settings.modelCommandPhrase}') on line ${commandLineIndex}. Opening modal.`);
 	}
+
+	/**
+		* Opens the model selector modal directly.
+		* Intended for use by commands/hotkeys.
+		*/
+	public openModelSelectorModal(): void {
+		new ModelSelectorModal(this.plugin).open();
+		log.debug("Opened model selector modal via command/hotkey.");
+	}
 }
