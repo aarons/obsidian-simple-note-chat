@@ -23,3 +23,7 @@ Feature: when archiving a note, we append a string (moved not to: folder/note-na
 
 Behavior Section
 - archiving moves the content, not the base note - allows for a persistent notes to act as chat areas, when done, the history is moved to the archive as a new note.
+
+Testing
+- add end-to-end tests
+
