@@ -130,10 +130,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					if (trimmedValue && this.plugin.settings.chatCommandPhrase !== trimmedValue) {
 						this.plugin.settings.chatCommandPhrase = trimmedValue;
 						await this.plugin.saveSettings();
-						// Removed Notice
 					} else if (!trimmedValue) {
 						new Notice('Command phrase cannot be empty.');
-						text.setValue(this.plugin.settings.chatCommandPhrase); // Revert if empty
+						text.setValue(this.plugin.settings.chatCommandPhrase);
 					}
 				}));
 
@@ -148,7 +147,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					if (trimmed && this.plugin.settings.modelCommandPhrase !== trimmed) {
 						this.plugin.settings.modelCommandPhrase = trimmed;
 						await this.plugin.saveSettings();
-						// Removed Notice
 					} else if (!trimmed) {
 						new Notice('Command phrase cannot be empty.');
 						t.setValue(this.plugin.settings.modelCommandPhrase);
@@ -166,7 +164,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				if (trimmedValue && this.plugin.settings.newChatCommandPhrase !== trimmedValue) {
 					this.plugin.settings.newChatCommandPhrase = trimmedValue;
 					await this.plugin.saveSettings();
-					// Removed Notice
 				} else if (!trimmedValue) {
 					new Notice('Command phrase cannot be empty.');
 					text.setValue(this.plugin.settings.newChatCommandPhrase);
@@ -184,10 +181,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					if (trimmedValue && this.plugin.settings.archiveCommandPhrase !== trimmedValue) {
 						this.plugin.settings.archiveCommandPhrase = trimmedValue;
 						await this.plugin.saveSettings();
-						// Removed Notice
 					} else if (!trimmedValue) {
 						new Notice('Command phrase cannot be empty.');
-						text.setValue(this.plugin.settings.archiveCommandPhrase); // Revert if empty
+						text.setValue(this.plugin.settings.archiveCommandPhrase);
 					}
 				}));
 
@@ -204,13 +200,10 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.archiveFolderName)
 				.onChange(async (value) => {
 					const trimmedValue = value.trim();
-					// Removed path normalization
 
 					if (this.plugin.settings.archiveFolderName !== trimmedValue) {
 						this.plugin.settings.archiveFolderName = trimmedValue;
 						await this.plugin.saveSettings();
-						// Removed Notice
-						// text.setValue(trimmedValue); // No need to set value back if not normalizing
 					}
 				}));
 
@@ -241,7 +234,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					if (trimmedValue) {
 						this.plugin.settings.archiveRenameDateFormat = trimmedValue;
 						await this.plugin.saveSettings();
-						// Removed Notice
 					} else {
 						new Notice('Archive rename format cannot be empty.');
 						text.setValue(this.plugin.settings.archiveRenameDateFormat);
@@ -292,7 +284,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					if (!isNaN(numValue) && numValue >= 1) {
 						this.plugin.settings.llmRenameWordLimit = numValue;
 						await this.plugin.saveSettings();
-						// Removed Notice
 					} else {
 						new Notice('Please enter a valid number (1 or greater).');
 						text.setValue(String(this.plugin.settings.llmRenameWordLimit));
@@ -379,13 +370,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.newNoteCustomFolder)
 				.onChange(async (value) => {
 					const trimmedValue = value.trim();
-					// Removed path normalization
 					if (this.plugin.settings.newNoteCustomFolder !== trimmedValue) {
 						this.plugin.settings.newNoteCustomFolder = trimmedValue;
 						await this.plugin.saveSettings();
-						// Removed Notice
-						// text.setValue(trimmedValue); // No need to set value back if not normalizing
-						// Update the main description if custom folder changes while 'custom' is selected
 						if (this.plugin.settings.newNoteLocation === 'custom') {
 							updateNewNoteDesc(newNoteLocationSetting, 'custom');
 						}
@@ -407,10 +394,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					if (trimmedValue) {
 						this.plugin.settings.newNoteTitleFormat = trimmedValue;
 						await this.plugin.saveSettings();
-						// Removed Notice
 					} else {
 						new Notice('New note title format cannot be empty.');
-						text.setValue(this.plugin.settings.newNoteTitleFormat); // Revert
+						text.setValue(this.plugin.settings.newNoteTitleFormat);
 					}
 				}));
 
@@ -441,7 +427,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					if (this.plugin.settings.chatSeparator !== trimmedValue) {
 						this.plugin.settings.chatSeparator = trimmedValue;
 						await this.plugin.saveSettings();
-						// Removed Notice
 					}
 				}));
 
