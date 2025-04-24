@@ -42,7 +42,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		this.openRouterService = new OpenRouterService();
 
-		// Preload models if API key is set
 		if (this.settings.apiKey) {
 			this.openRouterService.getCachedModels(this.settings.apiKey)
 				.then(() => log.debug('Models prefetched on plugin load'))
@@ -102,17 +101,16 @@ export default class SimpleNoteChatPlugin extends Plugin {
 						if (currentFile && currentFile.parent) {
 							targetFolder = currentFile.parent.path;
 						} else {
-							// Fallback if no active file or it's in the root
 							targetFolder = '/';
 							log.debug("No active file or parent folder found, using vault root for new note.");
 						}
 					} else if (this.settings.newNoteLocation === 'custom') {
-						targetFolder = this.settings.newNoteCustomFolder; // Use custom folder setting
-					} else { // Default to 'archive'
+						targetFolder = this.settings.newNoteCustomFolder;
+					} else {
 						targetFolder = this.settings.archiveFolderName;
 					}
 
-					// Ensure target folder exists (especially important for 'current' if it's a new/empty folder)
+					// Ensure target folder exists
 					if (targetFolder !== '/' && !(await this.app.vault.adapter.exists(targetFolder))) {
 						try {
 							await this.app.vault.createFolder(targetFolder);
@@ -127,12 +125,11 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 					const title = moment().format(DEFAULT_NN_TITLE_FORMAT);
 					const baseFilename = `${title}.md`;
-					// Use the determined targetFolder
 					const availablePath = await this.fileSystemService.findAvailablePath(targetFolder, baseFilename);
 
 					const newFile = await this.app.vault.create(availablePath, '');
 					await this.app.workspace.openLinkText(newFile.path, '', false); // Ensure leaf is open before notice
-					new Notice(`Created new chat note: ${newFile.basename}`); // Use basename from the actual created file
+					new Notice(`Created new chat note: ${newFile.basename}`);
 
 					// Archive the previous note in the background if enabled
 					if (this.settings.archivePreviousNoteOnNn && previousActiveFile) {
@@ -176,9 +173,8 @@ export default class SimpleNoteChatPlugin extends Plugin {
 				}
 				log.debug(`Triggering chat completion via hotkey for file: ${file.path}`);
 				const cursor = editor.getCursor(); // Get cursor position
-				this.chatService.startChat(editor, file, this.settings, cursor) // Use startChat with cursor
-					.catch((error: Error) => { // Add type Error
-						// Basic error handling, ChatService should show more specific notices
+				this.chatService.startChat(editor, file, this.settings, cursor)
+					.catch((error: Error) => {
 						log.error("Error starting chat from hotkey:", error);
 						new Notice("Failed to start chat. See console for details.");
 					});
@@ -257,7 +253,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			this.settings.chatCommandPhrase,
 			this.settings.archiveCommandPhrase,
 			this.settings.modelCommandPhrase,
-			this.settings.newChatCommandPhrase, // Always include NN command phrase
+			this.settings.newChatCommandPhrase,
 		].join('|');
 	}
 
@@ -297,7 +293,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		log.debug(`handleKeyDown triggered for key: ${evt.key}, file: ${filePath}`);
 
-		// Escape Key: Cancel active stream
+		// Cancel active stream with Escape
 		if (evt.key === 'Escape') {
 			const isActive = this.chatService.isStreamActive(filePath);
 			log.debug(`Escape key pressed. Active stream for ${filePath}: ${isActive}`);
@@ -311,7 +307,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			return;
 		}
 
-	 	// Enter Key: Trigger command phrases
+	 	// Trigger command phrases with Enter
 		if (this.chatService.isStreamActive(filePath)) {
 			log.debug("Enter key ignored: Stream active.");
 			return;
@@ -319,8 +315,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		const cursor = editor.getCursor();
 		const commandLine = cursor.line - 1;
-
-		// Command Matching
 		if (cursor.line >= 1) {
 			// Check if settings have changed
 			const currentSettingsHash = this.getSettingsHash();
@@ -334,8 +328,8 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			const commandHandler = this.commandMap[possibleCommand];
 
 			if (commandHandler) {
-				evt.preventDefault(); // Prevent default Enter behavior (new line)
-				evt.stopPropagation(); // Stop event propagation
+				evt.preventDefault();
+				evt.stopPropagation();
 				commandHandler(editor, view, commandLine);
 			}
 	  	}
