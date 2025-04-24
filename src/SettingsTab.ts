@@ -156,8 +156,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-		.setName('New Note')
-		.setDesc(`This quickly creates a new note for chatting, for when you are done with one topic and want to start another easily. By default, the note is created in the current directory, and title using the current date and time. It's behavior can be configured in the New Note Settings section below. Default: (${NEW_CHAT_COMMAND_DEFAULT}).`)
+		.setName('New Note Phrase')
+		.setDesc(`This quickly creates a new note for chatting, for when you are done with one topic and want to start another quickly. By default, the note is created in the archive directory, and titled using the current date and time. It's behavior can be configured in the New Note Settings section below. Default: (${NEW_CHAT_COMMAND_DEFAULT}).`)
 		.addText(text => text
 			.setPlaceholder(NEW_CHAT_COMMAND_DEFAULT)
 			.setValue(this.plugin.settings.newChatCommandPhrase)
@@ -192,13 +192,13 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 
-		// ========== 4. CHAT ARCHIVE SETTINGS ==========
+		// ========== ARCHIVE SETTINGS ==========
 		containerEl.createEl('h3', { text: 'Archive Settings', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'Configure how notes are handled after finishing with a chat.', cls: 'snc-setting-section-description' });
+		containerEl.createEl('p', { text: 'Configure how notes are handled when using the "Archive" command phrase, or when automatically archived via the "New Note" command.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('Archive Folder')
-			.setDesc('This is where notes will be moved when the archive command is used.')
+			.setDesc('Move notes to this directory when the archive command is used.')
 			.addText(text => text
 				.setPlaceholder(DEFAULT_ARCHIVE_FOLDER)
 				.setValue(this.plugin.settings.archiveFolderName)
@@ -216,7 +216,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Rename Note on Archive (Date/Time)')
-			.setDesc('When this is enabled, the note will be renamed using a date/time format at the moment of archival.')
+			.setDesc('When this is enabled, the archived note will be renamed using the current date and time.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableArchiveRenameDate)
 				.onChange(async (value) => {
@@ -231,8 +231,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		// Store the setting instance to control its visibility
 		const dateTimeFormatSetting = new Setting(containerEl)
-			.setName('Date/Time Format')
-			.setDesc('Moment.js format string for renaming archived notes. Default: (YYYY-MM-DD-HH-mm)')
+			.setName('Date and Time Format')
+			.setDesc('This uses moment.js for specifying the date and time format to use on the arhived note. Default: (YYYY-MM-DD-HH-mm)')
 			.addText(text => text
 				.setPlaceholder(DEFAULT_NN_TITLE_FORMAT)
 				.setValue(this.plugin.settings.archiveRenameDateFormat)
@@ -252,8 +252,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		dateTimeFormatSetting.settingEl.style.display = this.plugin.settings.enableArchiveRenameDate ? 'flex' : 'none';
 
 		new Setting(containerEl)
-			.setName('Generate a contextual title (LLM Title)')
-			.setDesc(`This will use an LLM to generate a title based on the note's content. This is added after the date if both are enabled.`)
+			.setName('Generate a Title')
+			.setDesc(`This will generate a title based on the note's content. This is added after the date if both are enabled.`)
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableArchiveRenameLlm)
 				.onChange(async (value) => {
@@ -319,18 +319,86 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		llmSettingsContainer.style.display = this.plugin.settings.enableArchiveRenameLlm ? 'block' : 'none';
 
+
+				// ========== NEW NOTE SETTINGS ==========
+		containerEl.createEl('h3', { text: 'New Chat Note Settings', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'Configure how new chat notes are created and where they are placed in your vault.', cls: 'snc-setting-section-description' });
+
 		new Setting(containerEl)
-			.setName('Automatically Archive Current Note on New Chat')
-			.setDesc(`When starting a new note, this will archive the old note if it has any chat messages (triggering all the steps in the Archive Chat section). Notes that don't have any chat separators in them will be left alone.`)
+			.setName('New Note Folder')
+			.setDesc('Choose where new chat notes should be created. Default: (archive folder)')
+			.addDropdown(dropdown => {
+				dropdown
+					.addOption('archive', 'Archive Folder')
+					.addOption('current', 'Current Folder')
+					.addOption('custom', 'Custom Folder')
+					.setValue(this.plugin.settings.newNoteLocation)
+					.onChange(async (value) => {
+						if (value === 'current' || value === 'archive' || value === 'custom') {
+							this.plugin.settings.newNoteLocation = value;
+							await this.plugin.saveSettings();
+							new Notice(`New note location set to: ${dropdown.selectEl.selectedOptions[0]?.text || value}`);
+							customFolderSetting.settingEl.style.display = value === 'custom' ? 'flex' : 'none';
+						} else {
+							log.warn(`SettingsTab: Invalid new note location selected: ${value}`);
+							dropdown.setValue(this.plugin.settings.newNoteLocation); // Revert
+						}
+					});
+			});
+
+		// --- New Note Location ---
+		const customFolderSetting = new Setting(containerEl)
+			.setName('Customer Folder')
+			.setDesc(`Which folder should new chat notes be placed in? If the folder doesn't exist then it will get created when the next chat note is created.`)
+			.addText(text => text
+				.setPlaceholder('e.g., chats/')
+				.setValue(this.plugin.settings.newNoteCustomFolder)
+				.onChange(async (value) => {
+					const trimmedValue = value.trim();
+					const normalizedValue = trimmedValue ? (trimmedValue.endsWith('/') ? trimmedValue : `${trimmedValue}/`) : '';
+					if (this.plugin.settings.newNoteCustomFolder !== normalizedValue) {
+						this.plugin.settings.newNoteCustomFolder = normalizedValue;
+						await this.plugin.saveSettings();
+						new Notice('Custom folder path saved.');
+						text.setValue(normalizedValue); // Update input with normalized value
+					}
+				}));
+
+		// Initially hide the custom folder setting
+		customFolderSetting.settingEl.style.display = this.plugin.settings.newNoteLocation === 'custom' ? 'flex' : 'none';
+
+		// --- New Note Title Format ---
+		new Setting(containerEl)
+			.setName('Title Format')
+			.setDesc('This uses moment.js for specifying the date and time format to use for the new chat note title. Default: (YYYY-MM-DD-HH-mm)')
+			.addText(text => text
+				.setPlaceholder(DEFAULT_NN_TITLE_FORMAT)
+				.setValue(this.plugin.settings.newNoteTitleFormat)
+				.onChange(async (value) => {
+					const trimmedValue = value.trim();
+					if (trimmedValue) {
+						this.plugin.settings.newNoteTitleFormat = trimmedValue;
+						await this.plugin.saveSettings();
+						new Notice('New note title format saved.');
+					} else {
+						new Notice('New note title format cannot be empty.');
+						text.setValue(this.plugin.settings.newNoteTitleFormat); // Revert
+					}
+				}));
+
+		// --- Archive Previous Note ---
+		new Setting(containerEl)
+			.setName('Archive Current Note on New Note')
+			.setDesc(`When creating a new note, check if the existing note appears to contain a chat session and archive it if so. This respects the hat marker, and will not archive content above it. Default: (off)`)
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.archivePreviousNoteOnNn)
 				.onChange(async (value) => {
 					this.plugin.settings.archivePreviousNoteOnNn = value;
 					await this.plugin.saveSettings();
-					new Notice(`Archive on New Chat ${value ? 'enabled' : 'disabled'}.`);
+					new Notice(`Archive current note on new note ${value ? 'enabled' : 'disabled'}.`);
 				}));
 
-		// ========== 5. STYLE OPTIONS ==========
+		// ========== STYLE OPTIONS ==========
 		containerEl.createEl('h3', { text: 'Style Options', cls: 'snc-section-header' });
 		containerEl.createEl('p', { text: 'Configure visual and formatting elements of the chat.', cls: 'snc-setting-section-description' });
 

@@ -4,13 +4,19 @@ export interface PluginSettings {
   apiKey: string;
   defaultModel: string;
   archiveFolderName: string;
-  archivePreviousNoteOnNn: boolean;
+  // Settings for the 'New Note' command
+  newNoteLocation: 'current' | 'archive' | 'custom';
+  newNoteCustomFolder: string;
+  newNoteTitleFormat: string;
+  archivePreviousNoteOnNn: boolean; // Moved conceptually to New Note section
+  // Settings for the 'Archive' command
   enableArchiveRenameDate: boolean;
   archiveRenameDateFormat: string;
   enableArchiveRenameLlm: boolean;
   llmRenameWordLimit: number;
   llmRenameIncludeEmojis: boolean;
   llmRenameModel: string; // Stores the ID of the model to use for titling
+  // General settings
   modelSortOrder: string;
   chatCommandPhrase: string;
   archiveCommandPhrase: string;
@@ -23,13 +29,19 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	apiKey: '',
 	defaultModel: 'openrouter/auto',
 	archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
-	archivePreviousNoteOnNn: false,
+	// New Note settings defaults
+	newNoteLocation: 'archive',
+	newNoteCustomFolder: '',
+	newNoteTitleFormat: DEFAULT_NN_TITLE_FORMAT,
+	archivePreviousNoteOnNn: false, // Default for archiving previous note
+	// Archive settings defaults
 	enableArchiveRenameDate: false,
-	archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT,
+	archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT, // Re-using for archive rename
 	enableArchiveRenameLlm: false,
 	llmRenameWordLimit: 5,
 	llmRenameIncludeEmojis: false,
 	llmRenameModel: '',
+	// General settings defaults
 	modelSortOrder: 'alphabetical',
 	chatCommandPhrase: '',
 	archiveCommandPhrase: '',
