@@ -92,8 +92,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			});
 
 		const modelSetting = new Setting(containerEl)
-			.setName('Default Chat Model')
-			.setDesc('Select the default model to use for new chats.');
+			.setName('Chat Model')
+			.setDesc('Select the AI model to use for new chats.');
 
 		modelSetting.addDropdown(dropdown => {
 			this.modelDropdown = dropdown;
@@ -101,21 +101,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			dropdown.setValue(this.plugin.settings.defaultModel);
 			dropdown.onChange(async (value) => {
 				this.plugin.settings.defaultModel = value;
-				await this.plugin.saveSettings();
-			});
-		});
-
-		// Move the LLM model setting for titles here from below
-		const llmModelSetting = new Setting(containerEl)
-			.setName('Model for Titling Notes')
-			.setDesc('This is the model to use for generating the note title. Uses the current chat model if left blank.');
-
-		llmModelSetting.addDropdown(dropdown => {
-			this.llmModelDropdown = dropdown;
-			dropdown.addOption('', 'Use Default Chat Model');
-			dropdown.setValue(this.plugin.settings.llmRenameModel);
-			dropdown.onChange(async (value) => {
-				this.plugin.settings.llmRenameModel = value;
 				await this.plugin.saveSettings();
 			});
 		});
@@ -132,11 +117,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		// ========== 3. PHRASES ==========
 		containerEl.createEl('h3', { text: 'Command Phrases', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'Configure the various command phrases used by the plugin. Phrases are typed into a note on their own line, and will activate after you hit the <enter> key.', cls: 'snc-setting-section-description' });
+		containerEl.createEl('p', { text: 'The plugin will look for these command phrases in order to take action. Phrases are recognzied when entered on their own line, and will activate after you hit the <enter> key. Deleting the phrase will disable the command.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('Chat Phrase')
-			.setDesc(`Use this phrase to trigger chat completion (Default: ${CHAT_COMMAND_DEFAULT}). The phrase needs to be on it's own line without any other text.`)
+			.setDesc(`This phrase will call the AI model and get a response. Previous conversation in the note is included and parsed into user and assistant messages, so the model can clearly follow the conversation. Default: (${CHAT_COMMAND_DEFAULT})`)
 			.addText(text => text
 				.setPlaceholder(CHAT_COMMAND_DEFAULT)
 				.setValue(this.plugin.settings.chatCommandPhrase)
@@ -154,7 +139,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Change Model Phrase')
-			.setDesc(`This will open a quick model selection dialog, to enable changing the model used for chats. (Default: ${MODEL_COMMAND_DEFAULT}).`)
+			.setDesc(`This will open an AI model selection dialog, to enable quickly changing the active model used for chats. Default: (${MODEL_COMMAND_DEFAULT}).`)
 			.addText(t => t
 				.setPlaceholder(MODEL_COMMAND_DEFAULT)
 				.setValue(this.plugin.settings.modelCommandPhrase)
@@ -166,13 +151,31 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 						new Notice('Model command phrase saved.');
 					} else if (!trimmed) {
 						new Notice('Command phrase cannot be empty.');
-						t.setValue(this.plugin.settings.modelCommandPhrase); // Revert if empty
+						t.setValue(this.plugin.settings.modelCommandPhrase);
 					}
 				}));
 
 		new Setting(containerEl)
+		.setName('New Note')
+		.setDesc(`This quickly creates a new note for chatting, for when you are done with one topic and want to start another easily. By default, the note is created in the current directory, and title using the current date and time. It's behavior can be configured in the New Note Settings section below. Default: (${NEW_CHAT_COMMAND_DEFAULT}).`)
+		.addText(text => text
+			.setPlaceholder(NEW_CHAT_COMMAND_DEFAULT)
+			.setValue(this.plugin.settings.newChatCommandPhrase)
+			.onChange(async (value) => {
+				const trimmedValue = value.trim();
+				if (trimmedValue && this.plugin.settings.newChatCommandPhrase !== trimmedValue) {
+					this.plugin.settings.newChatCommandPhrase = trimmedValue;
+					await this.plugin.saveSettings();
+					new Notice('New chat command phrase saved.');
+				} else if (!trimmedValue) {
+					new Notice('Command phrase cannot be empty.');
+					text.setValue(this.plugin.settings.newChatCommandPhrase);
+				}
+			}));
+
+		new Setting(containerEl)
 			.setName('Archive Phrase')
-			.setDesc(`This phrase will move the current note to your archive folder, and optionally update the title. (Default: ${ARCHIVE_COMMAND_DEFAULT}).`)
+			.setDesc(`This phrase will archive the current chat, moving the note to the archive folder, and optionally updating the title. The behavior can be configured in the Archive Section below. Default: (${ARCHIVE_COMMAND_DEFAULT}).`)
 			.addText(text => text
 				.setPlaceholder(ARCHIVE_COMMAND_DEFAULT)
 				.setValue(this.plugin.settings.archiveCommandPhrase)
@@ -188,27 +191,10 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
-		new Setting(containerEl)
-			.setName('New Note')
-			.setDesc(`Phrase to trigger creating a new note for chatting (Default: ${NEW_CHAT_COMMAND_DEFAULT}).`)
-			.addText(text => text
-				.setPlaceholder(NEW_CHAT_COMMAND_DEFAULT)
-				.setValue(this.plugin.settings.newChatCommandPhrase)
-				.onChange(async (value) => {
-					const trimmedValue = value.trim();
-					if (trimmedValue && this.plugin.settings.newChatCommandPhrase !== trimmedValue) {
-						this.plugin.settings.newChatCommandPhrase = trimmedValue;
-						await this.plugin.saveSettings();
-						new Notice('New chat command phrase saved.');
-					} else if (!trimmedValue) {
-						new Notice('Command phrase cannot be empty.');
-						text.setValue(this.plugin.settings.newChatCommandPhrase); // Revert if empty
-					}
-				}));
 
 		// ========== 4. CHAT ARCHIVE SETTINGS ==========
-		containerEl.createEl('h3', { text: 'Chat Archive Settings', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'Configure how notes are archived and renamed.', cls: 'snc-setting-section-description' });
+		containerEl.createEl('h3', { text: 'Archive Settings', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'Configure how notes are handled after finishing with a chat.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('Archive Folder')
@@ -237,9 +223,14 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					this.plugin.settings.enableArchiveRenameDate = value;
 					await this.plugin.saveSettings();
 					new Notice(`Archive renaming ${value ? 'enabled' : 'disabled'}.`);
+					// Show/hide the date format setting
+					if (dateTimeFormatSetting) {
+						dateTimeFormatSetting.settingEl.style.display = value ? 'flex' : 'none';
+					}
 				}));
 
-		new Setting(containerEl)
+		// Store the setting instance to control its visibility
+		const dateTimeFormatSetting = new Setting(containerEl)
 			.setName('Date/Time Format')
 			.setDesc('Moment.js format string for renaming archived notes. (Default: YYYY-MM-DD-HH-mm)')
 			.addText(text => text
@@ -257,6 +248,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
+		// Set initial visibility based on the toggle state
+		dateTimeFormatSetting.settingEl.style.display = this.plugin.settings.enableArchiveRenameDate ? 'flex' : 'none';
+
 		new Setting(containerEl)
 			.setName('Generate a contextual title (LLM Title)')
 			.setDesc(`This will use an LLM to generate a title based on the note's content. This is added after the date if both are enabled.`)
@@ -266,10 +260,26 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					this.plugin.settings.enableArchiveRenameLlm = value;
 					await this.plugin.saveSettings();
 					new Notice(`LLM title renaming ${value ? 'enabled' : 'disabled'}.`);
+					// No need to update description here anymore
 					llmSettingsContainer.style.display = value ? 'block' : 'none';
 				}));
 
 		const llmSettingsContainer = containerEl.createDiv('llm-archive-rename-settings');
+
+		// --- LLM Title Model Setting (Moved here) ---
+		new Setting(llmSettingsContainer)
+			.setName('Note Title Model')
+			.setDesc('Select the model to use for generating the note title. If empty, the Default Chat Model will be used.')
+			.addDropdown(dropdown => {
+				this.llmModelDropdown = dropdown; // Assign to the class property
+				dropdown.addOption('', 'Use Default Chat Model');
+				dropdown.setValue(this.plugin.settings.llmRenameModel);
+				dropdown.onChange(async (value) => {
+					this.plugin.settings.llmRenameModel = value;
+					await this.plugin.saveSettings();
+				});
+			});
+		// --- End LLM Title Model Setting ---
 
 		new Setting(llmSettingsContainer)
 			.setName('Title Word Limit')
@@ -319,7 +329,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 					new Notice(`Archive on New Chat ${value ? 'enabled' : 'disabled'}.`);
 				}));
-				
+
 		// ========== 5. STYLE OPTIONS ==========
 		containerEl.createEl('h3', { text: 'Style Options', cls: 'snc-section-header' });
 		containerEl.createEl('p', { text: 'Configure visual and formatting elements of the chat.', cls: 'snc-setting-section-description' });

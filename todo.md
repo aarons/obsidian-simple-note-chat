@@ -24,3 +24,14 @@ Behavior Section
 Testing
 - add end-to-end tests
 
+Setting Cleanup
+- archive chat:
+    - default leave note in place, create new file and move content
+    - setting to move entire note
+    - language changes when moving note vs moving content
+
+Word Limit for Title
+- allow me to clear the field entirely (if blank, disabled? or no limit?)
+
+Phrases
+- allow removing a phrase (disables the phrase entirely)
