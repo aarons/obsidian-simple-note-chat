@@ -138,16 +138,7 @@ export class FileSystemService {
             }
 
             let targetPath = normalizePath(`${normalizedArchivePath}/${baseFilename}`);
-            let counter = 0;
-
-            const targetBaseNameMatch = baseFilename.match(/^(.*?)(?:\.([^\.]+))?$/);
-            const targetBaseName = targetBaseNameMatch ? targetBaseNameMatch[1] : baseFilename;
-            const targetExtension = targetBaseNameMatch && targetBaseNameMatch[2] ? `.${targetBaseNameMatch[2]}` : '';
-
-            while (await this.app.vault.adapter.exists(targetPath)) {
-                counter++;
-                targetPath = normalizePath(`${normalizedArchivePath}/${targetBaseName} ${counter}${targetExtension}`);
-            }
+            targetPath = await this.findAvailablePath(normalizedArchivePath, baseFilename);
 
             if (markerExists) {
                 // Create new file with content below marker
@@ -168,6 +159,27 @@ export class FileSystemService {
             // Optionally notify the user here
             return null; // Indicate failure
         }
+    }
+
+    /**
+     * Finds an available file path in a folder by appending a number if the base name exists.
+     * @param folderPath The normalized path of the target folder.
+     * @param baseFilename The desired filename (including extension).
+     * @returns A promise that resolves to an available, normalized full path.
+     */
+    public async findAvailablePath(folderPath: string, baseFilename: string): Promise<string> {
+        let targetPath = normalizePath(`${folderPath}/${baseFilename}`);
+        let counter = 0;
+
+        const targetBaseNameMatch = baseFilename.match(/^(.*?)(?:\.([^\.]+))?$/);
+        const targetBaseName = targetBaseNameMatch ? targetBaseNameMatch[1] : baseFilename;
+        const targetExtension = targetBaseNameMatch && targetBaseNameMatch[2] ? `.${targetBaseNameMatch[2]}` : '';
+
+        while (await this.app.vault.adapter.exists(targetPath)) {
+            counter++;
+            targetPath = normalizePath(`${folderPath}/${targetBaseName} ${counter}${targetExtension}`);
+        }
+        return targetPath;
     }
 
     /**

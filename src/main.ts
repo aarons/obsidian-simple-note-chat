@@ -98,11 +98,12 @@ export default class SimpleNoteChatPlugin extends Plugin {
 				try {
 					const archiveFolder = this.settings.archiveFolderName.replace(/^\/|\/$/g, '');
 					const title = moment().format(DEFAULT_NN_TITLE_FORMAT);
-					const fullPath = `${archiveFolder}/${title}.md`;
+					const baseFilename = `${title}.md`;
+					const availablePath = await this.fileSystemService.findAvailablePath(archiveFolder, baseFilename);
 
-					const newFile = await this.app.vault.create(fullPath, '');
+					const newFile = await this.app.vault.create(availablePath, '');
 					await this.app.workspace.openLinkText(newFile.path, '', false); // Ensure leaf is open before notice
-					new Notice(`Created new chat note: ${title}.md`);
+					new Notice(`Created new chat note: ${newFile.basename}`); // Use basename from the actual created file
 
 					// Archive the previous note in the background if enabled
 					if (this.settings.archivePreviousNoteOnNn && previousActiveFile) {
