@@ -8,7 +8,7 @@ export interface PluginSettings {
   newNoteLocation: 'current' | 'archive' | 'custom';
   newNoteCustomFolder: string;
   newNoteTitleFormat: string;
-  archivePreviousNoteOnNn: boolean; // Moved conceptually to New Note section
+  archivePreviousNoteOnNn: boolean;
   // Settings for the 'Archive' command
   enableArchiveRenameDate: boolean;
   archiveRenameDateFormat: string;
@@ -33,10 +33,10 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	newNoteLocation: 'archive',
 	newNoteCustomFolder: '',
 	newNoteTitleFormat: DEFAULT_NN_TITLE_FORMAT,
-	archivePreviousNoteOnNn: false, // Default for archiving previous note
+	archivePreviousNoteOnNn: false,
 	// Archive settings defaults
 	enableArchiveRenameDate: false,
-	archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT, // Re-using for archive rename
+	archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT, // Reuses the note title format
 	enableArchiveRenameLlm: false,
 	llmRenameWordLimit: 5,
 	llmRenameIncludeEmojis: false,
