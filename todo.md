@@ -35,3 +35,13 @@ Word Limit for Title
 
 Phrases
 - allow removing a phrase (disables the phrase entirely)
+
+System Prompts
+- enable setting system prompts
+
+Compression
+- support for summarizing longer chats to limit context use
+
+Temperature
+- add support for this and other chat model parameters
+

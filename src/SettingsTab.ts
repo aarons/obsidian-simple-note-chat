@@ -232,7 +232,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		// Store the setting instance to control its visibility
 		const dateTimeFormatSetting = new Setting(containerEl)
 			.setName('Date/Time Format')
-			.setDesc('Moment.js format string for renaming archived notes. (Default: YYYY-MM-DD-HH-mm)')
+			.setDesc('Moment.js format string for renaming archived notes. Default: (YYYY-MM-DD-HH-mm)')
 			.addText(text => text
 				.setPlaceholder(DEFAULT_NN_TITLE_FORMAT)
 				.setValue(this.plugin.settings.archiveRenameDateFormat)
