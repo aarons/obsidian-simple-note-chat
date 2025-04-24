@@ -269,10 +269,10 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		// --- LLM Title Model Setting (Moved here) ---
 		new Setting(llmSettingsContainer)
 			.setName('Note Title Model')
-			.setDesc('Select the model to use for generating the note title. If empty, the Default Chat Model will be used.')
+			.setDesc('Choose which model will generate the note title. By default, it uses the same model as your chat conversations.')
 			.addDropdown(dropdown => {
 				this.llmModelDropdown = dropdown; // Assign to the class property
-				dropdown.addOption('', 'Use Default Chat Model');
+				dropdown.addOption('', 'Use Current Chat Model');
 				dropdown.setValue(this.plugin.settings.llmRenameModel);
 				dropdown.onChange(async (value) => {
 					this.plugin.settings.llmRenameModel = value;
@@ -324,9 +324,29 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		containerEl.createEl('h3', { text: 'New Chat Note Settings', cls: 'snc-section-header' });
 		containerEl.createEl('p', { text: 'Configure how new chat notes are created and where they are placed in your vault.', cls: 'snc-setting-section-description' });
 
-		new Setting(containerEl)
+		// Helper function to update the description
+		const updateNewNoteDesc = (setting: Setting, value: string) => {
+			const baseDesc = 'Choose where new chat notes should be created.';
+			let dynamicDesc = '';
+			switch (value) {
+				case 'archive':
+					const archiveFolder = this.plugin.settings.archiveFolderName || DEFAULT_ARCHIVE_FOLDER;
+					dynamicDesc = ` The Archive Folder is specified in Archive Settings and is currently set to: ${archiveFolder}.`;
+					break;
+				case 'current':
+					dynamicDesc = " The Current Folder is specified as the folder of the currently active note. If no note is active, then the new note will be created in the vault's root.";
+					break;
+				case 'custom':
+					const customFolder = this.plugin.settings.newNoteCustomFolder || '(not set yet, change it below)';
+					dynamicDesc = ` The Custom Folder is currently specified as: ${customFolder}.`;
+					break;
+			}
+			setting.setDesc(baseDesc + dynamicDesc);
+		};
+
+		const newNoteLocationSetting = new Setting(containerEl) // Store the setting instance
 			.setName('New Note Folder')
-			.setDesc('Choose where new chat notes should be created. Default: (archive folder)')
+			// .setDesc('Choose where new chat notes should be created. Default: (archive folder)') // Remove static description
 			.addDropdown(dropdown => {
 				dropdown
 					.addOption('archive', 'Archive Folder')
@@ -339,12 +359,16 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 							new Notice(`New note location set to: ${dropdown.selectEl.selectedOptions[0]?.text || value}`);
 							customFolderSetting.settingEl.style.display = value === 'custom' ? 'flex' : 'none';
+							updateNewNoteDesc(newNoteLocationSetting, value); // Update description on change
 						} else {
 							log.warn(`SettingsTab: Invalid new note location selected: ${value}`);
 							dropdown.setValue(this.plugin.settings.newNoteLocation); // Revert
 						}
 					});
 			});
+
+		// Call initially to set the description based on the saved setting
+		updateNewNoteDesc(newNoteLocationSetting, this.plugin.settings.newNoteLocation);
 
 		// --- New Note Location ---
 		const customFolderSetting = new Setting(containerEl)
@@ -361,6 +385,10 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 						new Notice('Custom folder path saved.');
 						text.setValue(normalizedValue); // Update input with normalized value
+						// Update the main description if custom folder changes while 'custom' is selected
+						if (this.plugin.settings.newNoteLocation === 'custom') {
+							updateNewNoteDesc(newNoteLocationSetting, 'custom');
+						}
 					}
 				}));
 
