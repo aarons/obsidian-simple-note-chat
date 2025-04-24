@@ -36,7 +36,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	archivePreviousNoteOnNn: false,
 	// Archive settings defaults
 	enableArchiveRenameDate: false,
-	archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT, // Reuses the note title format
+	archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT,
 	enableArchiveRenameLlm: false,
 	llmRenameWordLimit: 5,
 	llmRenameIncludeEmojis: false,
