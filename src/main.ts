@@ -106,8 +106,10 @@ export default class SimpleNoteChatPlugin extends Plugin {
 							targetFolder = '/';
 							log.debug("No active file or parent folder found, using vault root for new note.");
 						}
+					} else if (this.settings.newNoteLocation === 'custom') {
+						targetFolder = this.settings.newNoteCustomFolder; // Use custom folder setting
 					} else { // Default to 'archive'
-						targetFolder = this.settings.archiveFolderName.replace(/^\/|\/$/g, '');
+						targetFolder = this.settings.archiveFolderName;
 					}
 
 					// Ensure target folder exists (especially important for 'current' if it's a new/empty folder)
