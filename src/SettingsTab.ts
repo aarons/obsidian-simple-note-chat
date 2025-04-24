@@ -335,9 +335,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			setting.setDesc(baseDesc + dynamicDesc);
 		};
 
-		const newNoteLocationSetting = new Setting(containerEl) // Store the setting instance
+		const newNoteLocationSetting = new Setting(containerEl)
 			.setName('New Note Folder')
-			// .setDesc('Choose where new chat notes should be created. Default: (archive folder)') // Remove static description
 			.addDropdown(dropdown => {
 				dropdown
 					.addOption('archive', 'Archive Folder')
