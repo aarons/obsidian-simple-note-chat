@@ -96,10 +96,37 @@ export default class SimpleNoteChatPlugin extends Plugin {
 				const previousActiveFile = this.app.workspace.getActiveFile();
 
 				try {
-					const archiveFolder = this.settings.archiveFolderName.replace(/^\/|\/$/g, '');
+					let targetFolder = '';
+					if (this.settings.newNoteLocation === 'current') {
+						const currentFile = this.app.workspace.getActiveFile();
+						if (currentFile && currentFile.parent) {
+							targetFolder = currentFile.parent.path;
+						} else {
+							// Fallback if no active file or it's in the root
+							targetFolder = '/';
+							log.debug("No active file or parent folder found, using vault root for new note.");
+						}
+					} else { // Default to 'archive'
+						targetFolder = this.settings.archiveFolderName.replace(/^\/|\/$/g, '');
+					}
+
+					// Ensure target folder exists (especially important for 'current' if it's a new/empty folder)
+					if (targetFolder !== '/' && !(await this.app.vault.adapter.exists(targetFolder))) {
+						try {
+							await this.app.vault.createFolder(targetFolder);
+							log.debug(`Created target folder: ${targetFolder}`);
+						} catch (folderError) {
+							log.error(`Failed to create target folder "${targetFolder}":`, folderError);
+							new Notice(`Failed to create folder "${targetFolder}". Using vault root.`);
+							targetFolder = '/'; // Fallback to root on folder creation error
+						}
+					}
+
+
 					const title = moment().format(DEFAULT_NN_TITLE_FORMAT);
 					const baseFilename = `${title}.md`;
-					const availablePath = await this.fileSystemService.findAvailablePath(archiveFolder, baseFilename);
+					// Use the determined targetFolder
+					const availablePath = await this.fileSystemService.findAvailablePath(targetFolder, baseFilename);
 
 					const newFile = await this.app.vault.create(availablePath, '');
 					await this.app.workspace.openLinkText(newFile.path, '', false); // Ensure leaf is open before notice
