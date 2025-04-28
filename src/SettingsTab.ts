@@ -9,8 +9,7 @@ import {
 	CHAT_COMMAND_DEFAULT,
 	ARCHIVE_COMMAND_DEFAULT,
 	NEW_CHAT_COMMAND_DEFAULT,
-	MODEL_COMMAND_DEFAULT,
-	CHAT_SEPARATOR_DEFAULT
+	MODEL_COMMAND_DEFAULT
 } from './constants';
 
 export class SimpleNoteChatSettingsTab extends PluginSettingTab {
