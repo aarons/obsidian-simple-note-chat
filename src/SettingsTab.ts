@@ -32,7 +32,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.createEl('h2', { text: 'Simple Note Chat - Settings' });
 
-		// ========== 1. CONNECTIONS ==========
+		// ========== CONNECTIONS ==========
 		containerEl.createEl('h3', { text: 'Connections', cls: 'snc-section-header' });
 		containerEl.createEl('p', { text: 'Configure connection to LLM providers.', cls: 'snc-setting-section-description' });
 
@@ -57,7 +57,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				text.inputEl.setAttribute('type', 'password');
 			});
 
-		// ========== 2. MODEL MANAGEMENT ==========
+		// ========== MODEL MANAGEMENT ==========
 		containerEl.createEl('h3', { text: 'Model Management', cls: 'snc-section-header' });
 		containerEl.createEl('p', { text: 'Configure model selection and sorting options.', cls: 'snc-setting-section-description' });
 
@@ -115,7 +115,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				await this.fetchAndStoreModels(true);
 			}));
 
-		// ========== 3. PHRASES ==========
+		// ========== COMMAND PHRASES ==========
 		containerEl.createEl('h3', { text: 'Command Phrases', cls: 'snc-section-header' });
 		containerEl.createEl('p', { text: 'The plugin will look for these command phrases in order to take action. Phrases are recognzied when entered on their own line, and will activate after you hit the <enter> key. Deleting the phrase will disable the command.', cls: 'snc-setting-section-description' });
 
@@ -189,7 +189,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 
 		// ========== ARCHIVE SETTINGS ==========
-		containerEl.createEl('h3', { text: 'Archive Settings', cls: 'snc-section-header' });
+		containerEl.createEl('h3', { text: 'Archiving', cls: 'snc-section-header' });
 		containerEl.createEl('p', { text: 'Configure how notes are handled when using the "Archive" command phrase, or when automatically archived via the "New Note" command.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
@@ -312,7 +312,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 
 				// ========== NEW NOTE SETTINGS ==========
-		containerEl.createEl('h3', { text: 'New Chat Note Settings', cls: 'snc-section-header' });
+		containerEl.createEl('h3', { text: 'New Chat Shortcut', cls: 'snc-section-header' });
 		containerEl.createEl('p', { text: 'Configure how new chat notes are created and where they are placed in your vault.', cls: 'snc-setting-section-description' });
 
 		// Helper function to update the description
@@ -411,23 +411,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					new Notice(`Archive current note on new note ${value ? 'enabled' : 'disabled'}.`);
 				}));
 
-		// ========== STYLE OPTIONS ==========
-		containerEl.createEl('h3', { text: 'Style Options', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'Configure visual and formatting elements of the chat.', cls: 'snc-setting-section-description' });
-
-		new Setting(containerEl)
-			.setName('Chat Separator')
-			.setDesc(`This is the text used in notes to indicate separate messages between the user and AI. It is recommended to use something uncommon such as an html element, as LLMs are unlikely to use them in chat responses. If you use something more common, such as '---', and the LLM returns messages with those strings, then the parsing might get confused (not a big deal, but just FYI). Default: ${CHAT_SEPARATOR_DEFAULT}`)
-			.addText(text => text
-				.setPlaceholder(CHAT_SEPARATOR_DEFAULT)
-				.setValue(this.plugin.settings.chatSeparator)
-				.onChange(async (value) => {
-					const trimmedValue = value.trim();
-					if (this.plugin.settings.chatSeparator !== trimmedValue) {
-						this.plugin.settings.chatSeparator = trimmedValue;
-						await this.plugin.saveSettings();
-					}
-				}));
 
 		// Load models if API key is set
 		if (this.plugin.settings.apiKey) {

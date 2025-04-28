@@ -10,7 +10,7 @@ export const COMMAND_PHRASES_DEFAULTS = [
     MODEL_COMMAND_DEFAULT,
 ];
 
-export const CHAT_SEPARATOR_DEFAULT = '<hr>';
+export const CHAT_SEPARATOR_DEFAULT = '<hr message-from="chat">';
 export const DEFAULT_ARCHIVE_FOLDER = 'archive/';
 export const DEFAULT_NN_TITLE_FORMAT = 'YYYY-MM-DD-HH-mm';
 
