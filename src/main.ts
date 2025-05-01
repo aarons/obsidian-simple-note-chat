@@ -92,8 +92,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			id: 'create-new-chat-note',
 			name: 'Create New Chat Note',
 			callback: async () => {
-				const previousActiveFile = this.app.workspace.getActiveFile();
-
 				try {
 					let targetFolder = '';
 					if (this.settings.newNoteLocation === 'current') {
@@ -122,38 +120,18 @@ export default class SimpleNoteChatPlugin extends Plugin {
 						}
 					}
 
+					// Construct title using prefix, format, and suffix
+					const formattedDate = moment().format(this.settings.newNoteTitleFormat || DEFAULT_NN_TITLE_FORMAT);
+					const prefix = this.settings.newNoteTitlePrefix || '';
+					const suffix = this.settings.newNoteTitleSuffix || '';
+					const title = `${prefix}${formattedDate}${suffix}`;
 
-					const title = moment().format(DEFAULT_NN_TITLE_FORMAT);
 					const baseFilename = `${title}.md`;
 					const availablePath = await this.fileSystemService.findAvailablePath(targetFolder, baseFilename);
 
 					const newFile = await this.app.vault.create(availablePath, '');
 					await this.app.workspace.openLinkText(newFile.path, '', false); // Ensure leaf is open before notice
 					new Notice(`Created new chat note: ${newFile.basename}`);
-
-					// Archive the previous note in the background if enabled
-					if (this.settings.archivePreviousNoteOnNn && previousActiveFile) {
-						(async () => {
-							try {
-								const content = await this.app.vault.cachedRead(previousActiveFile);
-								if (content.includes(this.settings.chatSeparator)) {
-									const archiveResult = await this.fileSystemService.moveFileToArchive(previousActiveFile, this.settings.archiveFolderName, this.settings);
-									if (archiveResult === null) {
-										new Notice(`Failed to archive previous note '${previousActiveFile.name}'.`);
-										log.warn(`Failed background archive for ${previousActiveFile.name}`);
-									} else {
-										new Notice(`Archived previous note '${previousActiveFile.name}'.`);
-										log.info(`Background archive successful for ${previousActiveFile.name}`);
-									}
-								} else {
-									log.info(`Previous note '${previousActiveFile.name}' not archived (no separator).`);
-								}
-							} catch (archiveError) {
-								log.error(`Error during background archive attempt for ${previousActiveFile.name}:`, archiveError);
-								new Notice(`Error trying to archive previous note '${previousActiveFile.name}'.`);
-							}
-						})();
-					}
 
 				} catch (error) {
 					log.error("Error creating new chat note:", error);
@@ -335,4 +313,3 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	  	}
 	}
 }
-

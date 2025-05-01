@@ -8,7 +8,6 @@ export interface PluginSettings {
   newNoteLocation: 'current' | 'archive' | 'custom';
   newNoteCustomFolder: string;
   newNoteTitleFormat: string;
-  archivePreviousNoteOnNn: boolean;
   // Settings for the 'Archive' command
   enableArchiveRenameDate: boolean;
   archiveRenameDateFormat: string;
@@ -17,6 +16,8 @@ export interface PluginSettings {
   llmRenameIncludeEmojis: boolean;
   llmRenameModel: string; // Stores the ID of the model to use for titling
   // General settings
+  newNoteTitlePrefix: string;
+  newNoteTitleSuffix: string;
   modelSortOrder: string;
   chatCommandPhrase: string;
   archiveCommandPhrase: string;
@@ -33,7 +34,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	newNoteLocation: 'archive',
 	newNoteCustomFolder: '',
 	newNoteTitleFormat: DEFAULT_NN_TITLE_FORMAT,
-	archivePreviousNoteOnNn: false,
 	// Archive settings defaults
 	enableArchiveRenameDate: false,
 	archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT,
@@ -42,6 +42,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	llmRenameIncludeEmojis: false,
 	llmRenameModel: '',
 	// General settings defaults
+	newNoteTitlePrefix: '',
+	newNoteTitleSuffix: '',
 	modelSortOrder: 'alphabetical',
 	chatCommandPhrase: '',
 	archiveCommandPhrase: '',

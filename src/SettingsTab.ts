@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, Notice, DropdownComponent } from 'obsidian';
+import { App, PluginSettingTab, Setting, Notice, DropdownComponent, moment } from 'obsidian';
 import SimpleNoteChatPlugin from './main';
 import { OpenRouterService, OpenRouterModel, FormattedModelInfo, ModelSortOption } from './OpenRouterService'; // Import FormattedModelInfo and ModelSortOption
 import { PluginSettings } from './types';
@@ -18,7 +18,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	private availableModels: OpenRouterModel[] = [];
 	private modelDropdown: DropdownComponent | null = null;
 	private llmModelDropdown: DropdownComponent | null = null;
-	private sortDropdown: DropdownComponent | null = null;
+	private newNotePreviewEl: HTMLElement | null = null;
 
 	constructor(app: App, plugin: SimpleNoteChatPlugin) {
 		super(app, plugin);
@@ -64,7 +64,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			.setName('Model Sorting')
 			.setDesc('Choose how to sort the OpenRouter model lists in the dropdowns below.')
 			.addDropdown(dropdown => {
-				this.sortDropdown = dropdown;
 				// Add options based on the ModelSortOption enum
 				dropdown
 					.addOption(ModelSortOption.ALPHABETICAL, 'Alphabetical')
@@ -129,6 +128,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					if (trimmedValue && this.plugin.settings.chatCommandPhrase !== trimmedValue) {
 						this.plugin.settings.chatCommandPhrase = trimmedValue;
 						await this.plugin.saveSettings();
+						this.updateNewNotePathPreview(); // Update preview
 					} else if (!trimmedValue) {
 						new Notice('Command phrase cannot be empty.');
 						text.setValue(this.plugin.settings.chatCommandPhrase);
@@ -153,8 +153,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-		.setName('New Note Phrase')
-		.setDesc(`This quickly creates a new note for chatting, for when you are done with one topic and want to start another quickly. By default, the note is created in the archive directory, and titled using the current date and time. It's behavior can be configured in the New Note Settings section below. Default: (${NEW_CHAT_COMMAND_DEFAULT}).`)
+		.setName('New Chat Phrase')
+		.setDesc(`This quickly creates a new chat note, for when you want to start a new chat from anywhere in your vault. By default, the chat note is created in the archive directory with the current date and time. It's behavior can be configured in the New Note Settings section below. Default: (${NEW_CHAT_COMMAND_DEFAULT}).`)
 		.addText(text => text
 			.setPlaceholder(NEW_CHAT_COMMAND_DEFAULT)
 			.setValue(this.plugin.settings.newChatCommandPhrase)
@@ -163,6 +163,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				if (trimmedValue && this.plugin.settings.newChatCommandPhrase !== trimmedValue) {
 					this.plugin.settings.newChatCommandPhrase = trimmedValue;
 					await this.plugin.saveSettings();
+					this.updateNewNotePathPreview(); // Update preview
 				} else if (!trimmedValue) {
 					new Notice('Command phrase cannot be empty.');
 					text.setValue(this.plugin.settings.newChatCommandPhrase);
@@ -189,7 +190,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		// ========== ARCHIVE SETTINGS ==========
 		containerEl.createEl('h3', { text: 'Archiving', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'Configure how notes are handled when using the "Archive" command phrase, or when automatically archived via the "New Note" command.', cls: 'snc-setting-section-description' });
+		containerEl.createEl('p', { text: 'Configure how notes are handled when using the Archive command phrase.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('Archive Folder')
@@ -311,31 +312,16 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 
 				// ========== NEW NOTE SETTINGS ==========
-		containerEl.createEl('h3', { text: 'New Chat Shortcut', cls: 'snc-section-header' });
+		containerEl.createEl('h3', { text: 'New Chat Notes', cls: 'snc-section-header' });
 		containerEl.createEl('p', { text: 'Configure how new chat notes are created and where they are placed in your vault.', cls: 'snc-setting-section-description' });
+		this.newNotePreviewEl = containerEl.createEl('p', { cls: 'snc-setting-section-description' });
 
-		// Helper function to update the description
-		const updateNewNoteDesc = (setting: Setting, value: string) => {
-			const baseDesc = 'Choose where new chat notes should be created.';
-			let dynamicDesc = '';
-			switch (value) {
-				case 'archive':
-					const archiveFolder = this.plugin.settings.archiveFolderName || DEFAULT_ARCHIVE_FOLDER;
-					dynamicDesc = ` The Archive Folder is specified in Archive Settings and is currently set to: ${archiveFolder}.`;
-					break;
-				case 'current':
-					dynamicDesc = " The Current Folder is specified as the folder of the currently active note. If no note is active, then the new note will be created in the vault's root.";
-					break;
-				case 'custom':
-					const customFolder = this.plugin.settings.newNoteCustomFolder || '(not set yet, change it below)';
-					dynamicDesc = ` The Custom Folder is currently specified as: ${customFolder}.`;
-					break;
-			}
-			setting.setDesc(baseDesc + dynamicDesc);
-		};
+		// Initial update for the consolidated preview
+		this.updateNewNotePathPreview();
 
-		const newNoteLocationSetting = new Setting(containerEl)
+		new Setting(containerEl)
 			.setName('New Note Folder')
+			.setDesc('Choose where new chat notes should be created.')
 			.addDropdown(dropdown => {
 				dropdown
 					.addOption('archive', 'Archive Folder')
@@ -348,7 +334,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 							new Notice(`New note location set to: ${dropdown.selectEl.selectedOptions[0]?.text || value}`);
 							customFolderSetting.settingEl.style.display = value === 'custom' ? 'flex' : 'none';
-							updateNewNoteDesc(newNoteLocationSetting, value); // Update description on change
+							this.updateNewNotePathPreview(); // Update the consolidated preview
 						} else {
 							log.warn(`SettingsTab: Invalid new note location selected: ${value}`);
 							dropdown.setValue(this.plugin.settings.newNoteLocation); // Revert
@@ -356,10 +342,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					});
 			});
 
-		// Call initially to set the description based on the saved setting
-		updateNewNoteDesc(newNoteLocationSetting, this.plugin.settings.newNoteLocation);
-
-		// --- New Note Location ---
+		// --- Custom Folder Setting (only shown when location is 'custom') ---
 		const customFolderSetting = new Setting(containerEl)
 			.setName('Customer Folder')
 			.setDesc(`Which folder should new chat notes be placed in? If the folder doesn't exist then it will get created when the next chat note is created.`)
@@ -371,56 +354,71 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					if (this.plugin.settings.newNoteCustomFolder !== trimmedValue) {
 						this.plugin.settings.newNoteCustomFolder = trimmedValue;
 						await this.plugin.saveSettings();
-						if (this.plugin.settings.newNoteLocation === 'custom') {
-							updateNewNoteDesc(newNoteLocationSetting, 'custom');
-						}
+						this.updateNewNotePathPreview(); // Update preview when custom folder changes
 					}
 				}));
 
 		// Initially hide the custom folder setting
 		customFolderSetting.settingEl.style.display = this.plugin.settings.newNoteLocation === 'custom' ? 'flex' : 'none';
 
-		// --- New Note Title Format ---
-		new Setting(containerEl)
-			.setName('Title Format')
-			.setDesc('This uses moment.js for specifying the date and time format to use for the new chat note title. Default: (YYYY-MM-DD-HH-mm)')
-			.addText(text => text
-				.setPlaceholder(DEFAULT_NN_TITLE_FORMAT)
+		// --- New Note Date & Time ---
+		new Setting(containerEl) // Store the setting instance
+			.setName('Optional Date & Time')
+			.setDesc('Uses moment.js format for date/time in the title. Leave empty if no date/time is desired. Default: (YYYY-MM-DD-HH-mm)')
+			.addText(text => { text
+				.setPlaceholder('YYYY-MM-DD-HH-mm')
 				.setValue(this.plugin.settings.newNoteTitleFormat)
 				.onChange(async (value) => {
-					const trimmedValue = value.trim();
-					if (trimmedValue) {
-						this.plugin.settings.newNoteTitleFormat = trimmedValue;
-						await this.plugin.saveSettings();
-					} else {
-						new Notice('New note title format cannot be empty.');
-						text.setValue(this.plugin.settings.newNoteTitleFormat);
-					}
-				}));
-
-		// --- Archive Previous Note ---
-		new Setting(containerEl)
-			.setName('Archive Current Note on New Note')
-			.setDesc(`When creating a new note, check if the existing note appears to contain a chat session and archive it if so. This respects the hat marker, and will not archive content above it. Default: (off)`)
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.archivePreviousNoteOnNn)
-				.onChange(async (value) => {
-					this.plugin.settings.archivePreviousNoteOnNn = value;
+					// Allow empty format string
+					this.plugin.settings.newNoteTitleFormat = value.trim();
 					await this.plugin.saveSettings();
-					new Notice(`Archive current note on new note ${value ? 'enabled' : 'disabled'}.`);
-				}));
+					this.updateNewNotePathPreview(); // Update preview
+				});
+			});
 
+		// --- New Note Title Prefix ---
+		new Setting(containerEl) // Store the setting instance
+		.setName('Optional Prefix')
+		.setDesc('Text to add before the date/time in the new chat note title.')
+		.addText(text => { text
+			.setPlaceholder('e.g., Chat-')
+			.setValue(this.plugin.settings.newNoteTitlePrefix)
+			.onChange(async (value) => {
+				// Allow empty prefix
+				this.plugin.settings.newNoteTitlePrefix = value;
+				await this.plugin.saveSettings();
+				this.updateNewNotePathPreview(); // Update preview
+			});
+		});
 
-		// Load models if API key is set
-		if (this.plugin.settings.apiKey) {
-			this.fetchAndStoreModels(false);
-		} else {
-			this.populateModelDropdowns();
-		}
+		// --- New Note Title Suffix ---
+		new Setting(containerEl) // Store the setting instance
+			.setName('Optional Suffix')
+			// Simplified description
+			.setDesc('Text to add after the date/time in the new chat note title.')
+			.addText(text => { text
+				.setPlaceholder('e.g., -Meeting')
+				.setValue(this.plugin.settings.newNoteTitleSuffix)
+				.onChange(async (value) => {
+					// Allow empty suffix
+					this.plugin.settings.newNoteTitleSuffix = value;
+					await this.plugin.saveSettings();
+					this.updateNewNotePathPreview(); // Update preview
+				});
+			});
+
+		// Initial update for the consolidated preview
+		this.updateNewNotePathPreview();
+
+		// Fetch models and populate dropdowns on display (handles missing API key internally)
+		this.fetchAndStoreModels(false); // This also populates dropdowns
 	}
+
+
 
 	/**
 	 * Populates a single model dropdown menu.
+
 	 * @param dropdown The DropdownComponent instance
 	 * @param formattedModels Array of formatted models to populate with
 	 * @param settingKey The key in PluginSettings that this dropdown controls
@@ -464,7 +462,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			dropdown.addOption(model.id, model.displayName);
 		});
 
-		// @ts-ignore - Dynamic setting access
 		const savedModel = this.plugin.settings[settingKey] as string;
 		// Check if the current or saved model ID exists in the formatted list
 		const valueToSelect = formattedModels.some(m => m.id === currentSelectedValue) ? currentSelectedValue : savedModel;
@@ -475,6 +472,92 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			// If the saved model is no longer valid or wasn't set, default to empty/placeholder
 			dropdown.setValue('');
 		}
+	}
+
+	/** Generates the filename part of the preview based on current settings */
+	private generateFilenamePreview(): { filename: string, error: boolean } {
+		const format = this.plugin.settings.newNoteTitleFormat;
+		const prefix = this.plugin.settings.newNoteTitlePrefix;
+		const suffix = this.plugin.settings.newNoteTitleSuffix;
+
+		// If all parts are empty, default to "Untitled"
+		if (!prefix && !suffix && !format) {
+			return { filename: 'Untitled.md', error: false };
+		}
+
+		let formattedDate = '';
+		if (format) {
+			try {
+				formattedDate = moment().format(format);
+			} catch (e) {
+				log.warn("SettingsTab: Invalid moment format string for title preview:", format, e);
+				return { filename: 'Invalid Date Format', error: true };
+			}
+		}
+
+		const filename = `${prefix}${formattedDate}${suffix}.md`;
+
+		// Basic check for potentially invalid characters in the generated filename part
+		// This is not exhaustive but catches common issues. Obsidian handles sanitization on creation.
+		if (/[\\/:]/.test(filename)) {
+			log.warn("SettingsTab: Generated filename contains potentially invalid characters:", filename);
+			return { filename: 'Invalid Characters in Filename', error: true };
+		}
+
+		return { filename: filename, error: false };
+	}
+
+	/** Updates the consolidated preview element for new note path */
+	private updateNewNotePathPreview(): void {
+		if (!this.newNotePreviewEl) {
+			log.warn("SettingsTab: New Note Preview element not available for update.");
+			return;
+		}
+
+		const { filename, error: filenameError } = this.generateFilenamePreview();
+		let folderPath = '';
+		let previewText = '';
+		let previewClass = 'snc-filename-preview'; // Default class
+
+		const location = this.plugin.settings.newNoteLocation;
+
+		if (filenameError) {
+			previewText = `Preview: ${filename}`;
+			previewClass = 'snc-preview-error';
+		} else {
+			switch (location) {
+				case 'archive':
+					folderPath = this.plugin.settings.archiveFolderName || DEFAULT_ARCHIVE_FOLDER;
+					// Ensure trailing slash if folder path exists and doesn't have one
+					if (folderPath && !folderPath.endsWith('/')) {
+						folderPath += '/';
+					}
+					previewText = `Preview: ${folderPath}${filename}`;
+					break;
+				case 'custom':
+					folderPath = this.plugin.settings.newNoteCustomFolder || '';
+					// Ensure trailing slash if folder path exists and doesn't have one
+					if (folderPath && !folderPath.endsWith('/')) {
+						folderPath += '/';
+					}
+					previewText = `Preview: ${folderPath}${filename}`;
+					break;
+				case 'current':
+				default:
+					// Special case for 'current'
+					previewText = `Preview: ${filename} (created in the folder of the currently active note, or root folder if none)`;
+					break;
+			}
+			// Basic check for invalid characters in folder path (relevant for custom/archive)
+			if ((location === 'custom' || location === 'archive') && /[\\:*?"<>|]/.test(folderPath)) {
+				previewText = `Preview: Invalid characters in folder path: ${folderPath}`;
+				previewClass = 'snc-preview-error';
+			}
+		}
+
+		// Update the preview element's text and class
+		this.newNotePreviewEl.textContent = previewText;
+		this.newNotePreviewEl.className = `snc-setting-section-description ${previewClass}`; // Keep base class + add dynamic one
 	}
 
 	/**
