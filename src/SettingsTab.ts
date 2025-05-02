@@ -258,7 +258,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		const llmSettingsContainer = containerEl.createDiv('llm-archive-rename-settings');
 
-		// --- LLM Title Model Setting (Moved here) ---
 		new Setting(llmSettingsContainer)
 			.setName('Note Title Model')
 			.setDesc('Choose which model will generate the note title. By default, it uses the same model as your chat conversations.')
@@ -271,7 +270,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				});
 			});
-		// --- End LLM Title Model Setting ---
 
 		new Setting(llmSettingsContainer)
 			.setName('Title Word Limit')
@@ -369,10 +367,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				.setPlaceholder('YYYY-MM-DD-HH-mm')
 				.setValue(this.plugin.settings.newNoteTitleFormat)
 				.onChange(async (value) => {
-					// Allow empty format string
 					this.plugin.settings.newNoteTitleFormat = value.trim();
 					await this.plugin.saveSettings();
-					this.updateNewNotePathPreview(); // Update preview
+					this.updateNewNotePathPreview();
 				});
 			});
 
@@ -384,26 +381,23 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			.setPlaceholder('e.g., Chat-')
 			.setValue(this.plugin.settings.newNoteTitlePrefix)
 			.onChange(async (value) => {
-				// Allow empty prefix
 				this.plugin.settings.newNoteTitlePrefix = value;
 				await this.plugin.saveSettings();
-				this.updateNewNotePathPreview(); // Update preview
+				this.updateNewNotePathPreview();
 			});
 		});
 
 		// --- New Note Title Suffix ---
 		new Setting(containerEl) // Store the setting instance
 			.setName('Optional Suffix')
-			// Simplified description
 			.setDesc('Text to add after the date/time in the new chat note title.')
 			.addText(text => { text
 				.setPlaceholder('e.g., -Meeting')
 				.setValue(this.plugin.settings.newNoteTitleSuffix)
 				.onChange(async (value) => {
-					// Allow empty suffix
 					this.plugin.settings.newNoteTitleSuffix = value;
 					await this.plugin.saveSettings();
-					this.updateNewNotePathPreview(); // Update preview
+					this.updateNewNotePathPreview();
 				});
 			});
 
@@ -411,7 +405,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		this.updateNewNotePathPreview();
 
 		// Fetch models and populate dropdowns on display (handles missing API key internally)
-		this.fetchAndStoreModels(false); // This also populates dropdowns
+		this.fetchAndStoreModels(false);
 	}
 
 
