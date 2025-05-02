@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting, Notice, DropdownComponent, moment } from 'obsidian';
 import SimpleNoteChatPlugin from './main';
-import { OpenRouterService, OpenRouterModel, FormattedModelInfo, ModelSortOption } from './OpenRouterService'; // Import FormattedModelInfo and ModelSortOption
+import { OpenRouterService, OpenRouterModel, FormattedModelInfo, ModelSortOption } from './OpenRouterService';
 import { PluginSettings } from './types';
 import { log } from './utils/logger';
 import {
@@ -417,8 +417,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 
 	/**
-	 * Populates a single model dropdown menu.
-
 	 * @param dropdown The DropdownComponent instance
 	 * @param formattedModels Array of formatted models to populate with
 	 * @param settingKey The key in PluginSettings that this dropdown controls
@@ -458,7 +456,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		dropdown.addOption('', placeholderText);
 
 		formattedModels.forEach(model => {
-			// Use the pre-formatted displayName directly
 			dropdown.addOption(model.id, model.displayName);
 		});
 
@@ -474,13 +471,12 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		}
 	}
 
-	/** Generates the filename part of the preview based on current settings */
+	/** Generates a preview filename based on current settings */
 	private generateFilenamePreview(): { filename: string, error: boolean } {
 		const format = this.plugin.settings.newNoteTitleFormat;
 		const prefix = this.plugin.settings.newNoteTitlePrefix;
 		const suffix = this.plugin.settings.newNoteTitleSuffix;
 
-		// If all parts are empty, default to "Untitled"
 		if (!prefix && !suffix && !format) {
 			return { filename: 'Untitled.md', error: false };
 		}
@@ -497,8 +493,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		const filename = `${prefix}${formattedDate}${suffix}.md`;
 
-		// Basic check for potentially invalid characters in the generated filename part
-		// This is not exhaustive but catches common issues. Obsidian handles sanitization on creation.
+		// Basic check for potentially invalid characters in filename
 		if (/[\\/:]/.test(filename)) {
 			log.warn("SettingsTab: Generated filename contains potentially invalid characters:", filename);
 			return { filename: 'Invalid Characters in Filename', error: true };
@@ -507,7 +502,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		return { filename: filename, error: false };
 	}
 
-	/** Updates the consolidated preview element for new note path */
+	/** Updates the new note path preview */
 	private updateNewNotePathPreview(): void {
 		if (!this.newNotePreviewEl) {
 			log.warn("SettingsTab: New Note Preview element not available for update.");
@@ -517,7 +512,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		const { filename, error: filenameError } = this.generateFilenamePreview();
 		let folderPath = '';
 		let previewText = '';
-		let previewClass = 'snc-filename-preview'; // Default class
+		let previewClass = 'snc-filename-preview';
 
 		const location = this.plugin.settings.newNoteLocation;
 
@@ -528,7 +523,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			switch (location) {
 				case 'archive':
 					folderPath = this.plugin.settings.archiveFolderName || DEFAULT_ARCHIVE_FOLDER;
-					// Ensure trailing slash if folder path exists and doesn't have one
 					if (folderPath && !folderPath.endsWith('/')) {
 						folderPath += '/';
 					}
@@ -544,7 +538,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					break;
 				case 'current':
 				default:
-					// Special case for 'current'
 					previewText = `Preview: ${filename} (created in the folder of the currently active note, or root folder if none)`;
 					break;
 			}
@@ -555,30 +548,27 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			}
 		}
 
-		// Update the preview element's text and class
 		this.newNotePreviewEl.textContent = previewText;
-		this.newNotePreviewEl.className = `snc-setting-section-description ${previewClass}`; // Keep base class + add dynamic one
+		this.newNotePreviewEl.className = `snc-setting-section-description ${previewClass}`;
 	}
 
 	/**
-	 * Sorts models, formats them, and populates dropdowns
+	 * Sorts models, formats them, and populates dropdown menus
 	 */
 	private populateModelDropdowns(): void {
 		let formattedModels: FormattedModelInfo[] = [];
 		if (this.plugin.settings.apiKey && this.availableModels.length > 0) {
 			try {
-				// 1. Sort the raw models
 				const sortedModels = this.openRouterService.sortModels(
 					this.availableModels,
-					this.plugin.settings.modelSortOrder as ModelSortOption // Cast to satisfy TS
+					this.plugin.settings.modelSortOrder as ModelSortOption
 				);
-				// 2. Format the sorted models for display
 				formattedModels = this.openRouterService.getFormattedModels(sortedModels);
 
 			} catch (error) {
 				log.error("SettingsTab: Error sorting or formatting models:", error);
 				new Notice("Error preparing model list. Check console.");
-				// Attempt to format unsorted models as a fallback
+				// Format unsorted models as fallback
 				try {
 					formattedModels = this.openRouterService.getFormattedModels(this.availableModels);
 				} catch (formatError) {
@@ -588,7 +578,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			}
 		}
 
-		// Pass the formatted models to the dropdown population function
 		this.populateModelDropdown(
 			this.modelDropdown,
 			formattedModels,
@@ -607,6 +596,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 
 	/**
+	 * Fetches models from OpenRouter and updates dropdowns
 	 * @param showNotices If true, displays loading and result notices
 	 */
 	private async fetchAndStoreModels(showNotices: boolean = true): Promise<void> {
@@ -625,10 +615,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		}
 
 		try {
-			// Use forceRefresh=true when "Refresh Models" button is clicked
 			const models = await this.openRouterService.fetchModels(
 				this.plugin.settings.apiKey,
-				showNotices // showNotices indicates user-requested refresh, sets the forceRefresh parameter to true
+				showNotices
 			);
 			this.availableModels = models;
 
