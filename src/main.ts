@@ -4,8 +4,8 @@ import { ChatService } from './ChatService';
 import { OpenRouterService } from './OpenRouterService';
 import { EditorHandler } from './EditorHandler';
 import { FileSystemService } from './FileSystemService';
-import { PluginSettings, DEFAULT_SETTINGS } from './types';
-import { log } from './utils/logger';
+import { PluginSettings, DEFAULT_SETTINGS, LogLevel } from './types';
+import { log, initializeLogger } from './utils/logger';
 import {
 	DEFAULT_NN_TITLE_FORMAT,
 	CHAT_COMMAND_DEFAULT,
@@ -36,6 +36,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	async onload() {
 		log.debug('Loading Simple Note Chat plugin');
 		await this.loadSettings();
+		initializeLogger(this.settings); // Initialize logger with loaded settings
 
 		this.updateCommandMap();
 		this.lastSettingsHash = this.getSettingsHash();
@@ -219,6 +220,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		// Update command map when settings change
 		this.updateCommandMap();
+		initializeLogger(this.settings); // Re-initialize logger with new settings
 		this.lastSettingsHash = this.getSettingsHash();
 	}
 

@@ -1,5 +1,13 @@
 import { DEFAULT_ARCHIVE_FOLDER, DEFAULT_NN_TITLE_FORMAT } from './constants';
 
+// Define LogLevel enum
+export enum LogLevel {
+	ERROR = 'ERROR',
+	WARN = 'WARN',
+	INFO = 'INFO',
+	DEBUG = 'DEBUG',
+}
+
 export interface PluginSettings {
   apiKey: string;
   defaultModel: string;
@@ -24,6 +32,10 @@ export interface PluginSettings {
   newChatCommandPhrase: string;
   modelCommandPhrase: string;
   chatSeparator: string;
+
+	// Logging Settings
+	enableLogging: boolean;
+	logLevel: LogLevel;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -49,7 +61,10 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	archiveCommandPhrase: '',
 	newChatCommandPhrase: '',
 	modelCommandPhrase: '',
-	chatSeparator: ''
+	chatSeparator: '',
+	// Logging Defaults
+	enableLogging: false,
+	logLevel: LogLevel.ERROR,
 };
 
 export interface ChatMessage {

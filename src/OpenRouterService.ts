@@ -410,7 +410,7 @@ export class OpenRouterService {
                 try {
                     readResult = await reader.read();
                     done = readResult.done;
-                    log.debug('OpenRouterService: Raw stream chunk received:', readResult.value); // Log the raw chunk
+                    // log.debug('OpenRouterService: Raw stream chunk received:', readResult.value);
                 } catch (readError: any) {
                      // Catch errors during reader.read() itself
                      log.error('OpenRouterService: Error reading stream chunk:', readError);
@@ -433,7 +433,7 @@ export class OpenRouterService {
                         if (message.startsWith('data: ')) {
                             const dataContent = message.substring(6).trim();
                             if (dataContent === '[DONE]') {
-                                console.log('OpenRouterService: Received [DONE] signal.');
+                                log.info('OpenRouterService: Received [DONE] signal.');
                                 continue;
                             }
                             try {

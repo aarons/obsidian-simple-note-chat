@@ -2,7 +2,7 @@ import { App, PluginSettingTab, Setting, Notice, DropdownComponent, moment } fro
 import SimpleNoteChatPlugin from './main';
 import { OpenRouterService, OpenRouterModel, FormattedModelInfo, ModelSortOption } from './OpenRouterService';
 import { PluginSettings } from './types';
-import { log } from './utils/logger';
+import { log, initializeLogger } from './utils/logger';
 import {
 	DEFAULT_ARCHIVE_FOLDER,
 	DEFAULT_NN_TITLE_FORMAT,
@@ -11,6 +11,7 @@ import {
 	NEW_CHAT_COMMAND_DEFAULT,
 	MODEL_COMMAND_DEFAULT
 } from './constants';
+import { LogLevel } from './types'; // Import LogLevel
 
 export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	plugin: SimpleNoteChatPlugin;
@@ -406,7 +407,51 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		// Fetch models and populate dropdowns on display (handles missing API key internally)
 		this.fetchAndStoreModels(false);
-	}
+		containerEl.createEl('h3', { text: 'Logging', cls: 'snc-section-header' });
+		containerEl.createEl('p', {
+			text: 'Enable logging to help troubleshoot issues. Logs will appear in the developer console (usually accessed via View -> Developer -> Show Developer Tools -> Console tab).',
+			cls: 'snc-setting-section-description'
+		});
+
+		const loggingLevelSetting = new Setting(containerEl)
+			.setName('Logging Level')
+			.setDesc('Select the level of detail for logs.')
+			.addDropdown(dropdown => {
+				dropdown
+					.addOption(LogLevel.ERROR, 'Errors Only')
+					.addOption(LogLevel.WARN, 'Warnings & Errors')
+					.addOption(LogLevel.INFO, 'Info, Warnings & Errors')
+					.addOption(LogLevel.DEBUG, 'Debug (All Logs)')
+					.setValue(this.plugin.settings.logLevel)
+					.onChange(async (value) => {
+						if (Object.values(LogLevel).includes(value as LogLevel)) {
+							this.plugin.settings.logLevel = value as LogLevel;
+							await this.plugin.saveSettings();
+							initializeLogger(this.plugin.settings); // Update logger immediately
+							new Notice(`Log level set to ${value}`);
+						} else {
+							log.warn(`SettingsTab: Invalid log level selected: ${value}`);
+							dropdown.setValue(this.plugin.settings.logLevel); // Revert
+						}
+					});
+			});
+
+		new Setting(containerEl)
+			.setName('Enable Logging')
+			.setDesc('Turn on logging to the developer console.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enableLogging)
+				.onChange(async (value) => {
+					this.plugin.settings.enableLogging = value;
+					await this.plugin.saveSettings();
+					initializeLogger(this.plugin.settings); // Update logger immediately
+					loggingLevelSetting.settingEl.style.display = value ? 'flex' : 'none'; // Show/hide level dropdown
+					new Notice(`Logging ${value ? 'enabled' : 'disabled'}.`);
+				}));
+
+		// Set initial visibility of the logging level dropdown
+		loggingLevelSetting.settingEl.style.display = this.plugin.settings.enableLogging ? 'flex' : 'none';
+	} // End of display() method
 
 
 

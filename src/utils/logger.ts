@@ -1,37 +1,56 @@
+import { PluginSettings, LogLevel } from '../types';
+
 /**
- * Simple logger utility that only logs in development environments
- * Per Obsidian guidelines, we should avoid console logs in production builds
+ * Simple logger utility.
+ * Logging behavior is controlled by plugin settings.
  */
 
-const isDev = () => {
-    // Check common development environment indicators
-    return (
-        process.env.NODE_ENV === 'development' ||
-        process.env.DEBUG === 'true' ||
-        process.env.DEBUG === '*' ||
-        // @ts-ignore - Check Obsidian special environment variable
-        (typeof globalThis.app !== 'undefined' && (globalThis.app).inDevMode)
-    );
+// Module-level variables to store current logging settings
+let loggingEnabled = false;
+let currentLogLevel = LogLevel.ERROR;
+
+// Map LogLevel enum to numeric values for easier comparison
+const LogLevelValue: { [key in LogLevel]: number } = {
+	[LogLevel.ERROR]: 1,
+	[LogLevel.WARN]: 2,
+	[LogLevel.INFO]: 3,
+	[LogLevel.DEBUG]: 4,
+};
+
+/**
+ * Initializes or updates the logger settings.
+ * Called by the main plugin on load and when settings change.
+ * @param settings The current plugin settings.
+ */
+export const initializeLogger = (settings: PluginSettings): void => {
+	loggingEnabled = settings.enableLogging;
+	currentLogLevel = settings.logLevel;
+	// Log initialization status itself if INFO level is enabled
+	if (loggingEnabled && LogLevelValue[currentLogLevel] >= LogLevelValue[LogLevel.INFO]) {
+		console.info(`Logger initialized. Logging enabled: ${loggingEnabled}, Level: ${currentLogLevel}`);
+	}
 };
 
 export const log = {
-    debug: (message: string, ...args: any[]): void => {
-        if (isDev()) {
-            console.log(message, ...args);
-        }
-    },
-    info: (message: string, ...args: any[]): void => {
-        if (isDev()) {
-            console.info(message, ...args);
-        }
-    },
-    warn: (message: string, ...args: any[]): void => {
-        if (isDev()) {
-            console.warn(message, ...args);
-        }
-    },
-    error: (message: string, ...args: any[]): void => {
-        // Always show errors to help with debugging, even in production
-        console.error(message, ...args);
-    }
+	debug: (message: string, ...args: any[]): void => {
+		if (loggingEnabled && LogLevelValue[currentLogLevel] >= LogLevelValue[LogLevel.DEBUG]) {
+			console.debug(`[DEBUG] ${message}`, ...args);
+		}
+	},
+	info: (message: string, ...args: any[]): void => {
+		if (loggingEnabled && LogLevelValue[currentLogLevel] >= LogLevelValue[LogLevel.INFO]) {
+			console.info(`[INFO] ${message}`, ...args);
+		}
+	},
+	warn: (message: string, ...args: any[]): void => {
+		if (loggingEnabled && LogLevelValue[currentLogLevel] >= LogLevelValue[LogLevel.WARN]) {
+			console.warn(`[WARN] ${message}`, ...args);
+		}
+	},
+	error: (message: string, ...args: any[]): void => {
+		// Errors are logged if logging is enabled, regardless of level (minimum level is ERROR)
+		if (loggingEnabled && LogLevelValue[currentLogLevel] >= LogLevelValue[LogLevel.ERROR]) {
+			console.error(`[ERROR] ${message}`, ...args);
+		}
+	}
 };
