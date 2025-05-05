@@ -243,14 +243,22 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	private updateCommandMap() {
 		this.commandMap = {};
 
-		this.commandMap[this.settings.chatCommandPhrase] =
-			(editor, view, line) => this.editorHandler.triggerChatCommand(editor, view, this.settings, line);
-		this.commandMap[this.settings.archiveCommandPhrase] =
-			(editor, view, line) => this.editorHandler.triggerArchiveCommand(editor, view, this.settings, line);
-		this.commandMap[this.settings.modelCommandPhrase] =
-			(editor, view, line) => this.editorHandler.triggerModelCommand(editor, view, this.settings, line);
-		this.commandMap[this.settings.newChatCommandPhrase] =
-			(editor, view, line) => this.editorHandler.triggerNewChatCommand(editor, view, this.settings, line);
+		if (this.settings.chatCommandPhrase) {
+			this.commandMap[this.settings.chatCommandPhrase] =
+				(editor, view, line) => this.editorHandler.triggerChatCommand(editor, view, this.settings, line);
+		}
+		if (this.settings.archiveCommandPhrase) {
+			this.commandMap[this.settings.archiveCommandPhrase] =
+				(editor, view, line) => this.editorHandler.triggerArchiveCommand(editor, view, this.settings, line);
+		}
+		if (this.settings.modelCommandPhrase) {
+			this.commandMap[this.settings.modelCommandPhrase] =
+				(editor, view, line) => this.editorHandler.triggerModelCommand(editor, view, this.settings, line);
+		}
+		if (this.settings.newChatCommandPhrase) {
+			this.commandMap[this.settings.newChatCommandPhrase] =
+				(editor, view, line) => this.editorHandler.triggerNewChatCommand(editor, view, this.settings, line);
+		}
 	}
 
 	/**

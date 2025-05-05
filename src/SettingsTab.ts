@@ -116,7 +116,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		// ========== COMMAND PHRASES ==========
 		containerEl.createEl('h3', { text: 'Command Phrases', cls: 'snc-section-header' });
-		containerEl.createEl('p', { text: 'The plugin will look for these command phrases in order to take action. Phrases are recognzied when entered on their own line, and will activate after you hit the <enter> key. Deleting the phrase will disable the command.', cls: 'snc-setting-section-description' });
+		containerEl.createEl('p', { text: 'The plugin will look for these command phrases in order to take action. Phrases are recognzied when entered on their own line, and will activate after you hit the <enter> key. Deleting the phrase will disable it from being recognized, although the hotkey (if set) will still work.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('Chat Phrase')
@@ -126,14 +126,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.chatCommandPhrase)
 				.onChange(async (value) => {
 					const trimmedValue = value.trim();
-					if (trimmedValue && this.plugin.settings.chatCommandPhrase !== trimmedValue) {
-						this.plugin.settings.chatCommandPhrase = trimmedValue;
-						await this.plugin.saveSettings();
-						this.updateNewNotePathPreview(); // Update preview
-					} else if (!trimmedValue) {
-						new Notice('Command phrase cannot be empty.');
-						text.setValue(this.plugin.settings.chatCommandPhrase);
-					}
+					this.plugin.settings.chatCommandPhrase = trimmedValue;
+					await this.plugin.saveSettings();
+					this.updateNewNotePathPreview(); // Update preview
 				}));
 
 		new Setting(containerEl)
@@ -144,13 +139,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.modelCommandPhrase)
 				.onChange(async (v) => {
 					const trimmed = v.trim();
-					if (trimmed && this.plugin.settings.modelCommandPhrase !== trimmed) {
-						this.plugin.settings.modelCommandPhrase = trimmed;
-						await this.plugin.saveSettings();
-					} else if (!trimmed) {
-						new Notice('Command phrase cannot be empty.');
-						t.setValue(this.plugin.settings.modelCommandPhrase);
-					}
+					this.plugin.settings.modelCommandPhrase = trimmed;
+					await this.plugin.saveSettings();
 				}));
 
 		new Setting(containerEl)
@@ -164,16 +154,12 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				if (trimmedValue && this.plugin.settings.newChatCommandPhrase !== trimmedValue) {
 					this.plugin.settings.newChatCommandPhrase = trimmedValue;
 					await this.plugin.saveSettings();
-					this.updateNewNotePathPreview(); // Update preview
-				} else if (!trimmedValue) {
-					new Notice('Command phrase cannot be empty.');
-					text.setValue(this.plugin.settings.newChatCommandPhrase);
 				}
 			}));
 
 		new Setting(containerEl)
 			.setName('Archive Phrase')
-			.setDesc(`This phrase will archive the current chat, moving the note to the archive folder, and optionally updating the title. The behavior can be configured in the Archive Section below. Default: (${ARCHIVE_COMMAND_DEFAULT}).`)
+			.setDesc(`This phrase, when typed on its own line, will archive the current chat note. Leave blank to disable this phrase trigger (command still available via hotkey/palette). Default: (${ARCHIVE_COMMAND_DEFAULT}).`)
 			.addText(text => text
 				.setPlaceholder(ARCHIVE_COMMAND_DEFAULT)
 				.setValue(this.plugin.settings.archiveCommandPhrase)
@@ -182,9 +168,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					if (trimmedValue && this.plugin.settings.archiveCommandPhrase !== trimmedValue) {
 						this.plugin.settings.archiveCommandPhrase = trimmedValue;
 						await this.plugin.saveSettings();
-					} else if (!trimmedValue) {
-						new Notice('Command phrase cannot be empty.');
-						text.setValue(this.plugin.settings.archiveCommandPhrase);
 					}
 				}));
 
