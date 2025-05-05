@@ -1,7 +1,7 @@
 {
   "name": "simple-note-chat",
-  "version": "0.1.0",
-  "description": "A simple chat interface within Obsidian notes.",
+  "version": "1.0.0",
+  "description": "A simple plugin for chatting with LLMs in Obsidian.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
@@ -12,10 +12,11 @@
     "obsidian",
     "plugin",
     "chat",
-    "ai"
+    "ai",
+    "llm"
   ],
-  "author": "Plugin Author",
-  "license": "MIT",
+  "author": "Aaron Scott",
+  "license": "AGPL-3.0",
   "devDependencies": {
     "@types/node": "^16.11.6",
     "builtin-modules": "3.3.0",

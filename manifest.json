@@ -1,10 +1,10 @@
 {
 	"id": "simple-note-chat",
 	"name": "Simple Note Chat",
-	"version": "0.8.0",
+	"version": "1.0.0",
 	"minAppVersion": "1.0.0",
-	"description": "Chat with Large Language Models (LLMs) directly within your Obsidian notes using a simple, mobile-friendly interface. This plugin allows you to interact with services like OpenRouter without needing keyboard shortcuts or UI elements, making it suitable for both desktop and mobile use.",
-	"author": "Aaron",
+	"description": "Chat with AIs using command phrases in a note. This is a mobile-friendly way to talk to LLMs without needing keyboard shortcuts or buttons. It works great on desktop too.",
+	"author": "Aaron Scott",
 	"authorUrl": "https://github.com/aarons/obsidian-simple-chat",
 	"fundingUrl": "https://github.com/aarons/obsidian-simple-chat",
 	"isDesktopOnly": false

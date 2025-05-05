@@ -60,32 +60,29 @@ Tell me a haiku about kittens.
 cc  <- need to press the enter key after typing 'cc'
 ```
 
-### Using Hat Mode to Constrain Chat Context
+### Limiting what is sent to the AI
 
-You can limit which parts of a note are sent to the chat model by using hat mode. This is useful for long notes where you only want to chat about something specific quickly.
+You can quickly limit what is sent to the model by adding a boundary marker. This is useful for notes where you have other things going on, and you only want to chat about something specific quickly.
 
-To use hat mode:
-1. Add a line containing only `^^^` (three caret symbols)
-2. The chat will only contain content below this marker
+The boundary marker is `^^^`, put that on it's own line and anything above the marker will be ignored and not sent to the AI.
 
 **Example:**
 
 ```markdown
-# Research Notes
-These are my personal thoughts on the topic.
-Some private notes I don't want to send to the LLM.
+This is a personal journal note
+With information that I don't want to send to the LLM.
+But I thought of a quick question about pet adoption, let me ask...
 
 ^^^
 
-# Questions for AI
 What do I need to know about adopting a cat?
 
 cc
 ```
 
-In this example, the LLM will only see the question about the cat, and not the research notes.
+In this example, the LLM will only see the question about adopting a cat, and not the personal notes. The AI response will be added below the `^^^` boundary.
 
-If no `^^^` marker is found, then entire note content will be used.
+If you archive the chat afterward (using `gg`), then only content up to the boundary will be cleared and saved to your archive. So it's a fast way to ask a question, save the response somewhere else, then move on with your day.
 
 ### Stopping a Response
 
@@ -133,22 +130,34 @@ This provides a shortcut for adding a note to your chat or archive directory qui
 
 ### Trivia
 
-- `cc` stands for 'call chat'
+Each command stands for:
+
+- `cc` call chat
 - `cm` change model
-- `gg` stands for 'good game' and signifies the chat is over. Other phrases considered were `ac` for archive chat, `ta` for thanks, or `aa` for aarchive
-- `nn` new-note wooooo
-
-## License
-
-This project is licensed under the **Affero General Public License (AGPL) v3.0**
+- `nn` new note
+- `gg` good game - and signifies the chat is over. Other phrases considered were `ac` for archive chat, `ta` for thanks and see-you-later, or `aa` for *a-archive*
 
 ## Contributing
 
 Contributions are welcome!
 
+Please see the [contributing.md](contributing.md) file for development setup and more guidelines.
+
 In short:
 
-* Please open a Pull Request (PR) with a clear explanation of the changes.
-* Contributions that add third-party dependencies are unlikely to be accepted due to security risks.
+* Open a Pull Request (PR) with a clear explanation of the changes.
+* Contributions that add third-party dependencies are unlikely to be accepted.
 
-Please see the [contributing.md](contributing.md) file for development setup and more guidelines.
+## License
+
+This project is licensed under the **Affero General Public License (AGPL) v3.0**
+
+Key aspects:
+
+**Network Use Clause**
+If you modify AGPL-licensed software and make it accessible over a network (e.g., a web service), you must make the modified source code available to the users interacting with it.
+
+**Distribution**
+If you distribute the software (modified or unmodified), you must provide the source code under the same AGPL terms.
+
+This ensures that modifications remain free and accessible to the community, even when used in network-based services. You can find the full license text in the [LICENSE](LICENSE.txt) file or at [https://www.gnu.org/licenses/agpl-3.0.en.html](https://www.gnu.org/licenses/agpl-3.0.en.html).
