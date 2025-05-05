@@ -13,5 +13,6 @@ export const COMMAND_PHRASES_DEFAULTS = [
 export const CHAT_SEPARATOR_DEFAULT = '<hr message-from="chat">';
 export const DEFAULT_ARCHIVE_FOLDER = 'archive/';
 export const DEFAULT_NN_TITLE_FORMAT = 'YYYY-MM-DD-HH-mm';
+export const CHAT_BOUNDARY_MARKER = '^^^';
 
 export const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1';

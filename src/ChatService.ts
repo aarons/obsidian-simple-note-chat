@@ -2,6 +2,7 @@ import { Notice, Plugin, Editor, TFile, EditorPosition } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
 import { OpenRouterService } from './OpenRouterService';
 import { log } from './utils/logger';
+import { CHAT_BOUNDARY_MARKER } from './constants';
 
 interface ActiveStreamInfo {
     controller: AbortController;
@@ -27,19 +28,26 @@ export class ChatService {
      * @returns An array of ChatMessage objects.
      */
     private parseNoteContent(fullContent: string, separator: string, parseUntilOffset: number): ChatMessage[] {
-        const chatBoundaryMarker = '^^^';
-        const markerWithNewlines = `\n${chatBoundaryMarker}\n`;
         const relevantContent = fullContent.substring(0, parseUntilOffset); // Content before the insertion point
 
-        // Find the *last* occurrence of the marker within the relevant content
-        const lastBoundaryIndex = relevantContent.lastIndexOf(markerWithNewlines);
+        // Regex to find the marker on its own line, allowing whitespace
+        // Needs to escape potential regex characters in the marker itself
+        const escapedMarker = CHAT_BOUNDARY_MARKER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const boundaryRegex = new RegExp('(?:^|\\n)\\s*' + escapedMarker + '\\s*(?=\\n|$)', 'g');
+
+        // Find the *last* occurrence of the marker pattern within the relevant content
+        let lastMatch: RegExpExecArray | null = null;
+        let currentMatch: RegExpExecArray | null;
+        while ((currentMatch = boundaryRegex.exec(relevantContent)) !== null) {
+            lastMatch = currentMatch;
+        }
 
         let contentToParse: string;
-        if (lastBoundaryIndex !== -1) {
-            // If marker found, parse only the content *after* it
-            const startIndex = lastBoundaryIndex + markerWithNewlines.length;
+        if (lastMatch) {
+            // If marker found, parse only the content *after* the full match
+            const startIndex = lastMatch.index + lastMatch[0].length;
             contentToParse = relevantContent.substring(startIndex);
-            log.debug(`Found last chat boundary marker "^^^" at index ${lastBoundaryIndex}. Parsing content after marker up to offset ${parseUntilOffset}.`);
+            log.debug(`Found last chat boundary marker "${CHAT_BOUNDARY_MARKER}" ending at index ${startIndex -1}. Parsing content after marker up to offset ${parseUntilOffset}.`);
         } else {
             // If no marker found, parse all relevant content
             contentToParse = relevantContent;

@@ -2,6 +2,7 @@ import { App, TFile, normalizePath, moment, Notice } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
 import { OpenRouterService } from './OpenRouterService';
 import { log } from './utils/logger';
+import { CHAT_BOUNDARY_MARKER } from './constants';
 
 export class FileSystemService {
     private app: App;
@@ -22,18 +23,23 @@ export class FileSystemService {
     async moveFileToArchive(file: TFile, archiveFolderName: string, settings: PluginSettings): Promise<string | null> {
         try {
             const originalContent = await this.app.vault.read(file);
-            const chatBoundaryMarker = '^^^';
-            const boundaryString = `\n${chatBoundaryMarker}\n`;
-            const boundaryIndex = originalContent.indexOf(boundaryString);
-            const markerExists = boundaryIndex !== -1;
+
+            // Regex to find the marker on its own line, allowing whitespace
+            // Needs to escape potential regex characters in the marker itself
+            const escapedMarker = CHAT_BOUNDARY_MARKER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const boundaryRegex = new RegExp('(?:^|\\n)\\s*' + escapedMarker + '\\s*(?=\\n|$)', 'g');
+
+            // Find the *first* occurrence of the marker pattern
+            const firstMatch = boundaryRegex.exec(originalContent);
+            const markerExists = firstMatch !== null;
 
             let contentForTitleGeneration = originalContent;
             let contentToArchive = originalContent;
             let contentAboveMarker = ''; // Only used if marker exists
 
             if (markerExists) {
-                contentAboveMarker = originalContent.substring(0, boundaryIndex);
-                contentToArchive = originalContent.substring(boundaryIndex + boundaryString.length);
+                contentAboveMarker = originalContent.substring(0, firstMatch.index); // Content before the match starts
+                contentToArchive = originalContent.substring(firstMatch.index + firstMatch[0].length); // Content after the match ends
                 contentForTitleGeneration = contentToArchive; // Use archived part for title
                 log.debug(`Marker found. Archiving content below marker. Original file will retain content above.`);
             } else {
