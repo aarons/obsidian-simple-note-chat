@@ -151,7 +151,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			.setValue(this.plugin.settings.newChatCommandPhrase)
 			.onChange(async (value) => {
 				const trimmedValue = value.trim();
-				if (trimmedValue && this.plugin.settings.newChatCommandPhrase !== trimmedValue) {
+				if (this.plugin.settings.newChatCommandPhrase !== trimmedValue) {
 					this.plugin.settings.newChatCommandPhrase = trimmedValue;
 					await this.plugin.saveSettings();
 				}
@@ -165,7 +165,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.archiveCommandPhrase)
 				.onChange(async (value) => {
 					const trimmedValue = value.trim();
-					if (trimmedValue && this.plugin.settings.archiveCommandPhrase !== trimmedValue) {
+					if (this.plugin.settings.archiveCommandPhrase !== trimmedValue) {
 						this.plugin.settings.archiveCommandPhrase = trimmedValue;
 						await this.plugin.saveSettings();
 					}
