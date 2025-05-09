@@ -54,7 +54,7 @@ export class EditorHandler {
 
 		// Check if last line ends with a space (command activation)
 		const trimmed = lastContentLine.trimEnd();
-		if (lastContentLine.endsWith(' ')) {
+		if (settings.enableSpacebarDetection && lastContentLine.endsWith(' ')) {
 			let commandHandler: (() => void) | null = null;
 
 			if (trimmed === settings.chatCommandPhrase) {
@@ -68,7 +68,7 @@ export class EditorHandler {
 			}
 
 			if (commandHandler) {
-				log.debug(`Detected command phrase "${trimmed} " on line ${lastContentLineIdx}. Setting 0.5s timer.`);
+				log.debug(`Detected command phrase "${trimmed} " on line ${lastContentLineIdx}. Setting ${settings.spacebarDetectionDelay}s timer.`);
 				const finalCommandHandler = commandHandler; // Capture handler for closure
 				const timeout = setTimeout(() => {
 					// Re‑check that the line content hasn't changed during the delay
@@ -85,7 +85,7 @@ export class EditorHandler {
 						log.debug(`Timer finished for "${trimmed} ", but content changed. Aborting.`);
 					}
 					this.activationTimers.delete(filePath);
-				}, 500); // 0.5 s
+				}, settings.spacebarDetectionDelay * 1000); // Use delay from settings
 				this.activationTimers.set(filePath, timeout);
 			}
 		}

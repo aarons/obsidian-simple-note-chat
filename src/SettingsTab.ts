@@ -171,6 +171,50 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
+		// ========== BEHAVIOR SETTINGS ==========
+		containerEl.createEl('h3', { text: 'Behavior', cls: 'snc-section-header' });
+		containerEl.createEl('p', { text: 'Configure how the plugin reacts to user input.', cls: 'snc-setting-section-description' });
+
+		const spacebarDelaySetting = new Setting(containerEl)
+			.setName('Spacebar Detection Delay')
+			.setDesc('Wait time in seconds before acting after spacebar detection (e.g., 0.5 for half a second).')
+			.addText(text => text
+				.setPlaceholder('0.5')
+				.setValue(String(this.plugin.settings.spacebarDetectionDelay))
+				.onChange(async (value) => {
+					const floatValue = parseFloat(value);
+					if (!isNaN(floatValue) && floatValue >= 0) {
+						this.plugin.settings.spacebarDetectionDelay = floatValue;
+						await this.plugin.saveSettings();
+					} else {
+						new Notice('Please enter a valid number (e.g., 0.5).');
+						text.setValue(String(this.plugin.settings.spacebarDetectionDelay));
+					}
+				}))
+			.then(setting => {
+				const inputEl = setting.controlEl.querySelector('input');
+				if (inputEl) {
+					inputEl.setAttribute('type', 'number');
+					inputEl.setAttribute('step', '0.1');
+					inputEl.setAttribute('min', '0');
+				}
+			});
+
+		new Setting(containerEl)
+			.setName('Enable Spacebar Command Detection')
+			.setDesc('Detect command phrases after pressing spacebar. Defaults to 0.5 seconds wait before acting (configurable above).')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enableSpacebarDetection)
+				.onChange(async (value) => {
+					this.plugin.settings.enableSpacebarDetection = value;
+					await this.plugin.saveSettings();
+					new Notice(`Spacebar command detection ${value ? 'enabled' : 'disabled'}.`);
+					spacebarDelaySetting.settingEl.style.display = value ? 'flex' : 'none';
+				}));
+
+		// Set initial visibility of the delay setting
+		spacebarDelaySetting.settingEl.style.display = this.plugin.settings.enableSpacebarDetection ? 'flex' : 'none';
+
 
 		// ========== ARCHIVE SETTINGS ==========
 		containerEl.createEl('h3', { text: 'Archiving', cls: 'snc-section-header' });

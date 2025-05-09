@@ -32,6 +32,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	private boundKeyDownHandler: ((evt: KeyboardEvent) => void) | null = null;
 	private commandMap: Record<string, ((editor: Editor, view: MarkdownView, line: number) => void) | undefined> = {};
 	private lastSettingsHash: string = '';
+	private spacebarCommandTimeoutId: number | null = null;
 
 	async onload() {
 		log.debug('Loading Simple Note Chat plugin');
@@ -267,59 +268,111 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	 * @param evt The keyboard event.
 	 */
 	private handleKeyDown(view: MarkdownView, evt: KeyboardEvent): void {
-		if (evt.key !== 'Escape' && evt.key !== 'Enter') {
-	 		return;
-	 	}
-
+		const editor = view.editor;
 		const file = view.file;
+
+		// 1. Basic checks and initial timeout clearing for spacebar command
 		if (!file) {
 			log.debug("Keydown ignored: No file associated with the view.");
 			return;
 		}
+
+		// If a spacebar command timeout is pending and the current key is NOT space,
+		// it means the user typed something else, interrupting the potential space-triggered command.
+		if (this.spacebarCommandTimeoutId && evt.key !== ' ') {
+			clearTimeout(this.spacebarCommandTimeoutId);
+			this.spacebarCommandTimeoutId = null;
+			log.debug("Cleared spacebar command timeout due to subsequent non-space key press.");
+		}
+
 		const filePath = file.path;
-		const editor = view.editor;
 
-		log.debug(`handleKeyDown triggered for key: ${evt.key}, file: ${filePath}`);
-
-		// Cancel active stream with Escape
+		// 2. Handle Escape for stream cancellation
 		if (evt.key === 'Escape') {
+			log.debug(`Key: Escape, File: ${filePath}`);
 			const isActive = this.chatService.isStreamActive(filePath);
-			log.debug(`Escape key pressed. Active stream for ${filePath}: ${isActive}`);
 			if (isActive && this.chatService.cancelStream(filePath, editor, this.settings)) {
-				log.debug("Stream cancellation successful.");
+				log.debug("Stream cancellation successful via Escape.");
 				evt.preventDefault();
 				evt.stopPropagation();
 			} else if (isActive) {
-				log.debug("Stream cancellation failed.");
+				log.debug("Stream cancellation via Escape failed or no stream to cancel.");
 			}
-			return;
+			return; // Escape is fully handled
 		}
 
-	 	// Trigger command phrases with Enter
+		// 3. If a stream is active, ignore Enter and Space for command triggers
 		if (this.chatService.isStreamActive(filePath)) {
-			log.debug("Enter key ignored: Stream active.");
-			return;
+			if (evt.key === 'Enter' || evt.key === ' ') {
+				log.debug(`${evt.key} key ignored: Stream active for ${filePath}.`);
+				return;
+			}
 		}
 
-		const cursor = editor.getCursor();
-		const commandLine = cursor.line - 1;
-		if (cursor.line >= 1) {
-			// Check if settings have changed
-			const currentSettingsHash = this.getSettingsHash();
-			if (this.lastSettingsHash !== currentSettingsHash) {
-				this.updateCommandMap();
-				this.lastSettingsHash = currentSettingsHash;
+		// 4. Update command map if settings (command phrases) have changed
+		const currentSettingsHash = this.getSettingsHash();
+		if (this.lastSettingsHash !== currentSettingsHash) {
+			this.updateCommandMap();
+			this.lastSettingsHash = currentSettingsHash;
+			log.debug("Command map updated due to settings change.");
+		}
+
+		// 5. Handle Enter for command phrases
+		if (evt.key === 'Enter') {
+			log.debug(`Key: Enter, File: ${filePath}`);
+			const cursor = editor.getCursor();
+			const commandLineNum = cursor.line - 1; // Command is on the line above
+			if (commandLineNum >= 0) {
+				const possibleCommand = editor.getLine(commandLineNum).trim();
+				const commandHandler = this.commandMap[possibleCommand];
+				if (commandHandler) {
+					log.debug(`Enter: Found command "${possibleCommand}" on line ${commandLineNum}`);
+					evt.preventDefault();
+					evt.stopPropagation();
+					commandHandler(editor, view, commandLineNum);
+				} else {
+					log.debug(`Enter: No command found for "${possibleCommand}" on line ${commandLineNum}`);
+				}
+			}
+			return; // Enter is fully handled
+		}
+
+		// 6. Handle Space for command phrases (if enabled)
+		if (evt.key === ' ' && this.settings.enableSpacebarDetection) {
+			log.debug(`Key: Space, File: ${filePath}, Spacebar detection enabled.`);
+			// Space key itself should be typed. Do not preventDefault/stopPropagation here.
+
+			if (this.spacebarCommandTimeoutId) {
+				clearTimeout(this.spacebarCommandTimeoutId);
+				log.debug("Cleared previous spacebar timeout due to new space press.");
 			}
 
-			const possibleCommand = editor.getLine(commandLine).trim();
+			// Store cursor position at the time space was pressed
+			const triggerCursor = editor.getCursor();
 
-			const commandHandler = this.commandMap[possibleCommand];
+			this.spacebarCommandTimeoutId = window.setTimeout(() => {
+				this.spacebarCommandTimeoutId = null; // Clear ID after timeout runs
 
-			if (commandHandler) {
-				evt.preventDefault();
-				evt.stopPropagation();
-				commandHandler(editor, view, commandLine);
-			}
-	  	}
+				// Use the cursor position from when the space was pressed
+				const commandLineNum = triggerCursor.line;
+				// Text on the line up to the character *before* the space that triggered this.
+				// triggerCursor.ch is the position *after* the space has been inserted.
+				const textBeforeSpace = editor.getLine(commandLineNum)
+											.substring(0, triggerCursor.ch - 1)
+											.trim();
+
+				log.debug(`Spacebar timeout: Checking for command "${textBeforeSpace}" on line ${commandLineNum} (cursor was at ch ${triggerCursor.ch})`);
+
+				const commandHandler = this.commandMap[textBeforeSpace];
+				if (commandHandler) {
+					log.debug(`Spacebar: Found command "${textBeforeSpace}" on line ${commandLineNum}. Executing.`);
+					// commandHandler will typically clear the line
+					commandHandler(editor, view, commandLineNum);
+				} else {
+					log.debug(`Spacebar: No command found for "${textBeforeSpace}"`);
+				}
+			}, this.settings.spacebarDetectionDelay * 1000); // Convert seconds to ms
+			return; // Space key handling (setting timeout) is complete for this function's logic.
+		}
 	}
 }

@@ -33,38 +33,45 @@ export interface PluginSettings {
   modelCommandPhrase: string;
   chatSeparator: string;
 
-	// Logging Settings
-	enableLogging: boolean;
-	logLevel: LogLevel;
+  // Behavior Settings
+  enableSpacebarDetection: boolean;
+  spacebarDetectionDelay: number;
+
+  // Logging Settings
+  enableLogging: boolean;
+  logLevel: LogLevel;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
-	apiKey: '',
-	defaultModel: 'openrouter/auto',
-	archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
-	// New Note settings defaults
-	newNoteLocation: 'archive',
-	newNoteCustomFolder: '',
-	newNoteTitleFormat: DEFAULT_NN_TITLE_FORMAT,
-	// Archive settings defaults
-	enableArchiveRenameDate: false,
-	archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT,
-	enableArchiveRenameLlm: false,
-	llmRenameWordLimit: 5,
-	llmRenameIncludeEmojis: false,
-	llmRenameModel: '',
-	// General settings defaults
-	newNoteTitlePrefix: '',
-	newNoteTitleSuffix: '',
-	modelSortOrder: 'alphabetical',
-	chatCommandPhrase: '',
-	archiveCommandPhrase: '',
-	newChatCommandPhrase: '',
-	modelCommandPhrase: '',
-	chatSeparator: '',
-	// Logging Defaults
-	enableLogging: false,
-	logLevel: LogLevel.ERROR,
+  apiKey: '',
+  defaultModel: 'openrouter/auto',
+  archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
+  // New Note settings defaults
+  newNoteLocation: 'archive',
+  newNoteCustomFolder: '',
+  newNoteTitleFormat: DEFAULT_NN_TITLE_FORMAT,
+  // Archive settings defaults
+  enableArchiveRenameDate: false,
+  archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT,
+  enableArchiveRenameLlm: false,
+  llmRenameWordLimit: 5,
+  llmRenameIncludeEmojis: false,
+  llmRenameModel: '',
+  // General settings defaults
+  newNoteTitlePrefix: '',
+  newNoteTitleSuffix: '',
+  modelSortOrder: 'alphabetical',
+  chatCommandPhrase: '',
+  archiveCommandPhrase: '',
+  newChatCommandPhrase: '',
+  modelCommandPhrase: '',
+  chatSeparator: '',
+  // Behavior Settings defaults
+  enableSpacebarDetection: false,
+  spacebarDetectionDelay: 0.5,
+  // Logging Defaults
+  enableLogging: false,
+  logLevel: LogLevel.ERROR,
 };
 
 export interface ChatMessage {
