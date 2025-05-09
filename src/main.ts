@@ -32,7 +32,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	private boundKeyDownHandler: ((evt: KeyboardEvent) => void) | null = null;
 	private commandMap: Record<string, ((editor: Editor, view: MarkdownView, line: number) => void) | undefined> = {};
 	private lastSettingsHash: string = '';
-	private spacebarCommandTimeoutId: number | null = null;
+	private spacebarCommandTimeoutIds: Map<string, number> = new Map();
 
 	async onload() {
 		log.debug('Loading Simple Note Chat plugin');
@@ -54,10 +54,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		this.editorHandler = new EditorHandler(this.app, this);
 
 		this.addSettingTab(new SimpleNoteChatSettingsTab(this.app, this));
-
-		this.registerEvent(
-			this.app.workspace.on('editor-change', this.editorHandler.handleEditorChange)
-		);
 
 		this.registerEvent(this.app.workspace.on('active-leaf-change', (leaf) => {
 			this.unregisterScopedKeyDownHandler();
@@ -206,6 +202,10 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			this.activeEditorKeyDownTarget.removeEventListener('keydown', this.boundKeyDownHandler);
 			log.debug("Unregistered scoped keydown handler");
 		}
+		// Clear all pending spacebar timeouts when unregistering
+		this.spacebarCommandTimeoutIds.forEach(timeoutId => clearTimeout(timeoutId));
+		this.spacebarCommandTimeoutIds.clear();
+
 		this.activeMarkdownView = null;
 		this.activeEditorKeyDownTarget = null;
 		this.boundKeyDownHandler = null;
@@ -277,15 +277,16 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			return;
 		}
 
-		// If a spacebar command timeout is pending and the current key is NOT space,
-		// it means the user typed something else, interrupting the potential space-triggered command.
-		if (this.spacebarCommandTimeoutId && evt.key !== ' ') {
-			clearTimeout(this.spacebarCommandTimeoutId);
-			this.spacebarCommandTimeoutId = null;
-			log.debug("Cleared spacebar command timeout due to subsequent non-space key press.");
-		}
-
 		const filePath = file.path;
+
+		// If a spacebar command timeout is pending for this file and the current key is NOT space,
+		// it means the user typed something else, interrupting the potential space-triggered command.
+		const existingTimeoutId = this.spacebarCommandTimeoutIds.get(filePath);
+		if (existingTimeoutId && evt.key !== ' ') {
+			clearTimeout(existingTimeoutId);
+			this.spacebarCommandTimeoutIds.delete(filePath);
+			log.debug(`Cleared spacebar command timeout for ${filePath} due to subsequent non-space key press.`);
+		}
 
 		// 2. Handle Escape for stream cancellation
 		if (evt.key === 'Escape') {
@@ -342,23 +343,23 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			log.debug(`Key: Space, File: ${filePath}, Spacebar detection enabled.`);
 			// Space key itself should be typed. Do not preventDefault/stopPropagation here.
 
-			if (this.spacebarCommandTimeoutId) {
-				clearTimeout(this.spacebarCommandTimeoutId);
-				log.debug("Cleared previous spacebar timeout due to new space press.");
+			// Clear any existing timeout for this specific file path before setting a new one
+			const oldTimeoutId = this.spacebarCommandTimeoutIds.get(filePath);
+			if (oldTimeoutId) {
+				clearTimeout(oldTimeoutId);
+				log.debug(`Cleared previous spacebar timeout for ${filePath} due to new space press.`);
 			}
 
 			// Store cursor position at the time space was pressed
 			const triggerCursor = editor.getCursor();
 
-			this.spacebarCommandTimeoutId = window.setTimeout(() => {
-				this.spacebarCommandTimeoutId = null; // Clear ID after timeout runs
+			const newTimeoutId = window.setTimeout(() => {
+				this.spacebarCommandTimeoutIds.delete(filePath); // Clear ID from map after timeout runs
 
 				// Use the cursor position from when the space was pressed
 				const commandLineNum = triggerCursor.line;
-				// Text on the line up to the character *before* the space that triggered this.
-				// triggerCursor.ch is the position *after* the space has been inserted.
 				const textBeforeSpace = editor.getLine(commandLineNum)
-											.substring(0, triggerCursor.ch - 1)
+											.substring(0, triggerCursor.ch)
 											.trim();
 
 				log.debug(`Spacebar timeout: Checking for command "${textBeforeSpace}" on line ${commandLineNum} (cursor was at ch ${triggerCursor.ch})`);
@@ -372,6 +373,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 					log.debug(`Spacebar: No command found for "${textBeforeSpace}"`);
 				}
 			}, this.settings.spacebarDetectionDelay * 1000); // Convert seconds to ms
+			this.spacebarCommandTimeoutIds.set(filePath, newTimeoutId);
 			return; // Space key handling (setting timeout) is complete for this function's logic.
 		}
 	}

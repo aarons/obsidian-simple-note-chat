@@ -7,88 +7,10 @@ import { ModelSelectorModal } from './ModelSelectorModal'; // Added import
 export class EditorHandler {
 	private app: App;
 	private plugin: SimpleNoteChat;
-	private activationTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
 	constructor(app: App, plugin: SimpleNoteChat) {
 		this.app = app;
 		this.plugin = plugin;
-	}
-
-	public handleEditorChange = (editor: Editor, markdownView: MarkdownView): void => {
-		const settings = this.plugin.settings;
-		const file = markdownView.file;
-
-		if (!file) {
-			log.warn("Editor change detected but no active file.");
-			return;
-		}
-		const filePath = file.path;
-
-		// Cancel any pending activations for this file
-		const pending = this.activationTimers.get(filePath);
-		if (pending) {
-			clearTimeout(pending);
-			this.activationTimers.delete(filePath);
-		}
-
-		// --- Prevent Command Phrase Detection During Active Stream ---
-		// Don't trigger command phrases during an active stream
-		// Stream can only be stopped via Escape key (handled in main.ts)
-		if (this.plugin.chatService.isStreamActive(filePath)) {
-			return; // Don't process command phrases while streaming
-		}
-
-		// --- Detect Command Phrases (<phrase><space>[0.5s]) ---
-		// Handles space-triggered commands with 0.5s pause
-		// Enter-triggered commands are handled by handleKeyDown in main.ts
-
-		const lines = editor.getValue().split('\n');
-
-		// Find the last non-empty line in the document
-		let lastContentLineIdx = lines.length - 1;
-		while (lastContentLineIdx >= 0 && lines[lastContentLineIdx].trim() === '') {
-			lastContentLineIdx--;
-		}
-		if (lastContentLineIdx < 0) return; // whole file is blank
-		const lastContentLine = lines[lastContentLineIdx];
-
-		// Check if last line ends with a space (command activation)
-		const trimmed = lastContentLine.trimEnd();
-		if (settings.enableSpacebarDetection && lastContentLine.endsWith(' ')) {
-			let commandHandler: (() => void) | null = null;
-
-			if (trimmed === settings.chatCommandPhrase) {
-				commandHandler = () => this.triggerChatCommand(editor, markdownView, settings, lastContentLineIdx);
-			} else if (trimmed === settings.archiveCommandPhrase) {
-				commandHandler = () => this.triggerArchiveCommand(editor, markdownView, settings, lastContentLineIdx);
-			} else if (settings.newChatCommandPhrase && trimmed === settings.newChatCommandPhrase) {
-				commandHandler = () => this.triggerNewChatCommand(editor, markdownView, settings, lastContentLineIdx);
-			} else if (trimmed === settings.modelCommandPhrase) {
-				commandHandler = () => this.triggerModelCommand(editor, markdownView, settings, lastContentLineIdx);
-			}
-
-			if (commandHandler) {
-				log.debug(`Detected command phrase "${trimmed} " on line ${lastContentLineIdx}. Setting ${settings.spacebarDetectionDelay}s timer.`);
-				const finalCommandHandler = commandHandler; // Capture handler for closure
-				const timeout = setTimeout(() => {
-					// Re‑check that the line content hasn't changed during the delay
-					const currentLines = editor.getValue().split('\n');
-					let currentLastContentLineIdx = currentLines.length - 1;
-					while (currentLastContentLineIdx >= 0 && currentLines[currentLastContentLineIdx].trim() === '') {
-						currentLastContentLineIdx--;
-					}
-
-					if (currentLastContentLineIdx === lastContentLineIdx && currentLines[currentLastContentLineIdx] === lastContentLine) {
-						log.debug(`Timer finished for "${trimmed} ". Executing command.`);
-						finalCommandHandler();
-					} else {
-						log.debug(`Timer finished for "${trimmed} ", but content changed. Aborting.`);
-					}
-					this.activationTimers.delete(filePath);
-				}, settings.spacebarDetectionDelay * 1000); // Use delay from settings
-				this.activationTimers.set(filePath, timeout);
-			}
-		}
 	}
 
 	/**
