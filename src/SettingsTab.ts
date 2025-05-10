@@ -352,16 +352,16 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			.setDesc('Choose where new chat notes should be created.')
 			.addDropdown(dropdown => {
 				dropdown
-					.addOption('archive', 'Archive Folder')
-					.addOption('current', 'Current Folder')
-					.addOption('custom', 'Custom Folder')
+					.addOption(NewNoteLocation.ARCHIVE, 'Archive Folder')
+					.addOption(NewNoteLocation.CURRENT, 'Current Folder')
+					.addOption(NewNoteLocation.CUSTOM, 'Custom Folder')
 					.setValue(this.plugin.settings.newNoteLocation)
 					.onChange(async (value) => {
-						if (value === 'current' || value === 'archive' || value === 'custom') {
-							this.plugin.settings.newNoteLocation = value;
+						if (Object.values(NewNoteLocation).includes(value as NewNoteLocation)) {
+							this.plugin.settings.newNoteLocation = value as NewNoteLocation;
 							await this.plugin.saveSettings();
 							new Notice(`New note location set to: ${dropdown.selectEl.selectedOptions[0]?.text || value}`);
-							customFolderSetting.settingEl.style.display = value === 'custom' ? 'flex' : 'none';
+							customFolderSetting.settingEl.style.display = value === NewNoteLocation.CUSTOM ? 'flex' : 'none';
 							this.updateNewNotePathPreview(); // Update the consolidated preview
 						} else {
 							log.warn(`SettingsTab: Invalid new note location selected: ${value}`);
@@ -387,7 +387,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		// Initially hide the custom folder setting
-		customFolderSetting.settingEl.style.display = this.plugin.settings.newNoteLocation === 'custom' ? 'flex' : 'none';
+		customFolderSetting.settingEl.style.display = this.plugin.settings.newNoteLocation === NewNoteLocation.CUSTOM ? 'flex' : 'none';
 
 		// --- New Note Date & Time ---
 		new Setting(containerEl) // Store the setting instance
@@ -589,14 +589,14 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			previewClass = 'snc-preview-error';
 		} else {
 			switch (location) {
-				case 'archive':
+				case NewNoteLocation.ARCHIVE:
 					folderPath = this.plugin.settings.archiveFolderName || DEFAULT_ARCHIVE_FOLDER;
 					if (folderPath && !folderPath.endsWith('/')) {
 						folderPath += '/';
 					}
 					previewText = `Preview: ${folderPath}${filename}`;
 					break;
-				case 'custom':
+				case NewNoteLocation.CUSTOM:
 					folderPath = this.plugin.settings.newNoteCustomFolder || '';
 					// Ensure trailing slash if folder path exists and doesn't have one
 					if (folderPath && !folderPath.endsWith('/')) {
@@ -604,13 +604,13 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 					previewText = `Preview: ${folderPath}${filename}`;
 					break;
-				case 'current':
+				case NewNoteLocation.CURRENT:
 				default:
 					previewText = `Preview: ${filename} (created in the folder of the currently active note, or root folder if none)`;
 					break;
 			}
 			// Basic check for invalid characters in folder path (relevant for custom/archive)
-			if ((location === 'custom' || location === 'archive') && /[\\:*?"<>|]/.test(folderPath)) {
+			if ((location === NewNoteLocation.CUSTOM || location === NewNoteLocation.ARCHIVE) && /[\\:*?"<>|]/.test(folderPath)) {
 				previewText = `Preview: Invalid characters in folder path: ${folderPath}`;
 				previewClass = 'snc-preview-error';
 			}

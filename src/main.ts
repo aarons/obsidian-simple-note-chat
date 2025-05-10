@@ -88,7 +88,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			callback: async () => {
 				try {
 					let targetFolder = '';
-					if (this.settings.newNoteLocation === 'current') {
+					if (this.settings.newNoteLocation === NewNoteLocation.CURRENT) {
 						const currentFile = this.app.workspace.getActiveFile();
 						if (currentFile && currentFile.parent) {
 							targetFolder = currentFile.parent.path;
@@ -96,7 +96,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 							targetFolder = '/';
 							log.debug("No active file or parent folder found, using vault root for new note.");
 						}
-					} else if (this.settings.newNoteLocation === 'custom') {
+					} else if (this.settings.newNoteLocation === NewNoteLocation.CUSTOM) {
 						targetFolder = this.settings.newNoteCustomFolder;
 					} else {
 						targetFolder = this.settings.archiveFolderName;
