@@ -90,27 +90,31 @@ If the LLM response is not useful or going off track, you can stop it mid-stream
 
 ### Message Attribution
 
-Conversations are structured using a horizontal line (default: `<hr>`). The plugin automatically adds these separators and uses them to distinguish between user messages and AI responses. The first message is assumed to be from the user, the next from the AI, and so on.
+Conversations are structured using a horizontal line (default: `<hr message-from="chat">`). The plugin automatically adds these separators and uses them to distinguish between user messages and AI responses. The first message is assumed to be from the user, the next from the AI, and so on.
 
 **Example (Source Mode view):**
+
+The <hr> tags are rendered as horizontal lines, so it looks clean in the app.
 
 ```markdown
 User's first message.
 
-<hr>
+<hr message-from="chat">
 
 AI's first response.
 
-<hr>
+<hr message-from="chat">
 
 User's second message.
 
-<hr>
+<hr message-from="chat">
 
 AI's second response.
 ```
 
 The `<hr>` html tag was chosen because it is rarely used in markdown notes. The other horizontal rules (`---`, `___`, or `***`) also work just fine, but they are more likely to be part of an AI response, which the plugin would then parse incorrectly when attributing messages.
+
+The `message-from="chat"` property is added to further disambiguate the horizontal rule, in case you are asking the AI to provide some HTML code in a message.
 
 ### Changing the Model
 

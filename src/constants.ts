@@ -27,17 +27,17 @@ export enum ModelSortOption {
   COMPLETION_PRICE_DESC = 'completion_price_desc'
 }
 
+// Define location constants for note creation
+export const NEW_NOTE_LOCATION_CURRENT = 'current';
+export const NEW_NOTE_LOCATION_ARCHIVE = 'archive';
+export const NEW_NOTE_LOCATION_CUSTOM = 'custom';
+
 // Define note location enum
 export enum NewNoteLocation {
   CURRENT = NEW_NOTE_LOCATION_CURRENT,
   ARCHIVE = NEW_NOTE_LOCATION_ARCHIVE,
   CUSTOM = NEW_NOTE_LOCATION_CUSTOM
 }
-
-// Define location constants for note creation
-export const NEW_NOTE_LOCATION_CURRENT = 'current';
-export const NEW_NOTE_LOCATION_ARCHIVE = 'archive';
-export const NEW_NOTE_LOCATION_CUSTOM = 'custom';
 
 export const CHAT_SEPARATOR_DEFAULT = '<hr message-from="chat">';
 export const DEFAULT_ARCHIVE_FOLDER = 'archive/';
