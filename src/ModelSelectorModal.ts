@@ -1,6 +1,7 @@
 import { App, Modal, Setting, Notice } from 'obsidian';
 import SimpleNoteChatPlugin from './main';
-import { OpenRouterService, ModelSortOption } from './OpenRouterService';
+import { OpenRouterService } from './OpenRouterService';
+import { ModelSortOption } from './constants';
 import { log } from './utils/logger';
 
 export class ModelSelectorModal extends Modal {

@@ -1,4 +1,5 @@
-import { PluginSettings, LogLevel } from '../types';
+import { PluginSettings } from '../types';
+import { LogLevel } from '../constants';
 
 /**
  * Simple logger utility.

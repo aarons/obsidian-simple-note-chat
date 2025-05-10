@@ -8,32 +8,11 @@ import {
   CHAT_SEPARATOR_DEFAULT,
   NEW_NOTE_LOCATION_CURRENT,
   NEW_NOTE_LOCATION_ARCHIVE,
-  NEW_NOTE_LOCATION_CUSTOM
+  NEW_NOTE_LOCATION_CUSTOM,
+  LogLevel,
+  ModelSortOption,
+  NewNoteLocation
 } from './constants';
-
-// Define LogLevel enum
-export enum LogLevel {
-	ERROR = 'ERROR',
-	WARN = 'WARN',
-	INFO = 'INFO',
-	DEBUG = 'DEBUG',
-}
-
-// Define model sort options enum
-export enum ModelSortOption {
-  ALPHABETICAL = 'alphabetical',
-  PROMPT_PRICE_ASC = 'prompt_price_asc',
-  PROMPT_PRICE_DESC = 'prompt_price_desc',
-  COMPLETION_PRICE_ASC = 'completion_price_asc',
-  COMPLETION_PRICE_DESC = 'completion_price_desc'
-}
-
-// Define note location enum
-export enum NewNoteLocation {
-  CURRENT = NEW_NOTE_LOCATION_CURRENT,
-  ARCHIVE = NEW_NOTE_LOCATION_ARCHIVE,
-  CUSTOM = NEW_NOTE_LOCATION_CUSTOM
-}
 
 export interface PluginSettings {
   apiKey: string;

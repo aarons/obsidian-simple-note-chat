@@ -1,6 +1,7 @@
 import { App, Editor, MarkdownView, TFile, EditorPosition, Notice } from 'obsidian';
 import SimpleNoteChat from './main'; // Assuming main exports the class as default
 import { PluginSettings } from './types';
+import { NewNoteLocation } from './constants';
 import { log } from './utils/logger';
 import { ModelSelectorModal } from './ModelSelectorModal'; // Added import
 

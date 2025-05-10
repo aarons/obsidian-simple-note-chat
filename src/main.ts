@@ -4,7 +4,8 @@ import { ChatService } from './ChatService';
 import { OpenRouterService } from './OpenRouterService';
 import { EditorHandler } from './EditorHandler';
 import { FileSystemService } from './FileSystemService';
-import { PluginSettings, DEFAULT_SETTINGS, LogLevel, ModelSortOption, NewNoteLocation } from './types';
+import { PluginSettings, DEFAULT_SETTINGS } from './types';
+import { LogLevel, ModelSortOption, NewNoteLocation } from './constants';
 import { log, initializeLogger } from './utils/logger';
 import {
 	DEFAULT_NN_TITLE_FORMAT,
