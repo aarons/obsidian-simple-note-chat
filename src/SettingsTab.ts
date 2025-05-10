@@ -11,8 +11,7 @@ import {
 	NEW_CHAT_COMMAND_DEFAULT,
 	MODEL_COMMAND_DEFAULT,
 	LogLevel,
-	ModelSortOption,
-	NewNoteLocation
+	ModelSortOption
 } from './constants';
 
 export class SimpleNoteChatSettingsTab extends PluginSettingTab {
