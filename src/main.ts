@@ -5,7 +5,7 @@ import { OpenRouterService } from './OpenRouterService';
 import { EditorHandler } from './EditorHandler';
 import { FileSystemService } from './FileSystemService';
 import { PluginSettings, DEFAULT_SETTINGS } from './types';
-import { LogLevel, ModelSortOption, NewNoteLocation } from './constants';
+import { LogLevel, ModelSortOption } from './constants';
 import { log, initializeLogger } from './utils/logger';
 import {
 	DEFAULT_NN_TITLE_FORMAT,
@@ -88,7 +88,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			callback: async () => {
 				try {
 					let targetFolder = '';
-					if (this.settings.newNoteLocation === NewNoteLocation.CURRENT) {
+					if (this.settings.newNoteLocation === 'current') {
 						const currentFile = this.app.workspace.getActiveFile();
 						if (currentFile && currentFile.parent) {
 							targetFolder = currentFile.parent.path;
@@ -96,7 +96,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 							targetFolder = '/';
 							log.debug("No active file or parent folder found, using vault root for new note.");
 						}
-					} else if (this.settings.newNoteLocation === NewNoteLocation.CUSTOM) {
+					} else if (this.settings.newNoteLocation === 'custom') {
 						targetFolder = this.settings.newNoteCustomFolder;
 					} else {
 						targetFolder = this.settings.archiveFolderName;

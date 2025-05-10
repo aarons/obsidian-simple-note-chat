@@ -7,8 +7,7 @@ import {
   MODEL_COMMAND_DEFAULT,
   CHAT_SEPARATOR_DEFAULT,
   LogLevel,
-  ModelSortOption,
-  NewNoteLocation
+  ModelSortOption
 } from './constants';
 
 export interface PluginSettings {
@@ -16,7 +15,7 @@ export interface PluginSettings {
   defaultModel: string;
   archiveFolderName: string;
   // Settings for the 'New Note' command
-  newNoteLocation: NewNoteLocation;
+  newNoteLocation: 'current' | 'archive' | 'custom';
   newNoteCustomFolder: string;
   newNoteTitleFormat: string;
   // Settings for the 'Archive' command
@@ -50,7 +49,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   defaultModel: 'openrouter/auto',
   archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
   // New Note settings defaults
-  newNoteLocation: NewNoteLocation.ARCHIVE,
+  newNoteLocation: 'archive',
   newNoteCustomFolder: '',
   newNoteTitleFormat: DEFAULT_NN_TITLE_FORMAT,
   // Archive settings defaults

@@ -27,12 +27,6 @@ export enum ModelSortOption {
   COMPLETION_PRICE_DESC = 'completion_price_desc'
 }
 
-// Note location options
-export enum NewNoteLocation {
-  CURRENT = 'current',
-  ARCHIVE = 'archive',
-  CUSTOM = 'custom'
-}
 
 export const CHAT_SEPARATOR_DEFAULT = '<hr message-from="chat">';
 export const DEFAULT_ARCHIVE_FOLDER = 'archive/';
