@@ -277,7 +277,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		}
 		const filePath = file.path;
 
-		// 2. Refined Spacebar Timeout Clearing (Requirement 6)
+		// Refined Spacebar Timeout Clearing (Requirement 6)
 		const existingTimeoutId = this.spacebarCommandTimeoutIds.get(filePath);
 		if (existingTimeoutId && evt.key !== ' ') {
 			clearTimeout(existingTimeoutId);
@@ -285,12 +285,12 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			log.debug(`Cleared spacebar command timeout for ${filePath} due to subsequent non-space key press: ${evt.key}`);
 		}
 
-		// 3. Handle Escape key
+		// Handle Escape key
 		if (this.handleEscapeKey(view, evt)) {
 			return; // Escape was handled
 		}
 
-		// 4. If a stream is active, ignore further processing for Enter and Space
+		// If a stream is active, ignore further processing for Enter and Space
 		if (this.chatService.isStreamActive(filePath)) {
 			if (evt.key === 'Enter' || evt.key === ' ') {
 				log.debug(`${evt.key} key ignored: Stream active for ${filePath}.`);
@@ -298,7 +298,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			}
 		}
 
-		// 5. Implement Early Exit for Non-Command Keys
+		// Implement Early Exit for Non-Command Keys
 		const isEnterKey = evt.key === 'Enter';
 		const isSpaceKeyForCommand = evt.key === ' ' && this.settings.enableSpacebarDetection;
 
@@ -308,7 +308,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		// At this point, only Enter or Space (if enabled) will proceed.
 
-		// 6. Dispatch to specific key handlers
+		// Dispatch to specific key handlers
 		if (isEnterKey) {
 			this.handleEnterKey(view, evt);
 			return;
