@@ -1,4 +1,15 @@
-import { DEFAULT_ARCHIVE_FOLDER, DEFAULT_NN_TITLE_FORMAT } from './constants';
+import { 
+  DEFAULT_ARCHIVE_FOLDER, 
+  DEFAULT_NN_TITLE_FORMAT, 
+  CHAT_COMMAND_DEFAULT,
+  ARCHIVE_COMMAND_DEFAULT,
+  NEW_CHAT_COMMAND_DEFAULT,
+  MODEL_COMMAND_DEFAULT,
+  CHAT_SEPARATOR_DEFAULT,
+  NEW_NOTE_LOCATION_CURRENT,
+  NEW_NOTE_LOCATION_ARCHIVE,
+  NEW_NOTE_LOCATION_CUSTOM
+} from './constants';
 
 // Define LogLevel enum
 export enum LogLevel {
@@ -8,12 +19,28 @@ export enum LogLevel {
 	DEBUG = 'DEBUG',
 }
 
+// Define model sort options enum
+export enum ModelSortOption {
+  ALPHABETICAL = 'alphabetical',
+  PROMPT_PRICE_ASC = 'prompt_price_asc',
+  PROMPT_PRICE_DESC = 'prompt_price_desc',
+  COMPLETION_PRICE_ASC = 'completion_price_asc',
+  COMPLETION_PRICE_DESC = 'completion_price_desc'
+}
+
+// Define note location enum
+export enum NewNoteLocation {
+  CURRENT = NEW_NOTE_LOCATION_CURRENT,
+  ARCHIVE = NEW_NOTE_LOCATION_ARCHIVE,
+  CUSTOM = NEW_NOTE_LOCATION_CUSTOM
+}
+
 export interface PluginSettings {
   apiKey: string;
   defaultModel: string;
   archiveFolderName: string;
   // Settings for the 'New Note' command
-  newNoteLocation: 'current' | 'archive' | 'custom';
+  newNoteLocation: NewNoteLocation;
   newNoteCustomFolder: string;
   newNoteTitleFormat: string;
   // Settings for the 'Archive' command
@@ -26,7 +53,7 @@ export interface PluginSettings {
   // General settings
   newNoteTitlePrefix: string;
   newNoteTitleSuffix: string;
-  modelSortOrder: string;
+  modelSortOrder: ModelSortOption;
   chatCommandPhrase: string;
   archiveCommandPhrase: string;
   newChatCommandPhrase: string;
@@ -47,7 +74,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   defaultModel: 'openrouter/auto',
   archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
   // New Note settings defaults
-  newNoteLocation: 'archive',
+  newNoteLocation: NewNoteLocation.ARCHIVE,
   newNoteCustomFolder: '',
   newNoteTitleFormat: DEFAULT_NN_TITLE_FORMAT,
   // Archive settings defaults
@@ -60,12 +87,12 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   // General settings defaults
   newNoteTitlePrefix: '',
   newNoteTitleSuffix: '',
-  modelSortOrder: 'alphabetical',
-  chatCommandPhrase: '',
-  archiveCommandPhrase: '',
-  newChatCommandPhrase: '',
-  modelCommandPhrase: '',
-  chatSeparator: '',
+  modelSortOrder: ModelSortOption.ALPHABETICAL,
+  chatCommandPhrase: CHAT_COMMAND_DEFAULT,
+  archiveCommandPhrase: ARCHIVE_COMMAND_DEFAULT,
+  newChatCommandPhrase: NEW_CHAT_COMMAND_DEFAULT,
+  modelCommandPhrase: MODEL_COMMAND_DEFAULT,
+  chatSeparator: CHAT_SEPARATOR_DEFAULT,
   // Behavior Settings defaults
   enableSpacebarDetection: false,
   spacebarDetectionDelay: 0.5,

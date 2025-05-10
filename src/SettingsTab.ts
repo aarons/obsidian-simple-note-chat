@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting, Notice, DropdownComponent, moment } from 'obsidian';
 import SimpleNoteChatPlugin from './main';
-import { OpenRouterService, OpenRouterModel, FormattedModelInfo, ModelSortOption } from './OpenRouterService';
-import { PluginSettings } from './types';
+import { OpenRouterService, OpenRouterModel, FormattedModelInfo } from './OpenRouterService';
+import { PluginSettings, ModelSortOption, NewNoteLocation } from './types';
 import { log, initializeLogger } from './utils/logger';
 import {
 	DEFAULT_ARCHIVE_FOLDER,

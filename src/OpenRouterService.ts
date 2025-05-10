@@ -1,7 +1,7 @@
 // src/OpenRouterService.ts
 import { requestUrl, Notice } from 'obsidian';
 import { OPENROUTER_API_URL } from './constants';
-import { PluginSettings, ChatMessage } from './types';
+import { PluginSettings, ChatMessage, ModelSortOption } from './types';
 import { log } from './utils/logger';
 export interface OpenRouterModel {
     id: string;
@@ -29,16 +29,6 @@ export interface OpenRouterModel {
     } | null;
 }
 
-/**
- * Defines the available sorting options for models.
- */
-export enum ModelSortOption {
-    ALPHABETICAL = 'alphabetical',
-    PROMPT_PRICE_ASC = 'prompt_price_asc',
-    PROMPT_PRICE_DESC = 'prompt_price_desc',
-    COMPLETION_PRICE_ASC = 'completion_price_asc',
-    COMPLETION_PRICE_DESC = 'completion_price_desc'
-}
 
 /**
  * Represents the formatted information for a model, suitable for display.

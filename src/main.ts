@@ -4,7 +4,7 @@ import { ChatService } from './ChatService';
 import { OpenRouterService } from './OpenRouterService';
 import { EditorHandler } from './EditorHandler';
 import { FileSystemService } from './FileSystemService';
-import { PluginSettings, DEFAULT_SETTINGS, LogLevel } from './types';
+import { PluginSettings, DEFAULT_SETTINGS, LogLevel, ModelSortOption, NewNoteLocation } from './types';
 import { log, initializeLogger } from './utils/logger';
 import {
 	DEFAULT_NN_TITLE_FORMAT,
@@ -14,11 +14,6 @@ import {
 	CHAT_SEPARATOR_DEFAULT,
 	MODEL_COMMAND_DEFAULT
 } from './constants';
-DEFAULT_SETTINGS.chatCommandPhrase = CHAT_COMMAND_DEFAULT;
-DEFAULT_SETTINGS.archiveCommandPhrase = ARCHIVE_COMMAND_DEFAULT;
-DEFAULT_SETTINGS.newChatCommandPhrase = NEW_CHAT_COMMAND_DEFAULT;
-DEFAULT_SETTINGS.modelCommandPhrase = MODEL_COMMAND_DEFAULT;
-DEFAULT_SETTINGS.chatSeparator = CHAT_SEPARATOR_DEFAULT;
 
 export default class SimpleNoteChatPlugin extends Plugin {
 	settings: PluginSettings;

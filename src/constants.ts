@@ -8,7 +8,12 @@ export const COMMAND_PHRASES_DEFAULTS = [
     ARCHIVE_COMMAND_DEFAULT,
     NEW_CHAT_COMMAND_DEFAULT,
     MODEL_COMMAND_DEFAULT,
-];
+] as const;
+
+// Define location constants for note creation
+export const NEW_NOTE_LOCATION_CURRENT = 'current';
+export const NEW_NOTE_LOCATION_ARCHIVE = 'archive';
+export const NEW_NOTE_LOCATION_CUSTOM = 'custom';
 
 export const CHAT_SEPARATOR_DEFAULT = '<hr message-from="chat">';
 export const DEFAULT_ARCHIVE_FOLDER = 'archive/';
