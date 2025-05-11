@@ -28,7 +28,7 @@ export enum ModelSortOption {
 }
 
 
-export const CHAT_SEPARATOR_DEFAULT = '<hr message-from="chat">';
+export const CHAT_SEPARATOR = '<hr message-from="chat">';
 export const DEFAULT_ARCHIVE_FOLDER = 'archive/';
 export const DEFAULT_NN_TITLE_FORMAT = 'YYYY-MM-DD-HH-mm';
 export const CHAT_BOUNDARY_MARKER = '^^^';

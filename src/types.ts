@@ -5,7 +5,7 @@ import {
   ARCHIVE_COMMAND_DEFAULT,
   NEW_CHAT_COMMAND_DEFAULT,
   MODEL_COMMAND_DEFAULT,
-  CHAT_SEPARATOR_DEFAULT,
+  CHAT_SEPARATOR,
   LogLevel,
   ModelSortOption
 } from './constants';
@@ -67,7 +67,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   archiveCommandPhrase: ARCHIVE_COMMAND_DEFAULT,
   newChatCommandPhrase: NEW_CHAT_COMMAND_DEFAULT,
   modelCommandPhrase: MODEL_COMMAND_DEFAULT,
-  chatSeparator: CHAT_SEPARATOR_DEFAULT,
+  chatSeparator: CHAT_SEPARATOR,
   // Behavior Settings defaults
   enableSpacebarDetection: false,
   spacebarDetectionDelay: 0.5,
