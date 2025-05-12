@@ -436,7 +436,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		this.fetchAndStoreModels(false);
 		containerEl.createEl('h3', { text: 'Logging', cls: 'snc-section-header' });
 		containerEl.createEl('p', {
-			text: 'Enable logging to help troubleshoot issues. Logs will appear in the developer console (usually accessed via View -> Developer -> Show Developer Tools -> Console tab).',
+			text: 'Enable logging to help troubleshoot issues. Logs will appear in the developer console (View -> Toggle Developer Tools -> Console).',
 			cls: 'snc-setting-section-description'
 		});
 
