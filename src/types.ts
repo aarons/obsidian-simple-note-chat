@@ -1,4 +1,4 @@
-import { DEFAULT_ARCHIVE_FOLDER, DEFAULT_NN_TITLE_FORMAT } from './constants';
+import { DEFAULT_ARCHIVE_FOLDER, DEFAULT_NN_TITLE_FORMAT, CHAT_SEPARATOR } from './constants';
 
 // Define LogLevel enum
 export enum LogLevel {
@@ -65,7 +65,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   archiveCommandPhrase: '',
   newChatCommandPhrase: '',
   modelCommandPhrase: '',
-  chatSeparator: '',
+  chatSeparator: CHAT_SEPARATOR,
   // Behavior Settings defaults
   enableSpacebarDetection: false,
   spacebarDetectionDelay: 0.5,
