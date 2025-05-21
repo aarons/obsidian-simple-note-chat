@@ -11,14 +11,14 @@ import {
 	CHAT_COMMAND_DEFAULT,
 	ARCHIVE_COMMAND_DEFAULT,
 	NEW_CHAT_COMMAND_DEFAULT,
-	CHAT_SEPARATOR_DEFAULT,
+	CHAT_SEPARATOR,
 	MODEL_COMMAND_DEFAULT
 } from './constants';
 DEFAULT_SETTINGS.chatCommandPhrase = CHAT_COMMAND_DEFAULT;
 DEFAULT_SETTINGS.archiveCommandPhrase = ARCHIVE_COMMAND_DEFAULT;
 DEFAULT_SETTINGS.newChatCommandPhrase = NEW_CHAT_COMMAND_DEFAULT;
 DEFAULT_SETTINGS.modelCommandPhrase = MODEL_COMMAND_DEFAULT;
-DEFAULT_SETTINGS.chatSeparator = CHAT_SEPARATOR_DEFAULT;
+DEFAULT_SETTINGS.chatSeparator = CHAT_SEPARATOR;
 
 export default class SimpleNoteChatPlugin extends Plugin {
 	settings: PluginSettings;
@@ -214,6 +214,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		this.settings.chatSeparator = CHAT_SEPARATOR; // Ensure the constant is always used
 	}
 
 	async saveSettings() {
