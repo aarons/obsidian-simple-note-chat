@@ -160,4 +160,4 @@ If you modify AGPL-licensed software and make it accessible over a network (e.g.
 **Distribution**
 If you distribute the software (modified or unmodified), you must provide the source code under the same AGPL terms.
 
-This ensures that modifications remain free and accessible to the community, even when used in network-based services. You can find the full license text in the [LICENSE](LICENSE.txt) file or at [https://www.gnu.org/licenses/agpl-3.0.en.html](https://www.gnu.org/licenses/agpl-3.0.en.html).
+This ensures that modifications remain free and accessible to the community, even when used in network-based services. You can find the full license text in the [LICENSE](LICENSE) file or at [https://www.gnu.org/licenses/agpl-3.0.en.html](https://www.gnu.org/licenses/agpl-3.0.en.html).
