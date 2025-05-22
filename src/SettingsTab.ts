@@ -41,20 +41,38 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			.setDesc('Enter your OpenRouter API key; you can get one from openrouter.ai')
 			.addText(text => {
 				text
-					.setPlaceholder('sk-or-v1-...')
-					.setValue(this.plugin.settings.apiKey)
+					.setPlaceholder('Enter new API Key to update')
+					.setValue('') // Always start empty or with a placeholder
 					.onChange(async (value) => {
 						const trimmedValue = value.trim();
-						if (this.plugin.settings.apiKey !== trimmedValue) {
-							this.plugin.settings.apiKey = trimmedValue;
-							await this.plugin.saveSettings();
-							new Notice('API Key saved. Refreshing models...');
-							this.availableModels = [];
-							this.populateModelDropdowns();
-							await this.fetchAndStoreModels(false);
+						if (trimmedValue) {
+							const encryptedKey = await this.plugin.encryptionService.encrypt(trimmedValue);
+							if (encryptedKey) {
+								this.plugin.settings.encryptedApiKey = encryptedKey;
+								new Notice('API Key encrypted and saved.');
+							} else {
+								new Notice('Failed to encrypt API Key. Not saved.');
+								// Optionally clear the input or revert to a placeholder
+								text.setValue(''); // Clear invalid input
+								return; // Prevent further processing if encryption failed
+							}
+						} else {
+							// If user clears the field, clear the encrypted key
+							this.plugin.settings.encryptedApiKey = '';
+							new Notice('API Key cleared.');
 						}
+						await this.plugin.saveSettings();
+						this.availableModels = []; // Force model refresh
+						this.populateModelDropdowns();
+						await this.fetchAndStoreModels(false); // Refresh models with new/cleared key
 					});
 				text.inputEl.setAttribute('type', 'password');
+				// Set initial placeholder based on whether a key is already set
+				if (this.plugin.settings.encryptedApiKey) {
+					text.inputEl.placeholder = "API Key is set. Enter new key to change.";
+				} else {
+					text.inputEl.placeholder = "sk-or-v1-...";
+				}
 			});
 
 		// ========== MODEL MANAGEMENT ==========
@@ -504,7 +522,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		const currentSelectedValue = dropdown.getValue();
 		dropdown.selectEl.empty();
 
-		if (!this.plugin.settings.apiKey) {
+		if (!this.plugin.settings.encryptedApiKey) {
 			dropdown.addOption('', noApiKeyText);
 			dropdown.setDisabled(true);
 			dropdown.setValue('');
@@ -623,7 +641,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	 */
 	private populateModelDropdowns(): void {
 		let formattedModels: FormattedModelInfo[] = [];
-		if (this.plugin.settings.apiKey && this.availableModels.length > 0) {
+		if (this.plugin.settings.encryptedApiKey && this.availableModels.length > 0) {
 			try {
 				const sortedModels = this.openRouterService.sortModels(
 					this.availableModels,
@@ -666,7 +684,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	 * @param showNotices If true, displays loading and result notices
 	 */
 	private async fetchAndStoreModels(showNotices: boolean = true): Promise<void> {
-		if (!this.plugin.settings.apiKey) {
+		if (!this.plugin.settings.encryptedApiKey) {
 			if (showNotices) {
 				new Notice('Please enter your OpenRouter API key first.');
 			}
@@ -681,8 +699,19 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		}
 
 		try {
+			const decryptedApiKey = await this.plugin.encryptionService.decrypt(this.plugin.settings.encryptedApiKey);
+			if (!decryptedApiKey) {
+				if (showNotices) {
+					new Notice('Failed to decrypt API key. Cannot fetch models.');
+				}
+				this.availableModels = [];
+				this.populateModelDropdowns();
+				loadingNotice?.hide();
+				return;
+			}
+
 			const models = await this.openRouterService.fetchModels(
-				this.plugin.settings.apiKey,
+				decryptedApiKey,
 				showNotices
 			);
 			this.availableModels = models;

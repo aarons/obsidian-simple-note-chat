@@ -9,7 +9,7 @@ export enum LogLevel {
 }
 
 export interface PluginSettings {
-  apiKey: string;
+  encryptedApiKey: string;
   defaultModel: string;
   archiveFolderName: string;
   // Settings for the 'New Note' command
@@ -43,7 +43,7 @@ export interface PluginSettings {
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
-  apiKey: '',
+  encryptedApiKey: '',
   defaultModel: 'openrouter/auto',
   archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
   // New Note settings defaults

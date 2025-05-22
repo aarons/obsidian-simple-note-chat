@@ -326,26 +326,23 @@ export class OpenRouterService {
      */
     async * streamChatCompletion(
         messages: ChatMessage[],
-        settings: PluginSettings,
+        decryptedApiKey: string,
+        modelId: string,
         signal: AbortSignal
     ): AsyncGenerator<string> {
-        const { apiKey, defaultModel } = settings;
-
-        // Validate settings before proceeding
-        if (!apiKey) {
-            log.error('OpenRouterService: API key is missing.');
-            throw new Error("OpenRouter API key is not set");
+        // Validate parameters before proceeding
+        if (!decryptedApiKey) {
+            log.error('OpenRouterService: Decrypted API key is missing for stream.');
+            throw new Error("Decrypted OpenRouter API key is not provided");
         }
 
-        // Check if we should refresh the model cache in the background
-        this.backgroundRefreshIfNeeded(apiKey);
-        if (!defaultModel) {
-            log.error('OpenRouterService: Default model is not set.');
-            throw new Error("Default model is not set");
+        if (!modelId) {
+            log.error('OpenRouterService: Model ID is not set for stream.');
+            throw new Error("Model ID is not set for stream");
         }
 
         const requestBody = {
-            model: defaultModel,
+            model: modelId,
             messages: messages,
             stream: true,
         };
@@ -357,7 +354,7 @@ export class OpenRouterService {
             response = await fetch(`${OPENROUTER_API_URL}/chat/completions`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${apiKey}`,
+                    'Authorization': `Bearer ${decryptedApiKey}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(requestBody),

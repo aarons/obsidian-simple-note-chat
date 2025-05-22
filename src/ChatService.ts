@@ -175,10 +175,13 @@ export class ChatService {
                 return;
             }
 
+            // Call background refresh before starting the stream
+            this.openRouterService.backgroundRefreshIfNeeded(decryptedApiKey);
+
             const streamGenerator = this.openRouterService.streamChatCompletion(
                 messages,
                 decryptedApiKey,
-                settings.defaultModel,
+                settings.defaultModel, // modelId
                 abortController.signal
             );
 

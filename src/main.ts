@@ -26,6 +26,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	openRouterService: OpenRouterService;
 	editorHandler: EditorHandler;
 	fileSystemService: FileSystemService;
+	encryptionService: EncryptionService; // Added for direct access
 
 	private activeMarkdownView: MarkdownView | null = null;
 	private activeEditorKeyDownTarget: EventTarget | null = null;
@@ -42,14 +43,26 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		this.updateCommandMap();
 		this.lastSettingsHash = this.getSettingsHash();
 
+		this.encryptionService = new EncryptionService(this); // Initialize EncryptionService
+		// Ensure key is loaded/generated early
+		await this.encryptionService.initializeKey();
+
+
 		this.openRouterService = new OpenRouterService();
 
-		if (this.settings.apiKey) {
-			this.openRouterService.getCachedModels(this.settings.apiKey)
-				.then(() => log.debug('Models prefetched on plugin load'))
-				.catch(err => log.error('Error prefetching models:', err));
+		if (this.settings.encryptedApiKey) {
+			this.encryptionService.decrypt(this.settings.encryptedApiKey).then(decryptedApiKey => {
+				if (decryptedApiKey) {
+					this.openRouterService.getCachedModels(decryptedApiKey)
+						.then(() => log.debug('Models prefetched on plugin load'))
+						.catch(err => log.error('Error prefetching models:', err));
+				} else {
+					log.warn('Failed to decrypt API key for prefetching models.');
+				}
+			});
 		}
 		this.chatService = new ChatService(this, this.openRouterService);
+		// Pass the initialized encryptionService to FileSystemService
 		this.fileSystemService = new FileSystemService(this.app, this.openRouterService, this.encryptionService);
 		this.editorHandler = new EditorHandler(this.app, this);
 
