@@ -50,7 +50,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 				.catch(err => log.error('Error prefetching models:', err));
 		}
 		this.chatService = new ChatService(this, this.openRouterService);
-		this.fileSystemService = new FileSystemService(this.app, this.openRouterService);
+		this.fileSystemService = new FileSystemService(this.app, this.openRouterService, this.encryptionService);
 		this.editorHandler = new EditorHandler(this.app, this);
 
 		this.addSettingTab(new SimpleNoteChatSettingsTab(this.app, this));
