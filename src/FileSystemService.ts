@@ -1,16 +1,19 @@
 import { App, TFile, normalizePath, moment, Notice } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
 import { OpenRouterService } from './OpenRouterService';
+import { EncryptionService } from './EncryptionService';
 import { log } from './utils/logger';
 import { CHAT_BOUNDARY_MARKER } from './constants';
 
 export class FileSystemService {
     private app: App;
     private openRouterService: OpenRouterService;
+    private encryptionService: EncryptionService;
 
-    constructor(app: App, openRouterService: OpenRouterService) {
+    constructor(app: App, openRouterService: OpenRouterService, encryptionService: EncryptionService) {
         this.app = app;
         this.openRouterService = openRouterService;
+        this.encryptionService = encryptionService;
     }
 
     /**
@@ -75,27 +78,31 @@ export class FileSystemService {
                 const content = contentForTitleGeneration;
                 const titleModel = settings.llmRenameModel || settings.defaultModel;
 
-                if (!titleModel || !settings.apiKey) {
+                if (!titleModel || !settings.encryptedApiKey) {
                     new Notice("LLM Title generation skipped: API Key or Title/Default Model not set.");
                     log.warn("LLM Title generation skipped: API Key or Title/Default Model not set.");
                 } else if (!content.trim()) {
                     new Notice("LLM Title generation skipped: Note content is empty.");
                     log.warn("LLM Title generation skipped: Note content is empty.");
-                }
-                else {
-                    const wordLimit = settings.llmRenameWordLimit > 0 ? settings.llmRenameWordLimit : 10;
-                    const prompt = `Create a concise functional title for the following note content, under ${wordLimit} words.${settings.llmRenameIncludeEmojis ? ' You can include relevant emojis.' : ''} Respond ONLY with the title itself, no explanations or quotation marks. Note Content:\n\n${content}`;
-                    const messages: ChatMessage[] = [{ role: 'user', content: prompt }];
+                } else {
+                    const decryptedApiKey = await this.encryptionService.decrypt(settings.encryptedApiKey);
+                    if (!decryptedApiKey) {
+                        new Notice("LLM Title generation skipped: Failed to decrypt API Key.");
+                        log.warn("LLM Title generation skipped: Failed to decrypt API Key.");
+                    } else {
+                        const wordLimit = settings.llmRenameWordLimit > 0 ? settings.llmRenameWordLimit : 10;
+                        const prompt = `Create a concise functional title for the following note content, under ${wordLimit} words.${settings.llmRenameIncludeEmojis ? ' You can include relevant emojis.' : ''} Respond ONLY with the title itself, no explanations or quotation marks. Note Content:\n\n${content}`;
+                        const messages: ChatMessage[] = [{ role: 'user', content: prompt }];
 
-                    log.debug(`FileSystemService: Requesting LLM title with model ${titleModel}`);
-                    const llmTitle = await this.openRouterService.getChatCompletion(
-                        settings.apiKey,
-                        titleModel,
-                        messages,
-                        wordLimit * 5 // Estimate max tokens based on word limit
-                    );
+                        log.debug(`FileSystemService: Requesting LLM title with model ${titleModel}`);
+                        const llmTitle = await this.openRouterService.getChatCompletion(
+                            decryptedApiKey,
+                            titleModel,
+                            messages,
+                            wordLimit * 5 // Estimate max tokens based on word limit
+                        );
 
-                    if (llmTitle) {
+                        if (llmTitle) {
                         log.debug(`FileSystemService: Received LLM title: "${llmTitle}"`);
                         // Whitelist approach for sanitization
                         const basicWhitelistRegex = /[^a-zA-Z0-9 ]/g;
@@ -140,7 +147,8 @@ export class FileSystemService {
                         log.warn("FileSystemService: LLM title generation failed.");
                         new Notice("LLM title generation failed. Archiving with current name.");
                     }
-                }
+                  } // End of else (decryptedApiKey was valid)
+                } // End of else (content was not empty)
             }
 
             let targetPath = normalizePath(`${normalizedArchivePath}/${baseFilename}`);

@@ -1,6 +1,8 @@
 import { Notice, Plugin, Editor, TFile, EditorPosition } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
 import { OpenRouterService } from './OpenRouterService';
+import { EncryptionService } from './EncryptionService'; // Added for type hint
+import SimpleNoteChatPlugin from './main'; // Added for type hint
 import { log } from './utils/logger';
 import { CHAT_BOUNDARY_MARKER } from './constants';
 
@@ -154,10 +156,29 @@ export class ChatService {
         let lastPosition: EditorPosition | null = null; // Tracks the end of the last inserted chunk
 
         try {
-            // 4. Call API and Stream Response
+            // 4. Decrypt API Key and Call API
+            if (!settings.encryptedApiKey) {
+                new Notice('API Key is not set. Please configure it in settings.');
+                this.removeStatusMessageAtPos(editor, settings, actualStatusStartPos, actualStatusEndPos, 'API key missing.');
+                editor.setCursor(actualStatusStartPos);
+                this.activeStreams.delete(notePath);
+                return;
+            }
+
+            const decryptedApiKey = await (this.plugin as SimpleNoteChatPlugin).encryptionService.decrypt(settings.encryptedApiKey);
+
+            if (!decryptedApiKey) {
+                new Notice('Failed to decrypt API key. Please check plugin settings or re-enter the key.');
+                this.removeStatusMessageAtPos(editor, settings, actualStatusStartPos, actualStatusEndPos, 'API key decryption failed.');
+                editor.setCursor(actualStatusStartPos);
+                this.activeStreams.delete(notePath);
+                return;
+            }
+
             const streamGenerator = this.openRouterService.streamChatCompletion(
                 messages,
-                settings,
+                decryptedApiKey,
+                settings.defaultModel,
                 abortController.signal
             );
 
