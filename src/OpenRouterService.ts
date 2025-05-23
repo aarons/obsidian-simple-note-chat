@@ -1,7 +1,6 @@
-// src/OpenRouterService.ts
 import { requestUrl, Notice } from 'obsidian';
 import { OPENROUTER_API_URL } from './constants';
-import { PluginSettings, ChatMessage } from './types';
+import { ChatMessage } from './types';
 import { log } from './utils/logger';
 export interface OpenRouterModel {
     id: string;

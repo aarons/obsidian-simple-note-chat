@@ -33,7 +33,7 @@ export class ModelSelectorModal extends Modal {
 
 			const decryptedApiKey = await this.plugin.encryptionService.decrypt(encryptedApiKey);
 			if (!decryptedApiKey) {
-				contentEl.createEl('p', { text: 'Error: Failed to decrypt API Key. Please check plugin settings.' });
+				contentEl.createEl('p', { text: 'Error: Failed to decrypt the API Key. You may need to set the API key in Simple Chat settings.' });
 				notice.hide();
 				return;
 			}
