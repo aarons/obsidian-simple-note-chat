@@ -1,6 +1,7 @@
 import { Editor, MarkdownView, Notice, Plugin, moment } from 'obsidian';
 import { SimpleNoteChatSettingsTab } from './SettingsTab';
 import { ChatService } from './ChatService';
+import { EncryptionService } from './EncryptionService';
 import { OpenRouterService } from './OpenRouterService';
 import { EditorHandler } from './EditorHandler';
 import { FileSystemService } from './FileSystemService';
