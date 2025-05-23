@@ -136,11 +136,14 @@ dist
 .pnp.*
 .aider*
 
-# obsidian
+# obsidian testing
 test-vault/.obsidian/plugins/
 test-vault/.obsidian/workspace.json
 test-vault/.obsidian/data.json
 test-vault/*.md
 test-vault/*/*.md
+
+# obsidian testing v2
+TESTING_PLAN.md
 
 .roomodes

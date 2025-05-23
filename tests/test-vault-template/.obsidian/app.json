@@ -1,0 +1,6 @@
+{
+  "pluginEnabledStatus": {
+    "simple-note-chat": true
+  },
+  "enabledPlugins": ["simple-note-chat"]
+}

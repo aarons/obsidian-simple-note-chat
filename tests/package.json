@@ -1,0 +1,30 @@
+{
+  "name": "obsidian-simple-chat-tests",
+  "version": "1.0.0",
+  "description": "Test suite for Obsidian Simple Chat plugin",
+  "main": "harness/test-runner.ts",
+  "scripts": {
+    "test": "ts-node harness/test-runner.ts",
+    "test:watch": "nodemon --exec ts-node harness/test-runner.ts",
+    "test:commands": "ts-node harness/test-runner.ts --suite=commands",
+    "test:encryption": "ts-node harness/test-runner.ts --suite=encryption",
+    "mock-api": "ts-node harness/mock-api-server.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^16.11.6",
+    "@types/express": "^4.17.17",
+    "@types/chai": "^4.3.5",
+    "@types/fs-extra": "^11.0.0",
+    "typescript": "4.7.4",
+    "ts-node": "^10.9.1",
+    "nodemon": "^3.0.1",
+    "chai": "^4.3.7",
+    "express": "^4.18.2",
+    "puppeteer": "^21.0.0",
+    "fs-extra": "^11.0.0",
+    "electron": "^25.0.0"
+  },
+  "dependencies": {
+    "obsidian": "latest"
+  }
+}

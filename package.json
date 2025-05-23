@@ -6,7 +6,13 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "version": "node version-bump.mjs && git add manifest.json versions.json"
+    "version": "node version-bump.mjs && git add manifest.json versions.json",
+    "test": "cd tests && npm test",
+    "test:setup": "cd tests && npm install",
+    "test:commands": "cd tests && npm run test:commands",
+    "test:encryption": "cd tests && npm run test:encryption",
+    "test:all": "npm run build && cd tests && npm test",
+    "test:headless": "cd tests && npm test -- --headless"
   },
   "keywords": [
     "obsidian",
