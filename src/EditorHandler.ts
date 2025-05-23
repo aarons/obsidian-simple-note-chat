@@ -1,8 +1,8 @@
 import { App, Editor, MarkdownView, TFile, EditorPosition, Notice } from 'obsidian';
-import SimpleNoteChat from './main'; // Assuming main exports the class as default
+import SimpleNoteChat from './main';
 import { PluginSettings } from './types';
 import { log } from './utils/logger';
-import { ModelSelectorModal } from './ModelSelectorModal'; // Added import
+import { ModelSelectorModal } from './ModelSelectorModal';
 
 export class EditorHandler {
 	private app: App;
