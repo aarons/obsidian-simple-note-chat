@@ -146,7 +146,7 @@ export class EditorHandler {
 		// Show status *before* calling the potentially slow archive function if using model
 		if (settings.enableArchiveRenameLlm) {
 			const titleModel = settings.llmRenameModel || settings.defaultModel;
-			if (titleModel && settings.apiKey) {
+			if (titleModel && settings.encryptedApiKey) {
 				new Notice(`Calling ${titleModel} to generate title...`, 5000); // Temporary notice
 			} else {
 				log.warn("Archive rename with LLM enabled, but API key or model not set. Skipping notice.");

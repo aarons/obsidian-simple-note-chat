@@ -24,17 +24,24 @@ export class ModelSelectorModal extends Modal {
 		const notice = new Notice('Loading models…', 0); // Indefinite notice
 
 		try {
-			const apiKey = this.plugin.settings.apiKey;
-			if (!apiKey) {
+			const encryptedApiKey = this.plugin.settings.encryptedApiKey;
+			if (!encryptedApiKey) {
 				contentEl.createEl('p', { text: 'Error: OpenRouter API Key is not set in plugin settings.' });
 				notice.hide();
 				return;
 			}
 
+			const decryptedApiKey = await this.plugin.encryptionService.decrypt(encryptedApiKey);
+			if (!decryptedApiKey) {
+				contentEl.createEl('p', { text: 'Error: Failed to decrypt API Key. Please check plugin settings.' });
+				notice.hide();
+				return;
+			}
+
 			// Use cached models if available
-			let models = await this.ors.getCachedModels(apiKey);
+			let models = await this.ors.getCachedModels(decryptedApiKey);
 			if (models.length === 0) {
-				contentEl.createEl('p', { text: 'No models loaded. Check your API key or network connection.' });
+				contentEl.createEl('p', { text: 'No models loaded. Check your API key, network connection, or try refreshing the model list in settings.' });
 				notice.hide();
 				return;
 			}
