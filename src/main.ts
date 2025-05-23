@@ -62,7 +62,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 				}
 			});
 		}
-		this.chatService = new ChatService(this, this.openRouterService);
+		this.chatService = new ChatService(this, this.openRouterService, this.encryptionService);
 		// Pass the initialized encryptionService to FileSystemService
 		this.fileSystemService = new FileSystemService(this.app, this.openRouterService, this.encryptionService);
 		this.editorHandler = new EditorHandler(this.app, this);

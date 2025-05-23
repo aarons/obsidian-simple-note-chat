@@ -341,6 +341,9 @@ export class OpenRouterService {
             throw new Error("Model ID is not set for stream");
         }
 
+        // Check if we should refresh the model cache in the background
+        this.backgroundRefreshIfNeeded(decryptedApiKey);
+
         const requestBody = {
             model: modelId,
             messages: messages,

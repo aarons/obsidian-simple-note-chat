@@ -1,8 +1,7 @@
 import { Notice, Plugin, Editor, TFile, EditorPosition } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
 import { OpenRouterService } from './OpenRouterService';
-import { EncryptionService } from './EncryptionService'; // Added for type hint
-import SimpleNoteChatPlugin from './main'; // Added for type hint
+import { EncryptionService } from './EncryptionService';
 import { log } from './utils/logger';
 import { CHAT_BOUNDARY_MARKER } from './constants';
 
@@ -15,11 +14,13 @@ interface ActiveStreamInfo {
 export class ChatService {
     private plugin: Plugin;
     private openRouterService: OpenRouterService;
+    private encryptionService: EncryptionService;
     private activeStreams: Map<string, ActiveStreamInfo> = new Map(); // Key: note path
 
-    constructor(plugin: Plugin, openRouterService: OpenRouterService) {
+    constructor(plugin: Plugin, openRouterService: OpenRouterService, encryptionService: EncryptionService) {
         this.plugin = plugin;
         this.openRouterService = openRouterService;
+        this.encryptionService = encryptionService;
     }
 
     /**
@@ -165,7 +166,7 @@ export class ChatService {
                 return;
             }
 
-            const decryptedApiKey = await (this.plugin as SimpleNoteChatPlugin).encryptionService.decrypt(settings.encryptedApiKey);
+            const decryptedApiKey = await this.encryptionService.decrypt(settings.encryptedApiKey);
 
             if (!decryptedApiKey) {
                 new Notice('Failed to decrypt API key. Please check plugin settings or re-enter the key.');
@@ -174,9 +175,6 @@ export class ChatService {
                 this.activeStreams.delete(notePath);
                 return;
             }
-
-            // Call background refresh before starting the stream
-            this.openRouterService.backgroundRefreshIfNeeded(decryptedApiKey);
 
             const streamGenerator = this.openRouterService.streamChatCompletion(
                 messages,
