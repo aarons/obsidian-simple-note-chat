@@ -3,6 +3,7 @@ import SimpleNoteChatPlugin from './main';
 import { OpenRouterService, OpenRouterModel, FormattedModelInfo, ModelSortOption } from './OpenRouterService';
 import { PluginSettings } from './types';
 import { log, initializeLogger } from './utils/logger';
+import { isEncrypted } from './utils/encryption';
 import {
 	DEFAULT_ARCHIVE_FOLDER,
 	DEFAULT_NN_TITLE_FORMAT,
@@ -38,7 +39,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('OpenRouter API Key')
-			.setDesc('Enter your OpenRouter API key; you can get one from openrouter.ai')
+			.setDesc('Enter your OpenRouter API key; you can get one from openrouter.ai. Your API key is encrypted before being stored on disk.')
 			.addText(text => {
 				text
 					.setPlaceholder('sk-or-v1-...')
@@ -48,7 +49,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 						if (this.plugin.settings.apiKey !== trimmedValue) {
 							this.plugin.settings.apiKey = trimmedValue;
 							await this.plugin.saveSettings();
-							new Notice('API Key saved. Refreshing models...');
+							new Notice('API Key saved securely. Refreshing models...');
 							this.availableModels = [];
 							this.populateModelDropdowns();
 							await this.fetchAndStoreModels(false);

@@ -406,7 +406,7 @@ export class OpenRouterService {
                     throw new DOMException(signal.reason || 'Chat cancelled', 'AbortError');
                  }
 
-                let readResult: ReadableStreamReadResult<string>;
+                let readResult: { done: boolean; value?: string };
                 try {
                     readResult = await reader.read();
                     done = readResult.done;

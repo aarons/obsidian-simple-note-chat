@@ -6,6 +6,7 @@ import { EditorHandler } from './EditorHandler';
 import { FileSystemService } from './FileSystemService';
 import { PluginSettings, DEFAULT_SETTINGS, LogLevel } from './types';
 import { log, initializeLogger } from './utils/logger';
+import { encryptApiKey, decryptApiKey } from './utils/encryption';
 import {
 	DEFAULT_NN_TITLE_FORMAT,
 	CHAT_COMMAND_DEFAULT,
@@ -213,12 +214,26 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const loadedData = await this.loadData();
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
 		this.settings.chatSeparator = CHAT_SEPARATOR; // Ensure the constant is always used
+
+		// Decrypt the API key if it exists and is encrypted
+		if (this.settings.apiKey) {
+			this.settings.apiKey = decryptApiKey(this.settings.apiKey);
+		}
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
+		// Create a copy of settings for saving with encrypted API key
+		const settingsToSave = { ...this.settings };
+
+		// Encrypt the API key before saving
+		if (settingsToSave.apiKey) {
+			settingsToSave.apiKey = encryptApiKey(settingsToSave.apiKey);
+		}
+
+		await this.saveData(settingsToSave);
 
 		// Update command map when settings change
 		this.updateCommandMap();
