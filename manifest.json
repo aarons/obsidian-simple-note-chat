@@ -1,7 +1,7 @@
 {
 	"id": "simple-note-chat",
 	"name": "Simple Note Chat",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"minAppVersion": "1.0.0",
 	"description": "Chat with AIs using command phrases in a note. This is a mobile-friendly way to talk to LLMs without needing keyboard shortcuts or buttons. It works great on desktop too.",
 	"author": "Aaron Scott",
