@@ -144,3 +144,4 @@ test-vault/*.md
 test-vault/*/*.md
 
 .roomodes
+main.js
