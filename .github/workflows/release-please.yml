@@ -21,5 +21,9 @@ jobs:
           token: ${{ secrets.PAT_FOR_RELEASE_PLEASE }}
           # this is a built-in strategy in release-please, see "Action Inputs"
           # for more options
-          release-type: simple
+          release-type: node
+          extra-files: |
+            {
+              "manifest.json": "json:version"
+            }
 
