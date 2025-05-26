@@ -4,6 +4,7 @@
       "release-type": "node",
       "include-component-in-tag": false,
       "include-v-in-tag": false,
+      "release-name-pattern": "${version}",
       "tag-separator": "",
       "extra-files": [
         {
