@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/aarons/obsidian-simple-chat/compare/1.2.0...1.2.1) (2025-05-26)
+
+
+### Bug Fixes
+
+* **ci:** configure release-please to omit 'v' prefix from version tags ([63c0798](https://github.com/aarons/obsidian-simple-chat/commit/63c07988a11eaa999c72319358c84c06600849ce))
+
 ## [1.2.0](https://github.com/aarons/obsidian-simple-chat/compare/v1.1.0...v1.2.0) (2025-05-26)
 
 
