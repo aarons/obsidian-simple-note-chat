@@ -3,6 +3,7 @@
     ".": {
       "release-type": "node",
       "include-component-in-tag": false,
+      "include-v-in-tag": false,
       "tag-separator": "",
       "extra-files": [
         {
