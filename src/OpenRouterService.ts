@@ -406,7 +406,7 @@ export class OpenRouterService {
                     throw new DOMException(signal.reason || 'Chat cancelled', 'AbortError');
                  }
 
-                let readResult: { done: boolean; value?: string };
+                let readResult; // Allow TypeScript to infer the type from the assignment below
                 try {
                     readResult = await reader.read();
                     done = readResult.done;

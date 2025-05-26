@@ -147,3 +147,4 @@ test-vault/*/*.md
 TESTING_PLAN.md
 tests/test-report.json
 .roomodes
+main.js
