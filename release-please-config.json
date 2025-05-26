@@ -2,6 +2,8 @@
   "packages": {
     ".": {
       "release-type": "node",
+      "include-component-in-tag": false,
+      "tag-separator": "",
       "extra-files": [
         {
           "type": "json",
