@@ -155,8 +155,9 @@ export class FileSystemService {
                 if (editor) {
                     editor.setValue(contentAboveMarker);
                     log.debug(`Modified original file ${file.path} using Editor API to retain content above marker.`);
-                } else if (!editor) {
-                    log.debug(`Marker found in ${file.path} but no editor instance provided (e.g., archive called via command palette). Original file will not be trimmed.`);
+                } else { // No editor instance
+                    await this.app.vault.process(file, (_data) => contentAboveMarker);
+                    log.debug(`Modified original file ${file.path} using Vault.process to retain content above marker.`);
                 }
             } else {
                 // move the entire file to the archive
