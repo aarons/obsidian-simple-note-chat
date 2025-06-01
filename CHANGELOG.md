@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/aarons/obsidian-simple-chat/compare/1.2.1...1.2.2) (2025-06-01)
+
+
+### Bug Fixes
+
+* important doc and manifest updates ([3bef0fb](https://github.com/aarons/obsidian-simple-chat/commit/3bef0fbcef01c084ad7a22862c9239e53a56ccdc))
+
 ## [1.2.1](https://github.com/aarons/obsidian-simple-chat/compare/1.2.0...1.2.1) (2025-05-26)
 
 
