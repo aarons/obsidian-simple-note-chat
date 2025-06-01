@@ -1,4 +1,4 @@
-import { Editor, MarkdownView, Notice, Plugin, moment } from 'obsidian';
+import { Editor, MarkdownView, Notice, Plugin, moment, normalizePath } from 'obsidian';
 import { SimpleNoteChatSettingsTab } from './SettingsTab';
 import { ChatService } from './ChatService';
 import { OpenRouterService } from './OpenRouterService';
@@ -106,16 +106,27 @@ export default class SimpleNoteChatPlugin extends Plugin {
 						targetFolder = this.settings.archiveFolderName;
 					}
 
+					// Normalize the targetFolder path
+					if (targetFolder && targetFolder !== '/') {
+						targetFolder = normalizePath(targetFolder);
+					} else if (targetFolder === '') { // Handle case where custom path might be empty
+						targetFolder = '/'; // Default to root if empty
+					}
+
+
 					// Ensure target folder exists
-					const normalizedCheckPath = targetFolder.endsWith('/') && targetFolder.length > 1 ? targetFolder.slice(0, -1) : targetFolder;
-					if (targetFolder !== '/' && (this.app.vault.getAbstractFileByPath(normalizedCheckPath) === null)) {
-						try {
-							await this.app.vault.createFolder(targetFolder);
-							log.debug(`Created target folder: ${targetFolder}`);
-						} catch (folderError) {
-							log.error(`Failed to create target folder "${targetFolder}":`, folderError);
-							new Notice(`Failed to create folder "${targetFolder}". Using vault root.`);
-							targetFolder = '/'; // Fallback to root on folder creation error
+					// For root, no check/creation is needed. For others, check and create.
+					if (targetFolder !== '/') {
+						const folderExists = this.app.vault.getAbstractFileByPath(targetFolder) !== null;
+						if (!folderExists) {
+							try {
+								await this.app.vault.createFolder(targetFolder);
+								log.debug(`Created target folder: ${targetFolder}`);
+							} catch (folderError) {
+								log.error(`Failed to create target folder "${targetFolder}":`, folderError);
+								new Notice(`Failed to create folder "${targetFolder}". Using vault root.`);
+								targetFolder = '/'; // Fallback to root on folder creation error
+							}
 						}
 					}
 
