@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.3](https://github.com/aarons/obsidian-simple-note-chat/compare/1.2.2...1.2.3) (2025-06-01)
+
+
+### Bug Fixes
+
+* **archive:** correctly modify original file via vault.process and use vault.getAbstractFileByPath for file checks ([70ec6e8](https://github.com/aarons/obsidian-simple-note-chat/commit/70ec6e86dd313ae1f1ccdc7cd0fe74c10d65c11b))
+* improve target folder path normalization and handling ([15cf212](https://github.com/aarons/obsidian-simple-note-chat/commit/15cf21277cb2ad4afe8f0e979ddfad3df0568d72))
+* minor validation test for release please automation ([fd65c6f](https://github.com/aarons/obsidian-simple-note-chat/commit/fd65c6f7ca0e429e58b99e9d1e58f8465da0fd1c))
+
 ## [1.2.2](https://github.com/aarons/obsidian-simple-chat/compare/1.2.1...1.2.2) (2025-06-01)
 
 
