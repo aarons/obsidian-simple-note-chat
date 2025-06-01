@@ -108,7 +108,8 @@ export default class SimpleNoteChatPlugin extends Plugin {
 					}
 
 					// Ensure target folder exists
-					if (targetFolder !== '/' && !(await this.app.vault.adapter.exists(targetFolder))) {
+					const normalizedCheckPath = targetFolder.endsWith('/') && targetFolder.length > 1 ? targetFolder.slice(0, -1) : targetFolder;
+					if (targetFolder !== '/' && (this.app.vault.getAbstractFileByPath(normalizedCheckPath) === null)) {
 						try {
 							await this.app.vault.createFolder(targetFolder);
 							log.debug(`Created target folder: ${targetFolder}`);
