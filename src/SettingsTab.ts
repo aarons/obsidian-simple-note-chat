@@ -31,15 +31,14 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		containerEl.createEl('h2', { text: 'Simple Note Chat - Settings' });
 
 		// ========== CONNECTIONS ==========
-		containerEl.createEl('h3', { text: 'Connections', cls: 'snc-section-header' });
+		new Setting(containerEl).setName('Connections').setHeading();
 		containerEl.createEl('p', { text: 'Configure connection to LLM providers.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
-			.setName('OpenRouter API Key')
-			.setDesc('Enter your OpenRouter API key; you can get one from openrouter.ai. Your API key is encrypted before being stored on disk.')
+			.setName('OpenRouter API key')
+			.setDesc('Enter your OpenRouter API key; you can get one from openrouter.ai')
 			.addText(text => {
 				text
 					.setPlaceholder('sk-or-v1-...')
@@ -49,7 +48,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 						if (this.plugin.settings.apiKey !== trimmedValue) {
 							this.plugin.settings.apiKey = trimmedValue;
 							await this.plugin.saveSettings();
-							new Notice('API Key saved securely. Refreshing models...');
+							new Notice('API key saved. Refreshing models...');
 							this.availableModels = [];
 							this.populateModelDropdowns();
 							await this.fetchAndStoreModels(false);
@@ -59,20 +58,20 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			});
 
 		// ========== MODEL MANAGEMENT ==========
-		containerEl.createEl('h3', { text: 'Model Management', cls: 'snc-section-header' });
+		new Setting(containerEl).setName('Model management').setHeading();
 		containerEl.createEl('p', { text: 'Configure model selection and sorting options.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
-			.setName('Model Sorting')
+			.setName('Model sorting')
 			.setDesc('Choose how to sort the OpenRouter model lists in the dropdowns below.')
 			.addDropdown(dropdown => {
 				// Add options based on the ModelSortOption enum
 				dropdown
 					.addOption(ModelSortOption.ALPHABETICAL, 'Alphabetical')
-					.addOption(ModelSortOption.PROMPT_PRICE_ASC, 'Prompt Price: Ascending')
-					.addOption(ModelSortOption.PROMPT_PRICE_DESC, 'Prompt Price: Descending')
-					.addOption(ModelSortOption.COMPLETION_PRICE_ASC, 'Completion Price: Ascending')
-					.addOption(ModelSortOption.COMPLETION_PRICE_DESC, 'Completion Price: Descending')
+					.addOption(ModelSortOption.PROMPT_PRICE_ASC, 'Prompt price: ascending')
+					.addOption(ModelSortOption.PROMPT_PRICE_DESC, 'Prompt price: descending')
+					.addOption(ModelSortOption.COMPLETION_PRICE_ASC, 'Completion price: ascending')
+					.addOption(ModelSortOption.COMPLETION_PRICE_DESC, 'Completion price: descending')
 					// Set the current value from settings
 					.setValue(this.plugin.settings.modelSortOrder)
 					.onChange(async (value) => {
@@ -92,7 +91,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			});
 
 		const modelSetting = new Setting(containerEl)
-			.setName('Chat Model')
+			.setName('Chat model')
 			.setDesc('Select the AI model to use for new chats.');
 
 		modelSetting.addDropdown(dropdown => {
@@ -106,21 +105,21 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		});
 
 		new Setting(containerEl)
-		.setName('Refresh Model List')
+		.setName('Refresh model list')
 		.setDesc('Fetch the latest available models from OpenRouter. The list automatically refreshes once every 24 hours in the background, as well as when the plugin first starts with Obsidian; so the list should stay pretty current on its own.')
 		.addButton(button => button
-			.setButtonText('Refresh Models')
+			.setButtonText('Refresh models')
 			.setCta()
 			.onClick(async () => {
 				await this.fetchAndStoreModels(true);
 			}));
 
 		// ========== COMMAND PHRASES ==========
-		containerEl.createEl('h3', { text: 'Command Phrases', cls: 'snc-section-header' });
+		new Setting(containerEl).setName('Command phrases').setHeading();
 		containerEl.createEl('p', { text: 'The plugin will look for these command phrases in order to take action. Phrases are recognzied when entered on their own line, and will activate after you hit the <enter> key. Deleting the phrase will disable it from being recognized, although the hotkey (if set) will still work.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
-			.setName('Chat Phrase')
+			.setName('Chat phrase')
 			.setDesc(`This phrase will call the AI model and get a response. Previous conversation in the note is included and parsed into user and assistant messages, so the model can clearly follow the conversation. Default: (${CHAT_COMMAND_DEFAULT})`)
 			.addText(text => text
 				.setPlaceholder(CHAT_COMMAND_DEFAULT)
@@ -133,7 +132,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Change Model Phrase')
+			.setName('Change model phrase')
 			.setDesc(`This will open an AI model selection dialog, to enable quickly changing the active model used for chats. Default: (${MODEL_COMMAND_DEFAULT}).`)
 			.addText(t => t
 				.setPlaceholder(MODEL_COMMAND_DEFAULT)
@@ -145,8 +144,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-		.setName('New Chat Phrase')
-		.setDesc(`This quickly creates a new chat note, for when you want to start a new chat from anywhere in your vault. By default, the chat note is created in the archive directory with the current date and time. It's behavior can be configured in the New Note Settings section below. Default: (${NEW_CHAT_COMMAND_DEFAULT}).`)
+		.setName('New chat phrase')
+		.setDesc(`This quickly creates a new chat note, for when you want to start a new chat from anywhere in your vault. By default, the chat note is created in the archive directory with the current date and time. It's behavior can be configured in the New note settings section below. Default: (${NEW_CHAT_COMMAND_DEFAULT}).`)
 		.addText(text => text
 			.setPlaceholder(NEW_CHAT_COMMAND_DEFAULT)
 			.setValue(this.plugin.settings.newChatCommandPhrase)
@@ -159,7 +158,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			}));
 
 		new Setting(containerEl)
-			.setName('Archive Phrase')
+			.setName('Archive phrase')
 			.setDesc(`This phrase, when typed on its own line, will archive the current chat note. Leave blank to disable this phrase trigger (command still available via hotkey/palette). Default: (${ARCHIVE_COMMAND_DEFAULT}).`)
 			.addText(text => text
 				.setPlaceholder(ARCHIVE_COMMAND_DEFAULT)
@@ -173,11 +172,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		// ========== BEHAVIOR SETTINGS ==========
-		containerEl.createEl('h3', { text: 'Behavior', cls: 'snc-section-header' });
+		new Setting(containerEl).setName('Behavior').setHeading();
 		containerEl.createEl('p', { text: 'Configure how the plugin reacts to user input.', cls: 'snc-setting-section-description' });
 
 		const spacebarDelaySetting = new Setting(containerEl)
-			.setName('Spacebar Detection Delay')
+			.setName('Spacebar detection delay')
 			.setDesc('Wait time in seconds before acting after spacebar detection (e.g., 0.5 for half a second).')
 			.addText(text => text
 				.setPlaceholder('0.5')
@@ -202,7 +201,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName('Enable Spacebar Command Detection')
+			.setName('Enable spacebar command detection')
 			.setDesc('Detect command phrases after pressing spacebar. Defaults to 0.5 seconds wait before acting (configurable above).')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableSpacebarDetection)
@@ -218,11 +217,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 
 		// ========== ARCHIVE SETTINGS ==========
-		containerEl.createEl('h3', { text: 'Archiving', cls: 'snc-section-header' });
+		new Setting(containerEl).setName('Archiving').setHeading();
 		containerEl.createEl('p', { text: 'Configure how notes are handled when using the Archive command phrase.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
-			.setName('Archive Folder')
+			.setName('Archive folder')
 			.setDesc('Move notes to this directory when the archive command is used.')
 			.addText(text => text
 				.setPlaceholder(DEFAULT_ARCHIVE_FOLDER)
@@ -237,7 +236,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Rename Note on Archive (Date/Time)')
+			.setName('Rename note on archive (date/time)')
 			.setDesc('When this is enabled, the archived note will be renamed using the current date and time.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableArchiveRenameDate)
@@ -253,8 +252,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		// Store the setting instance to control its visibility
 		const dateTimeFormatSetting = new Setting(containerEl)
-			.setName('Date and Time Format')
-			.setDesc('This uses moment.js for specifying the date and time format to use on the arhived note. Default: (YYYY-MM-DD-HH-mm)')
+			.setName('Date and time format')
+			.setDesc('This uses moment.js for specifying the date and time format to use on the archived note. Default: (YYYY-MM-DD-HH-mm)')
 			.addText(text => text
 				.setPlaceholder(DEFAULT_NN_TITLE_FORMAT)
 				.setValue(this.plugin.settings.archiveRenameDateFormat)
@@ -273,7 +272,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		dateTimeFormatSetting.settingEl.style.display = this.plugin.settings.enableArchiveRenameDate ? 'flex' : 'none';
 
 		new Setting(containerEl)
-			.setName('Generate a Title')
+			.setName('Generate a title')
 			.setDesc(`This will generate a title based on the note's content. This is added after the date if both are enabled.`)
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableArchiveRenameLlm)
@@ -288,11 +287,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		const llmSettingsContainer = containerEl.createDiv('llm-archive-rename-settings');
 
 		new Setting(llmSettingsContainer)
-			.setName('Note Title Model')
+			.setName('Note title model')
 			.setDesc('Choose which model will generate the note title. By default, it uses the same model as your chat conversations.')
 			.addDropdown(dropdown => {
 				this.llmModelDropdown = dropdown; // Assign to the class property
-				dropdown.addOption('', 'Use Current Chat Model');
+				dropdown.addOption('', 'Use current chat model');
 				dropdown.setValue(this.plugin.settings.llmRenameModel);
 				dropdown.onChange(async (value) => {
 					this.plugin.settings.llmRenameModel = value;
@@ -301,7 +300,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			});
 
 		new Setting(llmSettingsContainer)
-			.setName('Title Word Limit')
+			.setName('Title word limit')
 			.setDesc('The maximum number of words allowed for the generated title.')
 			.addText(text => text
 				.setPlaceholder('3')
@@ -325,7 +324,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			});
 
 		new Setting(llmSettingsContainer)
-			.setName('Allow Emojis in LLM Title?')
+			.setName('Allow emojis in LLM title?')
 			.setDesc(`For those that like the occasional flair. This feature works on MacOS, I'm unsure about: iOS, Android, Linux, and Windows. Note that this doesn't actually ask for emojis; so you will only see them if the model likes to use them.`)
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.llmRenameIncludeEmojis)
@@ -339,7 +338,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 
 				// ========== NEW NOTE SETTINGS ==========
-		containerEl.createEl('h3', { text: 'New Chat Notes', cls: 'snc-section-header' });
+		new Setting(containerEl).setName('New chat notes').setHeading();
 		containerEl.createEl('p', { text: 'Configure how new chat notes are created and where they are placed in your vault.', cls: 'snc-setting-section-description' });
 		this.newNotePreviewEl = containerEl.createEl('p', { cls: 'snc-setting-section-description' });
 
@@ -347,13 +346,13 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		this.updateNewNotePathPreview();
 
 		new Setting(containerEl)
-			.setName('New Note Folder')
+			.setName('New note folder')
 			.setDesc('Choose where new chat notes should be created.')
 			.addDropdown(dropdown => {
 				dropdown
-					.addOption('archive', 'Archive Folder')
-					.addOption('current', 'Current Folder')
-					.addOption('custom', 'Custom Folder')
+					.addOption('archive', 'Archive folder')
+					.addOption('current', 'Current folder')
+					.addOption('custom', 'Custom folder')
 					.setValue(this.plugin.settings.newNoteLocation)
 					.onChange(async (value) => {
 						if (value === 'current' || value === 'archive' || value === 'custom') {
@@ -371,7 +370,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		// --- Custom Folder Setting (only shown when location is 'custom') ---
 		const customFolderSetting = new Setting(containerEl)
-			.setName('Customer Folder')
+			.setName('Custom folder')
 			.setDesc(`Which folder should new chat notes be placed in? If the folder doesn't exist then it will get created when the next chat note is created.`)
 			.addText(text => text
 				.setPlaceholder('e.g., chats/')
@@ -390,7 +389,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		// --- New Note Date & Time ---
 		new Setting(containerEl) // Store the setting instance
-			.setName('Optional Date & Time')
+			.setName('Optional date & time')
 			.setDesc('Uses moment.js format for date/time in the title. Leave empty if no date/time is desired. Default: (YYYY-MM-DD-HH-mm)')
 			.addText(text => { text
 				.setPlaceholder('YYYY-MM-DD-HH-mm')
@@ -404,7 +403,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		// --- New Note Title Prefix ---
 		new Setting(containerEl) // Store the setting instance
-		.setName('Optional Prefix')
+		.setName('Optional prefix')
 		.setDesc('Text to add before the date/time in the new chat note title.')
 		.addText(text => { text
 			.setPlaceholder('e.g., Chat-')
@@ -418,7 +417,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		// --- New Note Title Suffix ---
 		new Setting(containerEl) // Store the setting instance
-			.setName('Optional Suffix')
+			.setName('Optional suffix')
 			.setDesc('Text to add after the date/time in the new chat note title.')
 			.addText(text => { text
 				.setPlaceholder('e.g., -Meeting')
@@ -435,21 +434,21 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		// Fetch models and populate dropdowns on display (handles missing API key internally)
 		this.fetchAndStoreModels(false);
-		containerEl.createEl('h3', { text: 'Logging', cls: 'snc-section-header' });
+		new Setting(containerEl).setName('Logging').setHeading();
 		containerEl.createEl('p', {
 			text: 'Enable logging to help troubleshoot issues. Logs will appear in the developer console (View -> Toggle Developer Tools -> Console).',
 			cls: 'snc-setting-section-description'
 		});
 
 		const loggingLevelSetting = new Setting(containerEl)
-			.setName('Logging Level')
+			.setName('Logging level')
 			.setDesc('Select the level of detail for logs.')
 			.addDropdown(dropdown => {
 				dropdown
-					.addOption(LogLevel.ERROR, 'Errors Only')
-					.addOption(LogLevel.WARN, 'Warnings & Errors')
-					.addOption(LogLevel.INFO, 'Info, Warnings & Errors')
-					.addOption(LogLevel.DEBUG, 'Debug (All Logs)')
+					.addOption(LogLevel.ERROR, 'Errors only')
+					.addOption(LogLevel.WARN, 'Warnings & errors')
+					.addOption(LogLevel.INFO, 'Info, warnings & errors')
+					.addOption(LogLevel.DEBUG, 'Debug (all logs)')
 					.setValue(this.plugin.settings.logLevel)
 					.onChange(async (value) => {
 						if (Object.values(LogLevel).includes(value as LogLevel)) {
@@ -465,7 +464,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName('Enable Logging')
+			.setName('Enable logging')
 			.setDesc('Turn on logging to the developer console.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableLogging)
@@ -506,7 +505,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		dropdown.selectEl.empty();
 
 		if (!this.plugin.settings.apiKey) {
-			dropdown.addOption('', noApiKeyText);
+			dropdown.addOption('', 'Enter API key to load models'); // Assuming noApiKeyText was 'Enter API Key to load models'
 			dropdown.setDisabled(true);
 			dropdown.setValue('');
 			return;
@@ -554,7 +553,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				formattedDate = moment().format(format);
 			} catch (e) {
 				log.warn("SettingsTab: Invalid moment format string for title preview:", format, e);
-				return { filename: 'Invalid Date Format', error: true };
+				return { filename: 'Invalid date format', error: true };
 			}
 		}
 
@@ -563,7 +562,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		// Basic check for potentially invalid characters in filename
 		if (/[\\/:]/.test(filename)) {
 			log.warn("SettingsTab: Generated filename contains potentially invalid characters:", filename);
-			return { filename: 'Invalid Characters in Filename', error: true };
+			return { filename: 'Invalid characters in filename', error: true };
 		}
 
 		return { filename: filename, error: false };
@@ -649,15 +648,15 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			this.modelDropdown,
 			formattedModels,
 			'defaultModel',
-			'Enter API Key to load models',
+			'Enter API key to load models',
 			'-- Select a model --'
 		);
 		this.populateModelDropdown(
 			this.llmModelDropdown,
 			formattedModels,
 			'llmRenameModel',
-			'Enter API Key to load models',
-			'Use Default Chat Model'
+			'Enter API key to load models',
+			'Use default chat model'
 		);
 	}
 
