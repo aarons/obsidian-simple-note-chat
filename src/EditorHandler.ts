@@ -158,7 +158,8 @@ export class EditorHandler {
 				const newPath = await this.plugin.fileSystemService.moveFileToArchive(
 					file,
 					settings.archiveFolderName,
-					settings
+					settings,
+					editor // Pass the editor instance
 				);
 				if (newPath) {
 					// Parse new name and folder from the returned path

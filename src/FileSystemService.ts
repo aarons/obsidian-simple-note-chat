@@ -1,4 +1,4 @@
-import { App, TFile, normalizePath, moment, Notice } from 'obsidian';
+import { App, TFile, normalizePath, moment, Notice, Editor } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
 import { OpenRouterService } from './OpenRouterService';
 import { log } from './utils/logger';
@@ -18,9 +18,10 @@ export class FileSystemService {
      * @param file The file to move.
      * @param archiveFolderName The relative path of the archive folder from the vault root.
      * @param settings The plugin settings containing archive and LLM options.
+     * @param editor Optional Editor instance if the file is currently active in an editor.
      * @returns The new path of the archived file, or null if an error occurred.
      */
-    async moveFileToArchive(file: TFile, archiveFolderName: string, settings: PluginSettings): Promise<string | null> {
+    async moveFileToArchive(file: TFile, archiveFolderName: string, settings: PluginSettings, editor?: Editor): Promise<string | null> {
         try {
             const originalContent = await this.app.vault.read(file);
 
@@ -49,7 +50,7 @@ export class FileSystemService {
 
             const normalizedArchivePath = normalizePath(archiveFolderName);
 
-            const folderExists = await this.app.vault.adapter.exists(normalizedArchivePath);
+            const folderExists = (this.app.vault.getAbstractFileByPath(normalizedArchivePath) !== null);
             if (!folderExists) {
                 try {
                     await this.app.vault.createFolder(normalizedArchivePath);
@@ -145,16 +146,20 @@ export class FileSystemService {
 
             let targetPath = normalizePath(`${normalizedArchivePath}/${baseFilename}`);
             targetPath = await this.findAvailablePath(normalizedArchivePath, baseFilename);
-
+            // Check if the boundary marker was present, if so we'll keep the content above the marker
+            // and only save content below it to the archived note
             if (markerExists) {
-                // Create new file with content below marker
                 await this.app.vault.create(targetPath, contentToArchive);
                 log.debug(`Created archive file at ${targetPath} with content below marker.`);
                 // Modify original file to keep content above marker
-                await this.app.vault.modify(file, contentAboveMarker);
-                log.debug(`Modified original file ${file.path} to retain content above marker.`);
+                if (editor) {
+                    editor.setValue(contentAboveMarker);
+                    log.debug(`Modified original file ${file.path} using Editor API to retain content above marker.`);
+                } else if (!editor) {
+                    log.debug(`Marker found in ${file.path} but no editor instance provided (e.g., archive called via command palette). Original file will not be trimmed.`);
+                }
             } else {
-                // Original behavior: move the entire file
+                // move the entire file to the archive
                 await this.app.fileManager.renameFile(file, targetPath);
                 log.debug(`Archived entire file ${file.path} to ${targetPath}`);
             }
@@ -162,8 +167,7 @@ export class FileSystemService {
 
         } catch (error) {
             log.error(`Error archiving file "${file.path}" to folder "${archiveFolderName}":`, error);
-            // Optionally notify the user here
-            return null; // Indicate failure
+            return null;
         }
     }
 
@@ -181,7 +185,7 @@ export class FileSystemService {
         const targetBaseName = targetBaseNameMatch ? targetBaseNameMatch[1] : baseFilename;
         const targetExtension = targetBaseNameMatch && targetBaseNameMatch[2] ? `.${targetBaseNameMatch[2]}` : '';
 
-        while (await this.app.vault.adapter.exists(targetPath)) {
+        while (await this.app.vault.getAbstractFileByPath(targetPath) !== null) {
             counter++;
             targetPath = normalizePath(`${folderPath}/${targetBaseName} ${counter}${targetExtension}`);
         }
