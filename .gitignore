@@ -145,5 +145,5 @@ test-vault/*/*.md
 
 # obsidian testing v2
 TESTING_PLAN.md
-
+tests/test-report.json
 .roomodes
