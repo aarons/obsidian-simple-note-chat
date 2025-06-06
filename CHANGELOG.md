@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.6](https://github.com/aarons/obsidian-simple-note-chat/compare/1.2.5...1.2.6) (2025-06-06)
+
+
+### Bug Fixes
+
+* attempt to fix issue with CI release title naming ([4e9a25a](https://github.com/aarons/obsidian-simple-note-chat/commit/4e9a25ac816fcb03d824721a63080e47fc80f332))
+* potentially fix tag_name reference and add debug statement ([2488cb1](https://github.com/aarons/obsidian-simple-note-chat/commit/2488cb17b6144bd0054d800d312b031c67b8f031))
+
 ## [1.2.5](https://github.com/aarons/obsidian-simple-note-chat/compare/1.2.4...1.2.5) (2025-06-06)
 
 
