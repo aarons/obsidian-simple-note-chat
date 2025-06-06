@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.7](https://github.com/aarons/obsidian-simple-note-chat/compare/1.2.6...1.2.7) (2025-06-06)
+
+
+### Bug Fixes
+
+* trigger github actions release flow ([30883be](https://github.com/aarons/obsidian-simple-note-chat/commit/30883be180e9eac5b4f82070c4db6e7c8d1edd96))
+
 ## [1.2.6](https://github.com/aarons/obsidian-simple-note-chat/compare/1.2.5...1.2.6) (2025-06-06)
 
 
