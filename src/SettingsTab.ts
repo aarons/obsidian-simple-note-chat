@@ -208,11 +208,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					this.plugin.settings.enableSpacebarDetection = value;
 					await this.plugin.saveSettings();
 					new Notice(`Spacebar command detection ${value ? 'enabled' : 'disabled'}.`);
-					spacebarDelaySetting.settingEl.style.display = value ? 'flex' : 'none';
+					spacebarDelaySetting.settingEl.toggleClass('snc-hidden', !value);
 				}));
 
 		// Set initial visibility of the delay setting
-		spacebarDelaySetting.settingEl.style.display = this.plugin.settings.enableSpacebarDetection ? 'flex' : 'none';
+		spacebarDelaySetting.settingEl.toggleClass('snc-hidden', !this.plugin.settings.enableSpacebarDetection);
 
 
 		// ========== ARCHIVE SETTINGS ==========
@@ -245,7 +245,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					new Notice(`Archive renaming ${value ? 'enabled' : 'disabled'}.`);
 					// Show/hide the date format setting
 					if (dateTimeFormatSetting) {
-						dateTimeFormatSetting.settingEl.style.display = value ? 'flex' : 'none';
+						dateTimeFormatSetting.settingEl.toggleClass('snc-hidden', !value);
 					}
 				}));
 
@@ -268,7 +268,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		// Set initial visibility based on the toggle state
-		dateTimeFormatSetting.settingEl.style.display = this.plugin.settings.enableArchiveRenameDate ? 'flex' : 'none';
+		dateTimeFormatSetting.settingEl.toggleClass('snc-hidden', !this.plugin.settings.enableArchiveRenameDate);
 
 		new Setting(containerEl)
 			.setName('Generate a title')
@@ -280,7 +280,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 					new Notice(`LLM title renaming ${value ? 'enabled' : 'disabled'}.`);
 					// No need to update description here anymore
-					llmSettingsContainer.style.display = value ? 'block' : 'none';
+					llmSettingsContainer.toggleClass('snc-hidden', !value);
 				}));
 
 		const llmSettingsContainer = containerEl.createDiv('llm-archive-rename-settings');
@@ -333,7 +333,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					new Notice(`LLM title emoji inclusion ${value ? 'enabled' : 'disabled'}.`);
 				}));
 
-		llmSettingsContainer.style.display = this.plugin.settings.enableArchiveRenameLlm ? 'block' : 'none';
+		llmSettingsContainer.toggleClass('snc-hidden', !this.plugin.settings.enableArchiveRenameLlm);
 
 
 				// ========== NEW NOTE SETTINGS ==========
@@ -358,7 +358,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 							this.plugin.settings.newNoteLocation = value;
 							await this.plugin.saveSettings();
 							new Notice(`New note location set to: ${dropdown.selectEl.selectedOptions[0]?.text || value}`);
-							customFolderSetting.settingEl.style.display = value === 'custom' ? 'flex' : 'none';
+							customFolderSetting.settingEl.toggleClass('snc-hidden', value !== 'custom');
 							this.updateNewNotePathPreview(); // Update the consolidated preview
 						} else {
 							log.warn(`SettingsTab: Invalid new note location selected: ${value}`);
@@ -384,7 +384,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		// Initially hide the custom folder setting
-		customFolderSetting.settingEl.style.display = this.plugin.settings.newNoteLocation === 'custom' ? 'flex' : 'none';
+		customFolderSetting.settingEl.toggleClass('snc-hidden', this.plugin.settings.newNoteLocation !== 'custom');
 
 		// --- New Note Date & Time ---
 		new Setting(containerEl) // Store the setting instance
@@ -471,12 +471,12 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					this.plugin.settings.enableLogging = value;
 					await this.plugin.saveSettings();
 					initializeLogger(this.plugin.settings); // Update logger immediately
-					loggingLevelSetting.settingEl.style.display = value ? 'flex' : 'none'; // Show/hide level dropdown
+					loggingLevelSetting.settingEl.toggleClass('snc-hidden', !value); // Show/hide level dropdown
 					new Notice(`Logging ${value ? 'enabled' : 'disabled'}.`);
 				}));
 
 		// Set initial visibility of the logging level dropdown
-		loggingLevelSetting.settingEl.style.display = this.plugin.settings.enableLogging ? 'flex' : 'none';
+		loggingLevelSetting.settingEl.toggleClass('snc-hidden', !this.plugin.settings.enableLogging);
 	} // End of display() method
 
 

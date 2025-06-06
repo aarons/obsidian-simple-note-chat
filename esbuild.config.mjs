@@ -20,16 +20,25 @@ const targetVaultPath = process.env.TARGET_VAULT_PATH || 'test-vault';
 const outDir = prod ? '.' : path.join(targetVaultPath, '.obsidian', 'plugins', pluginId);
 const outFile = path.join(outDir, 'main.js');
 const manifestFile = 'manifest.json';
+const stylesFile = 'src/styles.css';
 const hotreloadFile = path.join(outDir, '.hotreload');
 
-// Copy manifest and create hotreload file for development
-const copyManifestAndHotreload = async () => {
+// Copy manifest, styles, and create hotreload file for development
+const copyFilesAndHotreload = async () => {
   try {
+    await fs.ensureDir(outDir);
+
+    // Copy manifest.json
+    await fs.copy(manifestFile, path.join(outDir, manifestFile));
+
+    // Copy styles.css
+    await fs.copy(stylesFile, path.join(outDir, 'styles.css'));
+
     if (!prod) { // Only in dev mode
-      await fs.ensureDir(outDir);
-      await fs.copy(manifestFile, path.join(outDir, manifestFile));
       await fs.ensureFile(hotreloadFile);
-      console.log('Manifest copied and .hotreload touched.');
+      console.log('Manifest, styles copied and .hotreload touched.');
+    } else {
+      console.log('Manifest and styles copied.');
     }
   } catch (err) {
     console.error('Error during post-build steps:', err);
@@ -70,7 +79,7 @@ const context = await esbuild.context({
       build.onEnd(async (result) => {
         if (result.errors.length === 0) {
           console.log('Initial build successful.');
-          await copyManifestAndHotreload();
+          await copyFilesAndHotreload();
         } else {
           console.error('Initial build failed:', result.errors);
         }
@@ -113,7 +122,7 @@ if (prod) {
         build.onEnd(async (result) => {
           if (result.errors.length === 0) {
             console.log('Build successful.');
-            await copyManifestAndHotreload();
+            await copyFilesAndHotreload();
           } else {
             console.error('Build failed:', result.errors);
           }
