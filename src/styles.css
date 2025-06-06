@@ -1,0 +1,29 @@
+/* Simple Note Chat (snc) Plugin Styles */
+
+/* Progressive disclosure utility class */
+.snc-hidden {
+    display: none !important;
+}
+
+/* Setting section descriptions */
+.snc-setting-section-description {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    margin-bottom: 1em;
+}
+
+/* Filename preview styles */
+.snc-filename-preview {
+    font-family: var(--font-monospace);
+    background-color: var(--background-secondary);
+    padding: 0.5em;
+    border-radius: var(--radius-s);
+    border: 1px solid var(--background-modifier-border);
+}
+
+/* Error state for preview */
+.snc-preview-error {
+    color: var(--text-error);
+    background-color: var(--background-modifier-error);
+    border-color: var(--background-modifier-error-border);
+}

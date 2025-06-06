@@ -461,4 +461,5 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		}, this.settings.spacebarDetectionDelay * 1000);
 		this.spacebarCommandTimeoutIds.set(filePath, newTimeoutId);
 	}
+
 }
