@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.5](https://github.com/aarons/obsidian-simple-note-chat/compare/1.2.4...1.2.5) (2025-06-06)
+
+
+### Bug Fixes
+
+* remove redundant operator from run script ([1d30247](https://github.com/aarons/obsidian-simple-note-chat/commit/1d30247ec1a123c9fa23616f33eaca5a77f807e1))
+
 ## [1.2.4](https://github.com/aarons/obsidian-simple-note-chat/compare/1.2.3...1.2.4) (2025-06-06)
 
 
