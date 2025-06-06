@@ -25,6 +25,12 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history needed for gh release edit
+          token: ${{ secrets.PAT_FOR_RELEASE_PLEASE }} # Or GITHUB_TOKEN if PAT has repo scope
+
       - name: Correct Release Title
         if: ${{ steps.release_step.outputs.releases_created == 'true' }}
         env:

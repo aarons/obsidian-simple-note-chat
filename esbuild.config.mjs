@@ -28,20 +28,25 @@ const copyFilesAndHotreload = async () => {
   try {
     await fs.ensureDir(outDir);
 
-    // Copy manifest.json
-    await fs.copy(manifestFile, path.join(outDir, manifestFile));
-
-    // Copy styles.css
-    await fs.copy(stylesFile, path.join(outDir, 'styles.css'));
-
-    if (!prod) { // Only in dev mode
+    // In development, copy manifest and styles to the target vault's plugin directory.
+    // In production, outDir is '.', so manifest.json is already at the root.
+    // Only styles.css needs to be copied from src/ to the root in production.
+    if (!prod) {
+      // Development mode
+      await fs.copy(manifestFile, path.join(outDir, manifestFile));
+      await fs.copy(stylesFile, path.join(outDir, 'styles.css'));
       await fs.ensureFile(hotreloadFile);
-      console.log('Manifest, styles copied and .hotreload touched.');
+      console.log(`Development: Manifest and styles copied to ${outDir}, .hotreload touched.`);
     } else {
-      console.log('Manifest and styles copied.');
+      // Production mode (outDir is '.')
+      // manifest.json is already at the root, no copy needed.
+      // Copy styles.css from src/styles.css to ./styles.css
+      await fs.copy(stylesFile, path.join(outDir, 'styles.css')); // outDir is '.', so path.join(outDir, 'styles.css') is 'styles.css'
+      console.log(`Production: Copied ${stylesFile} to ${path.join(outDir, 'styles.css')}. manifest.json is at root.`);
     }
   } catch (err) {
     console.error('Error during post-build steps:', err);
+    throw err; // Re-throw the error
   }
 };
 
@@ -89,9 +94,17 @@ const context = await esbuild.context({
 });
 
 if (prod) {
-  await context.rebuild();
-  console.log('Production build complete.');
-  await context.dispose();
+  try {
+    await context.rebuild();
+    console.log('Production build complete.');
+  } catch (e) {
+    console.error("Production build process failed:", e);
+    process.exit(1); // Exit with error code
+  } finally {
+    // Ensure dispose is called even if rebuild fails,
+    // though process.exit might terminate before this in case of error.
+    await context.dispose();
+  }
 } else {
   // Development mode: watch for changes
   await context.watch();

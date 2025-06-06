@@ -148,3 +148,5 @@ TESTING_PLAN.md
 tests/test-report.json
 .roomodes
 main.js
+
+styles.css
