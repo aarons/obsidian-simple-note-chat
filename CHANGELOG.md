@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.4](https://github.com/aarons/obsidian-simple-note-chat/compare/1.2.3...1.2.4) (2025-06-06)
+
+
+### Bug Fixes
+
+* **ci:** use explicit string comparison for release-please output ([d6fff4a](https://github.com/aarons/obsidian-simple-note-chat/commit/d6fff4a0ef7bbe928c8c8b85e03ce07eda9ae6b5))
+
 ## [1.2.3](https://github.com/aarons/obsidian-simple-note-chat/compare/1.2.2...1.2.3) (2025-06-01)
 
 
