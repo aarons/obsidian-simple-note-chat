@@ -145,3 +145,5 @@ test-vault/*/*.md
 
 .roomodes
 main.js
+
+styles.css
