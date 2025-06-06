@@ -30,5 +30,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_FOR_RELEASE_PLEASE }} # Or secrets.GITHUB_TOKEN if PAT_FOR_RELEASE_PLEASE has repo scope
         run: |
-          gh release edit ${{ steps.release_step.outputs.tag_name }} --title ${{ steps.release_step.outputs.tag_name }}
+          set -x
+          gh release edit "${{ steps.release_step.outputs.tag_name }}" --title "${{ steps.release_step.outputs.tag_name }}"
 
