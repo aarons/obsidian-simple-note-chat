@@ -174,7 +174,23 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		new Setting(containerEl).setName('Behavior').setHeading();
 		containerEl.createEl('p', { text: 'Configure how the plugin reacts to user input.', cls: 'snc-setting-section-description' });
 
-		const spacebarDelaySetting = new Setting(containerEl)
+		let spacebarDelaySetting: Setting; // Declare here to be accessible in both scopes
+
+		new Setting(containerEl)
+			.setName('Enable spacebar command detection')
+			.setDesc('Detect command phrases after pressing spacebar. Defaults to 0.5 seconds wait before acting (configurable below).')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enableSpacebarDetection)
+				.onChange(async (value) => {
+					this.plugin.settings.enableSpacebarDetection = value;
+					await this.plugin.saveSettings();
+					new Notice(`Spacebar command detection ${value ? 'enabled' : 'disabled'}.`);
+					if (spacebarDelaySetting) { // Check if spacebarDelaySetting is initialized
+						spacebarDelaySetting.settingEl.toggleClass('snc-hidden', !value);
+					}
+				}));
+
+		spacebarDelaySetting = new Setting(containerEl) // Assign here
 			.setName('Spacebar detection delay')
 			.setDesc('Wait time in seconds before acting after spacebar detection (e.g., 0.5 for half a second).')
 			.addText(text => text
@@ -199,20 +215,10 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}
 			});
 
-		new Setting(containerEl)
-			.setName('Enable spacebar command detection')
-			.setDesc('Detect command phrases after pressing spacebar. Defaults to 0.5 seconds wait before acting (configurable above).')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableSpacebarDetection)
-				.onChange(async (value) => {
-					this.plugin.settings.enableSpacebarDetection = value;
-					await this.plugin.saveSettings();
-					new Notice(`Spacebar command detection ${value ? 'enabled' : 'disabled'}.`);
-					spacebarDelaySetting.settingEl.toggleClass('snc-hidden', !value);
-				}));
-
 		// Set initial visibility of the delay setting
-		spacebarDelaySetting.settingEl.toggleClass('snc-hidden', !this.plugin.settings.enableSpacebarDetection);
+		if (spacebarDelaySetting) { // Check if spacebarDelaySetting is initialized
+			spacebarDelaySetting.settingEl.toggleClass('snc-hidden', !this.plugin.settings.enableSpacebarDetection);
+		}
 
 
 		// ========== ARCHIVE SETTINGS ==========
