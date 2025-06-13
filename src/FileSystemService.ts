@@ -25,22 +25,24 @@ export class FileSystemService {
         try {
             const originalContent = await this.app.vault.read(file);
 
-            // Regex to find the marker on its own line, allowing whitespace
             // Needs to escape potential regex characters in the marker itself
             const escapedMarker = CHAT_BOUNDARY_MARKER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const boundaryRegex = new RegExp('(?:^|\\n)\\s*' + escapedMarker + '\\s*(?=\\n|$)', 'g');
+            log.debug(`escapedMarker: ${escapedMarker}`);
+            const boundaryRegex = new RegExp(`^\\s?${escapedMarker}\\s*$`, 'm');
+            log.debug(`boundaryRegex: ${boundaryRegex}`);
 
-            // Find the *first* occurrence of the marker pattern
-            const firstMatch = boundaryRegex.exec(originalContent);
-            const markerExists = firstMatch !== null;
+            const markerExists = boundaryRegex.test(originalContent);
 
             let contentForTitleGeneration = originalContent;
             let contentToArchive = originalContent;
             let contentAboveMarker = ''; // Only used if marker exists
 
             if (markerExists) {
-                contentAboveMarker = originalContent.substring(0, firstMatch.index); // Content before the match starts
-                contentToArchive = originalContent.substring(firstMatch.index + firstMatch[0].length); // Content after the match ends
+                const parts = originalContent.split(boundaryRegex);
+                contentAboveMarker = parts[0];
+                log.debug(`contentAboveMarker: ${contentAboveMarker}`);
+                // In case the marker appears multiple times, we archive everything after the first one.
+                contentToArchive = parts.slice(1).join(CHAT_BOUNDARY_MARKER).trimStart();
                 contentForTitleGeneration = contentToArchive; // Use archived part for title
                 log.debug(`Marker found. Archiving content below marker. Original file will retain content above.`);
             } else {
@@ -154,6 +156,8 @@ export class FileSystemService {
                 // Modify original file to keep content above marker
                 if (editor) {
                     editor.setValue(contentAboveMarker);
+                    // Position cursor at the very end of the document
+                    editor.setCursor(editor.lastLine());
                     log.debug(`Modified original file ${file.path} using Editor API to retain content above marker.`);
                 } else { // No editor instance
                     await this.app.vault.process(file, (_data) => contentAboveMarker);
