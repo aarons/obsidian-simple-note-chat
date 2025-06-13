@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.8](https://github.com/aarons/obsidian-simple-note-chat/compare/1.2.7...1.2.8) (2025-06-13)
+
+
+### Bug Fixes
+
+* **archive:** improve boundary marker detection and editor state ([52ecbd9](https://github.com/aarons/obsidian-simple-note-chat/commit/52ecbd9bb6b02557ffadd1440caf847138440471))
+* **archive:** remove requirement for chat separator on archive ([0d42cc9](https://github.com/aarons/obsidian-simple-note-chat/commit/0d42cc96cacd106cd9a4ea6a486a3167e358ff1e))
+* display logging toggle before level selection dropdown ([39f2db1](https://github.com/aarons/obsidian-simple-note-chat/commit/39f2db190a53633787fafca394d4640368f98537))
+* **settings:** correctly toggle visibility of spacebar delay setting ([b3f4c5d](https://github.com/aarons/obsidian-simple-note-chat/commit/b3f4c5d1b0c8db22c3f4cdb8198e393aa54d0052))
+
 ## [1.2.7](https://github.com/aarons/obsidian-simple-note-chat/compare/1.2.6...1.2.7) (2025-06-06)
 
 
