@@ -445,7 +445,24 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			cls: 'snc-setting-section-description'
 		});
 
-		const loggingLevelSetting = new Setting(containerEl)
+		let loggingLevelSetting: Setting;
+
+		new Setting(containerEl)
+			.setName('Enable logging')
+			.setDesc('Turn on logging to the developer console.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enableLogging)
+				.onChange(async (value) => {
+					this.plugin.settings.enableLogging = value;
+					await this.plugin.saveSettings();
+					initializeLogger(this.plugin.settings); // Update logger immediately
+					if (loggingLevelSetting) {
+						loggingLevelSetting.settingEl.toggleClass('snc-hidden', !value); // Show/hide level dropdown
+					}
+					new Notice(`Logging ${value ? 'enabled' : 'disabled'}.`);
+				}));
+
+		loggingLevelSetting = new Setting(containerEl)
 			.setName('Logging level')
 			.setDesc('Select the level of detail for logs.')
 			.addDropdown(dropdown => {
@@ -468,21 +485,10 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					});
 			});
 
-		new Setting(containerEl)
-			.setName('Enable logging')
-			.setDesc('Turn on logging to the developer console.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableLogging)
-				.onChange(async (value) => {
-					this.plugin.settings.enableLogging = value;
-					await this.plugin.saveSettings();
-					initializeLogger(this.plugin.settings); // Update logger immediately
-					loggingLevelSetting.settingEl.toggleClass('snc-hidden', !value); // Show/hide level dropdown
-					new Notice(`Logging ${value ? 'enabled' : 'disabled'}.`);
-				}));
-
 		// Set initial visibility of the logging level dropdown
-		loggingLevelSetting.settingEl.toggleClass('snc-hidden', !this.plugin.settings.enableLogging);
+		if (loggingLevelSetting) {
+			loggingLevelSetting.settingEl.toggleClass('snc-hidden', !this.plugin.settings.enableLogging);
+		}
 	} // End of display() method
 
 
