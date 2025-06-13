@@ -117,21 +117,6 @@ export class EditorHandler {
 		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
 		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: editor.getLine(commandLineIndex).length };
 
-		// Check for chat separator, excluding the command line itself
-		const tempContentBefore = editor.getRange({line: 0, ch: 0}, commandLineStartPos);
-		const tempContentAfter = editor.getRange(
-			(commandLineIndex < editor.lastLine()) ? { line: commandLineIndex + 1, ch: 0 } : commandLineEndPos,
-			editor.offsetToPos(editor.getValue().length)
-		);
-		const combinedContent = tempContentBefore + tempContentAfter;
-		const chatSeparatorGg = settings.chatSeparator;
-
-		if (!combinedContent.includes(chatSeparatorGg)) {
-			new Notice(`Archive command ('${settings.archiveCommandPhrase}') requires at least one chat separator ('${chatSeparatorGg}') in the note (excluding the command line).`);
-			// Do not remove the command line if check fails
-			return;
-		}
-
 		// Determine the end of the range to remove (command line + its newline, or just command line if last line)
 		const rangeToRemoveEnd = (commandLineIndex < editor.lastLine())
 			? { line: commandLineIndex + 1, ch: 0 } // Remove the line and its newline
