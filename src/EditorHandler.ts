@@ -29,27 +29,6 @@ export class EditorHandler {
 	}
 
 	/**
-		* Appends the final archive status message to the content of the archived note.
-		*/
-	private async appendStatusToFile(filePath: string, noteName: string, folderName: string): Promise<void> {
-		try {
-			const archivedTFile = this.app.vault.getAbstractFileByPath(filePath);
-			if (archivedTFile instanceof TFile) {
-				const statusText = `note moved to: ${folderName}${noteName}\n`;
-				await this.app.vault.append(archivedTFile, statusText);
-				log.debug(`Appended status to archived note: ${filePath}`);
-			} else {
-				log.error(`Could not find archived file TFile at path: ${filePath}`);
-				new Notice(`Failed to append status to archived note content.`);
-			}
-		} catch (appendError) {
-			log.error(`Error appending status to archived note ${filePath}:`, appendError);
-			new Notice(`Error appending status to archived note content.`);
-		}
-	}
-
-
-	/**
 		* Handles chat command activation.
 		* Replaces command line with status message and initiates chat.
 	 */
@@ -153,9 +132,6 @@ export class EditorHandler {
 
 					// Show persistent notice
 					new Notice(`Renamed to ${newName}\nMoved to ${archiveFolder}`);
-
-					// Append status to the *content* of the archived file
-					await this.appendStatusToFile(newPath, newName, archiveFolder);
 
 				} else {
 					new Notice("Failed to archive note.");
