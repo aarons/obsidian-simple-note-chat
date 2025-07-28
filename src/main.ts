@@ -140,7 +140,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 					const availablePath = await this.fileSystemService.findAvailablePath(targetFolder, baseFilename);
 
 					const newFile = await this.app.vault.create(availablePath, '');
-					await this.app.workspace.openLinkText(newFile.path, '', false); // Ensure leaf is open before notice
+					await this.app.workspace.openLinkText(newFile.path, '', true); // Ensure leaf is open before notice
 					new Notice(`Created new chat note: ${newFile.basename}`);
 
 				} catch (error) {
