@@ -3,7 +3,7 @@
 	"name": "Simple Note Chat",
 	"version": "1.2.8",
 	"minAppVersion": "1.0.0",
-	"description": "Chat with AIs using keywords in a note. This is a mobile friendly way to talk to LLMs without needing keyboard shortcuts. It works great on desktop too.",
+	"description": "Chat with AIs using keywords, which are a mobile friendly way to talk to LLMs without needing keyboard shortcuts.",
 	"author": "Aaron Scott",
 	"authorUrl": "https://github.com/aarons/obsidian-simple-note-chat",
 	"isDesktopOnly": false
