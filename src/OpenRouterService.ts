@@ -1,4 +1,3 @@
-// src/OpenRouterService.ts
 import { requestUrl, Notice } from 'obsidian';
 import { OPENROUTER_API_URL } from './constants';
 import { PluginSettings, ChatMessage } from './types';
@@ -10,20 +9,20 @@ export interface OpenRouterModel {
     pricing: {
         prompt: string;
         completion: string;
-        request?: string; // Optional, based on OpenRouter API docs
-        image?: string;   // Optional
+        request?: string;
+        image?: string;
     };
-    context_length?: number; // Optional
-    architecture?: { // Optional
+    context_length?: number;
+    architecture?: {
         modality: string;
         tokenizer: string;
         instruct_type: string | null;
     };
-    top_provider?: { // Optional
+    top_provider?: {
         max_completion_tokens: number | null;
         is_moderated: boolean;
     };
-    per_request_limits?: { // Optional
+    per_request_limits?: {
         prompt_tokens: string;
         completion_tokens: string;
     } | null;
@@ -185,7 +184,6 @@ export class OpenRouterService {
             if (response.status === 200) {
                 const data = response.json;
                 if (data && Array.isArray(data.data)) {
-                    // Update the cache
                     this.availableModels = data.data as OpenRouterModel[];
                     this.modelsLastFetched = Date.now();
                     log.debug(`Model cache updated at: ${this.modelsLastFetched}`)
@@ -301,7 +299,6 @@ export class OpenRouterService {
             // Construct the display name
             // Use 'free' explicitly if the ID indicates it, otherwise use formatted prices
             if (model.id.includes(':free')) {
-                 // Use the name but indicate free pricing clearly
                  return {
                      id: model.id,
                      displayName: `${modelName} | free | free`
@@ -445,7 +442,7 @@ export class OpenRouterService {
                                 }
                             } catch (e) {
                                 log.error('OpenRouterService: Error parsing SSE JSON:', e, 'Data:', dataContent);
-                                // Optionally yield an error marker or throw? For now, just log.
+
                             }
                         } else if (message.startsWith(':')) {
                              log.debug("OpenRouterService: Received SSE comment:", message);
