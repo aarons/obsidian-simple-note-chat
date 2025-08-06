@@ -28,9 +28,6 @@ export interface OpenRouterModel {
     } | null;
 }
 
-/**
- * Defines the available sorting options for models.
- */
 export enum ModelSortOption {
     ALPHABETICAL = 'alphabetical',
     PROMPT_PRICE_ASC = 'prompt_price_asc',
@@ -39,9 +36,6 @@ export enum ModelSortOption {
     COMPLETION_PRICE_DESC = 'completion_price_desc'
 }
 
-/**
- * Represents the formatted information for a model, suitable for display.
- */
 export interface FormattedModelInfo {
     id: string;
     displayName: string;
@@ -58,55 +52,41 @@ export class OpenRouterService {
      * @returns A formatted string representing the price per million tokens (e.g., "$1.50", "free", "<$0.01").
      */
     private formatPricePerMillion(price: string | undefined | null): string {
-        if (price === undefined || price === null) return '?'; // Indicate unknown price
+        if (price === undefined || price === null) return '?';
 
         const numPrice = typeof price === 'string' ? parseFloat(price) : NaN;
 
-        if (isNaN(numPrice)) return '?'; // Indicate invalid price string
+        if (isNaN(numPrice)) return '?';
         if (numPrice === 0) return 'free';
 
         const pricePerMillion = numPrice * 1000000;
 
         let formattedPrice: string;
-        // Format based on magnitude
         if (pricePerMillion < 0.01) {
             formattedPrice = '<0.01';
         } else if (pricePerMillion < 10) {
-            // Use toFixed(2) for prices like $1.50, $0.15 etc.
             formattedPrice = pricePerMillion.toFixed(2);
         } else if (pricePerMillion < 100) {
-            // Use toFixed(1) for prices like $15.5, $99.9
             formattedPrice = pricePerMillion.toFixed(1);
         } else {
-            // Round for prices >= $100
             formattedPrice = Math.round(pricePerMillion).toString();
         }
 
-        // Remove trailing zeros after decimal point if they are redundant (e.g., "1.50" -> "1.5", "2.00" -> "2")
-        // But keep ".0" if it resulted from toFixed(1) e.g. 15.0
+        // Clean up decimal formatting to remove redundant trailing zeros
         if (formattedPrice.includes('.')) {
-             formattedPrice = formattedPrice.replace(/(\.\d*?)0+$/, '$1'); // Remove trailing zeros
-             formattedPrice = formattedPrice.replace(/\.$/, ''); // Remove trailing decimal point if it exists (e.g. "2.")
+             formattedPrice = formattedPrice.replace(/(\.\d*?)0+$/, '$1');
+             formattedPrice = formattedPrice.replace(/\.$/, '');
         }
 
 
         return `$${formattedPrice}`;
     }
 
-    /**
-     * Checks if the model cache is valid.
-     * @returns true if models are cached and the cache hasn't expired.
-     */
     isCacheValid(): boolean {
         return this.availableModels.length > 0 &&
                (Date.now() - this.modelsLastFetched) < this.cacheValidityDuration;
     }
 
-    /**
-     * Checks if a refresh is needed (cache expired) but we still have cached models.
-     * Used to determine if we should trigger a background refresh.
-     * @returns true if we have cached models but they're stale
-     */
     isRefreshNeeded(): boolean {
         return this.availableModels.length > 0 &&
                (Date.now() - this.modelsLastFetched) >= this.cacheValidityDuration;
@@ -118,38 +98,25 @@ export class OpenRouterService {
      * @param apiKey The OpenRouter API key.
      */
     backgroundRefreshIfNeeded(apiKey: string): void {
-        // Only proceed if refresh is needed and we have an API key
         if (!this.isRefreshNeeded() || !apiKey) {
             return;
         }
 
         log.debug('OpenRouterService: Starting background model refresh');
 
-        // Start the refresh in the background without awaiting
         this.fetchModels(apiKey, true)
             .then(models => {
                 log.debug(`OpenRouterService: Background refresh completed, loaded ${models.length} models`);
             })
             .catch(error => {
-                // Just log the error - don't show notices or disturb the user
                 log.error('OpenRouterService: Background refresh failed:', error);
             });
     }
 
-    /**
-     * Gets cached models or fetches them if not available.
-     * @param apiKey The OpenRouter API key.
-     * @returns A promise that resolves to the cached models.
-     */
     async getCachedModels(apiKey: string): Promise<OpenRouterModel[]> {
         return this.fetchModels(apiKey, false);
     }
 
-    /**
-     * Clears the model cache and forces a refresh.
-     * @param apiKey The OpenRouter API key.
-     * @returns A promise that resolves to the newly fetched models.
-     */
     async refreshModels(apiKey: string): Promise<OpenRouterModel[]> {
         return this.fetchModels(apiKey, true);
     }
@@ -161,7 +128,6 @@ export class OpenRouterService {
      * @returns A promise that resolves to an array of models or an empty array in case of error.
      */
     async fetchModels(apiKey: string, forceRefresh: boolean = false): Promise<OpenRouterModel[]> {
-        // Return cached models if available and cache is still valid
         if (!forceRefresh && this.isCacheValid()) {
             log.debug('OpenRouterService: Using cached models');
             return this.availableModels;
@@ -169,7 +135,7 @@ export class OpenRouterService {
 
         if (!apiKey) {
             log.warn('OpenRouter API key is missing.');
-            return []; // Don't show notice, just return empty
+            return [];
         }
 
         try {
@@ -212,22 +178,19 @@ export class OpenRouterService {
     /**
      * Sorts an array of models based on specified criteria.
      * @param models The array of models to sort.
-     * @param sortCriteria The sorting criteria ('alphabetical', 'prompt_price_asc', 'prompt_price_desc',
      * @param sortCriteria The sorting criteria enum value. Defaults to `ModelSortOption.ALPHABETICAL`.
      * @returns The sorted array of models.
      */
     sortModels(models: OpenRouterModel[], sortCriteria: ModelSortOption = ModelSortOption.ALPHABETICAL): OpenRouterModel[] {
         const modelsToSort = [...models];
 
-        // Helper to get a consistent name for sorting
         const getModelName = (model: OpenRouterModel): string =>
             model.name?.toLowerCase() ?? model.id?.toLowerCase() ?? '';
 
-        // Helper to parse price, handling 0, null/undefined, and invalid strings
         const parsePrice = (price: string | undefined | null): number => {
             if (price === undefined || price === null) return Infinity;
             const numPrice = parseFloat(price);
-            // Treat NaN or negative prices (shouldn't happen) as Infinity for sorting
+            // Sort invalid/negative prices last
             return isNaN(numPrice) || numPrice < 0 ? Infinity : numPrice;
         };
 
@@ -236,7 +199,6 @@ export class OpenRouterService {
             const nameB = getModelName(b);
             let comparison = 0;
 
-            // Primary sort based on criteria
             switch (sortCriteria) {
                 case ModelSortOption.PROMPT_PRICE_ASC:
                 case ModelSortOption.PROMPT_PRICE_DESC: {
@@ -264,7 +226,7 @@ export class OpenRouterService {
                     break;
             }
 
-            // Secondary sort: if primary comparison is equal, sort alphabetically
+            // Fallback to alphabetical sorting for ties
             if (comparison === 0 && sortCriteria !== ModelSortOption.ALPHABETICAL) {
                 comparison = nameA.localeCompare(nameB);
             }
@@ -275,16 +237,10 @@ export class OpenRouterService {
         return modelsToSort;
     }
 
-    /**
-     * Formats a list of OpenRouter models for display purposes.
-     * @param models The array of models fetched from the API.
-     * @returns An array of FormattedModelInfo objects.
-     */
     getFormattedModels(models: OpenRouterModel[]): FormattedModelInfo[] {
         return models.map(model => {
-            const modelName = model.name || model.id; // Fallback to ID if name is missing
+            const modelName = model.name || model.id;
 
-            // Handle special cases like free models or auto-routing
             if (model.id === 'openrouter/auto') {
                 return {
                     id: model.id,
@@ -292,12 +248,9 @@ export class OpenRouterService {
                 };
             }
 
-            // Check if pricing info exists and format it
             const promptPriceStr = this.formatPricePerMillion(model.pricing?.prompt);
             const completionPriceStr = this.formatPricePerMillion(model.pricing?.completion);
 
-            // Construct the display name
-            // Use 'free' explicitly if the ID indicates it, otherwise use formatted prices
             if (model.id.includes(':free')) {
                  return {
                      id: model.id,
@@ -328,13 +281,11 @@ export class OpenRouterService {
     ): AsyncGenerator<string> {
         const { apiKey, defaultModel } = settings;
 
-        // Validate settings before proceeding
         if (!apiKey) {
             log.error('OpenRouterService: API key is missing.');
             throw new Error("OpenRouter API key is not set");
         }
 
-        // Check if we should refresh the model cache in the background
         this.backgroundRefreshIfNeeded(apiKey);
         if (!defaultModel) {
             log.error('OpenRouterService: Default model is not set.');
@@ -397,23 +348,17 @@ export class OpenRouterService {
             while (!done) {
                  if (signal.aborted) {
                     log.debug('OpenRouterService: Abort signal detected during stream read.');
-                    // Ensure the reader is cancelled if we break early
                     await reader.cancel('Aborted by signal');
-                    // Throwing here ensures the calling ChatService knows it was aborted
                     throw new DOMException(signal.reason || 'Chat cancelled', 'AbortError');
                  }
 
-                let readResult; // Allow TypeScript to infer the type from the assignment below
+                let readResult;
                 try {
                     readResult = await reader.read();
                     done = readResult.done;
-                    // log.debug('OpenRouterService: Raw stream chunk received:', readResult.value);
                 } catch (readError: any) {
-                     // Catch errors during reader.read() itself
                      log.error('OpenRouterService: Error reading stream chunk:', readError);
-                     // Check if it's an abort error triggered by reader.cancel()
                      if (readError.name === 'AbortError') {
-                         // Already handled by the signal check or cancellation logic
                          return;
                      }
                      throw new Error(`Error reading stream: ${readError.message}`);
@@ -485,7 +430,6 @@ export class OpenRouterService {
         messages: ChatMessage[],
         maxTokens?: number
     ): Promise<string | null> {
-        // Validate settings before proceeding
         if (!apiKey) {
             log.error('OpenRouterService: API key is missing for getChatCompletion.');
             new Notice('OpenRouter API key is not set. Please configure it in the plugin settings.');
@@ -513,7 +457,7 @@ export class OpenRouterService {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(requestBody),
-                throw: false, // Prevent requestUrl from throwing on non-200 status
+                throw: false,
             });
 
             log.debug('OpenRouterService: Non-stream response status:', response.status);
@@ -535,12 +479,12 @@ export class OpenRouterService {
                 log.error(`OpenRouterService: Error fetching non-stream completion: ${response.status}`, response.text);
                 let errorMessage = `LLM request failed. Status: ${response.status}.`;
                  try {
-                    const errorJson = response.json; // Try parsing error JSON
+                    const errorJson = response.json;
                     errorMessage += ` ${errorJson?.error?.message || response.text || ''}`;
                  } catch {
                     errorMessage += ` ${response.text || 'Could not read error body.'}`;
                  }
-                new Notice(errorMessage.substring(0, 200)); // Limit notice length
+                new Notice(errorMessage.substring(0, 200));
                 return null;
             }
         } catch (error) {

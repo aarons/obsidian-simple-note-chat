@@ -14,8 +14,7 @@ export class EditorHandler {
 	}
 
 	/**
-	 * Sets cursor position after command execution - either at the end of the previous line
-	 * or at document start if command was on the first line.
+	 * Positions cursor to end of previous line or start of document after command removal.
 	 */
 	private _setCursorBeforeCommand(editor: Editor, commandLineIndex: number): void {
 		if (commandLineIndex > 0) {
@@ -23,14 +22,13 @@ export class EditorHandler {
 			const targetLineLength = editor.getLine(targetLineIndex).length;
 			editor.setCursor({ line: targetLineIndex, ch: targetLineLength });
 		} else {
-			// If command was on the very first line (index 0), move cursor to start
 			editor.setCursor({ line: 0, ch: 0 });
 		}
 	}
 
 	/**
-		* Handles chat command activation.
-		* Replaces command line with status message and initiates chat.
+	 * Processes chat command trigger by removing command line and initiating streaming response.
+	 * Command line is completely removed before starting chat to avoid content duplication.
 	 */
 	public triggerChatCommand(
 		editor: Editor,
@@ -45,39 +43,32 @@ export class EditorHandler {
 			return;
 		}
 
-		// I think we should rename this to CommandPhraseStartPos etcc.
 		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
 		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: editor.getLine(commandLineIndex).length };
 
-		// Handle line endings appropriately based on position in document
+		// Include newline for mid-document lines to prevent line merging
 		const rangeToRemoveEnd = (commandLineIndex < editor.lastLine())
-			? { line: commandLineIndex + 1, ch: 0 } // Include newline if not last line
-			: commandLineEndPos; // Just the line content if last line
+			? { line: commandLineIndex + 1, ch: 0 }
+			: commandLineEndPos;
 
-		// Remove the command phrase
 		editor.replaceRange('', commandLineStartPos, rangeToRemoveEnd);
 
-		// Position cursor for incoming stream
-		// editor.setCursor(statusMessageEndPos);
-
-		// Start chat, providing the position where the status message started
+		// Start chat at removed command position for streaming response
 		this.plugin.chatService.startChat(
 			editor,
 			file,
 			settings,
-			commandLineStartPos // Position where status message was inserted
-		).catch((error: Error) => { // Add type to error
+			commandLineStartPos
+		).catch((error: Error) => {
 			log.error("Error starting chat from command phrase:", error);
 			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-			// Log the error. startChat handles cleanup and user notification.
 			log.error(`Chat Error from command phrase: ${errorMessage}. Relying on startChat cleanup.`);
-			// No need for fallback insertion here, startChat handles its errors internally.
 		});
 	}
 
 	/**
-	 * Handles archive command activation.
-	 * Removes command line and moves file to archive location.
+	 * Processes archive command by removing command line and moving file to archive.
+	 * Shows early notice for LLM-powered rename operations due to potential delay.
 	 */
 	public triggerArchiveCommand(
 		editor: Editor,
@@ -92,26 +83,23 @@ export class EditorHandler {
 			return;
 		}
 
-		// Define the range for the command line itself
 		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
 		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: editor.getLine(commandLineIndex).length };
 
-		// Determine the end of the range to remove (command line + its newline, or just command line if last line)
 		const rangeToRemoveEnd = (commandLineIndex < editor.lastLine())
-			? { line: commandLineIndex + 1, ch: 0 } // Remove the line and its newline
-			: commandLineEndPos; // Just remove the content if it's the last line
+			? { line: commandLineIndex + 1, ch: 0 }
+			: commandLineEndPos;
 
-		// Remove the command line (and its newline if applicable)
 		editor.replaceRange('', commandLineStartPos, rangeToRemoveEnd);
 
-		// Set cursor position *before* the async operation
+		// Position cursor before async operation to provide immediate feedback
 		this._setCursorBeforeCommand(editor, commandLineIndex);
 
-		// Show status *before* calling the potentially slow archive function if using model
+		// Notify user early if LLM rename is enabled due to potential processing delay
 		if (settings.enableArchiveRenameLlm) {
 			const titleModel = settings.llmRenameModel || settings.defaultModel;
 			if (titleModel && settings.apiKey) {
-				new Notice(`Calling ${titleModel} to generate title...`, 5000); // Temporary notice
+				new Notice(`Calling ${titleModel} to generate title...`, 5000);
 			} else {
 				log.warn("Archive rename with LLM enabled, but API key or model not set. Skipping notice.");
 			}
@@ -123,20 +111,16 @@ export class EditorHandler {
 					file,
 					settings.archiveFolderName,
 					settings,
-					editor // Pass the editor instance
+					editor
 				);
 				if (newPath) {
-					// Parse new name and folder from the returned path
-					const newName = newPath.split('/').pop() || file.basename; // Fallback to original basename
-					const archiveFolder = settings.archiveFolderName; // Use the setting value
-
-					// Show persistent notice
+					const newName = newPath.split('/').pop() || file.basename;
+					const archiveFolder = settings.archiveFolderName;
 					new Notice(`Renamed to ${newName}\nMoved to ${archiveFolder}`);
 
 				} else {
 					new Notice("Failed to archive note.");
 					log.warn("FileSystemService.moveFileToArchive returned null.");
-					// Consider adding back the command line if archive fails? Might be complex.
 				}
 			} catch (error) {
 				console.error("Error during note archive:", error);
@@ -146,8 +130,7 @@ export class EditorHandler {
 	}
 
 	/**
-	 * Handles new chat command activation.
-	 * Removes command line and creates a new chat note.
+	 * Processes new chat command by removing command line and executing note creation command.
 	 */
 	public triggerNewChatCommand(
 		editor: Editor,
@@ -155,30 +138,26 @@ export class EditorHandler {
 		settings: PluginSettings,
 		commandLineIndex: number
 	): void {
-		// Define the range for the command line itself
 		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
 		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: editor.getLine(commandLineIndex).length };
 
-		// Determine the end of the range to remove (command line + its newline, or just command line if last line)
 		const rangeToRemoveEnd = (commandLineIndex < editor.lastLine())
-			? { line: commandLineIndex + 1, ch: 0 } // Remove the line and its newline
-			: commandLineEndPos; // Just remove the content if it's the last line
+			? { line: commandLineIndex + 1, ch: 0 }
+			: commandLineEndPos;
 
-		// Remove the command line (and its newline if applicable)
 		editor.replaceRange('', commandLineStartPos, rangeToRemoveEnd);
 
-		// Set cursor position *before* executing the command
+		// Position cursor before command execution to maintain proper state
 		this._setCursorBeforeCommand(editor, commandLineIndex);
 
-		// Execute the command *after* modifying the editor
+		// Execute note creation after editor modification to ensure clean state
 		// @ts-ignore - Assuming 'commands' exists on app
 		this.app.commands.executeCommandById('simple-note-chat:create-new-chat-note');
 		new Notice("Creating new chat note...");
 	}
 
 	/**
-	 * Handles model selection command activation.
-	 * Removes command line and opens the model selector modal.
+	 * Processes model selection command by removing command line and opening model selector.
 	 */
 	public triggerModelCommand(
 		editor: Editor,
@@ -186,30 +165,25 @@ export class EditorHandler {
 		settings: PluginSettings,
 		commandLineIndex: number
 	): void {
-		// Define the range for the command line itself
 		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
 		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: editor.getLine(commandLineIndex).length };
 
-		// Determine the end of the range to remove (command line + its newline, or just command line if last line)
 		const rangeToRemoveEnd = (commandLineIndex < editor.lastLine())
-			? { line: commandLineIndex + 1, ch: 0 } // Remove the line and its newline
-			: commandLineEndPos; // Just remove the content if it's the last line
+			? { line: commandLineIndex + 1, ch: 0 }
+			: commandLineEndPos;
 
-		// Remove the command line (and its newline if applicable)
 		editor.replaceRange('', commandLineStartPos, rangeToRemoveEnd);
 
-		// Set cursor position *before* opening the modal
+		// Position cursor before modal to maintain editor state
 		this._setCursorBeforeCommand(editor, commandLineIndex);
 
-		// Open the modal
 		new ModelSelectorModal(this.plugin).open();
 		log.debug(`Executed model command ('${settings.modelCommandPhrase}') on line ${commandLineIndex}. Opening modal.`);
 	}
 
 	/**
-		* Opens the model selector modal directly.
-		* Intended for use by commands/hotkeys.
-		*/
+	 * Opens model selector modal via command/hotkey (bypasses command line processing).
+	 */
 	public openModelSelectorModal(): void {
 		new ModelSelectorModal(this.plugin).open();
 		log.debug("Opened model selector modal via command/hotkey.");

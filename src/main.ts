@@ -37,7 +37,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	async onload() {
 		log.debug('Loading Simple Note Chat plugin');
 		await this.loadSettings();
-		initializeLogger(this.settings); // Initialize logger with loaded settings
+		initializeLogger(this.settings);
 
 		this.updateCommandMap();
 		this.lastSettingsHash = this.getSettingsHash();
@@ -72,7 +72,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			}
 		}));
 
-		// Check for active markdown view on plugin load
 		const currentLeaf = this.app.workspace.activeLeaf;
 		if (currentLeaf?.view instanceof MarkdownView) {
 			const view = currentLeaf.view;
@@ -106,16 +105,13 @@ export default class SimpleNoteChatPlugin extends Plugin {
 						targetFolder = this.settings.archiveFolderName;
 					}
 
-					// Normalize the targetFolder path
 					if (targetFolder && targetFolder !== '/') {
 						targetFolder = normalizePath(targetFolder);
-					} else if (targetFolder === '') { // Handle case where custom path might be empty
-						targetFolder = '/'; // Default to root if empty
+					} else if (targetFolder === '') {
+						targetFolder = '/';
 					}
 
 
-					// Ensure target folder exists
-					// For root, no check/creation is needed. For others, check and create.
 					if (targetFolder !== '/') {
 						const folderExists = this.app.vault.getAbstractFileByPath(targetFolder) !== null;
 						if (!folderExists) {
@@ -125,12 +121,11 @@ export default class SimpleNoteChatPlugin extends Plugin {
 							} catch (folderError) {
 								log.error(`Failed to create target folder "${targetFolder}":`, folderError);
 								new Notice(`Failed to create folder "${targetFolder}". Using vault root.`);
-								targetFolder = '/'; // Fallback to root on folder creation error
+								targetFolder = '/';
 							}
 						}
 					}
 
-					// Construct title using prefix, format, and suffix
 					const formattedDate = moment().format(this.settings.newNoteTitleFormat || DEFAULT_NN_TITLE_FORMAT);
 					const prefix = this.settings.newNoteTitlePrefix || '';
 					const suffix = this.settings.newNoteTitleSuffix || '';
@@ -140,7 +135,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 					const availablePath = await this.fileSystemService.findAvailablePath(targetFolder, baseFilename);
 
 					const newFile = await this.app.vault.create(availablePath, '');
-					await this.app.workspace.openLinkText(newFile.path, '', true); // Ensure leaf is open before notice
+					await this.app.workspace.openLinkText(newFile.path, '', true);
 					new Notice(`Created new chat note: ${newFile.basename}`);
 
 				} catch (error) {
@@ -160,7 +155,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 					return;
 				}
 				log.debug(`Triggering chat completion via hotkey for file: ${file.path}`);
-				const cursor = editor.getCursor(); // Get cursor position
+				const cursor = editor.getCursor();
 				this.chatService.startChat(editor, file, this.settings, cursor)
 					.catch((error: Error) => {
 						log.error("Error starting chat from hotkey:", error);
@@ -175,14 +170,13 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			checkCallback: (checking: boolean) => {
 				const activeFile = this.app.workspace.getActiveFile();
 				if (!activeFile) {
-					return false; // No active file to archive
+					return false;
 				}
 
 				if (checking) {
-					return true; // Command is available if there's an active file
+					return true;
 				}
 
-				// Execute the archive logic - moveFileToArchive handles notifications
 				this.fileSystemService.moveFileToArchive(
 					activeFile,
 					this.settings.archiveFolderName,
@@ -205,7 +199,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 	onunload() {
 		log.debug('Unloading Simple Note Chat plugin');
-		// Ensure the listener is removed when the plugin unloads
 		this.unregisterScopedKeyDownHandler();
 	}
 
@@ -214,7 +207,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			this.activeEditorKeyDownTarget.removeEventListener('keydown', this.boundKeyDownHandler);
 			log.debug("Unregistered scoped keydown handler");
 		}
-		// Clear all pending spacebar timeouts when unregistering
 		this.spacebarCommandTimeoutIds.forEach(timeoutId => clearTimeout(timeoutId));
 		this.spacebarCommandTimeoutIds.clear();
 
@@ -226,21 +218,19 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-		this.settings.chatSeparator = CHAT_SEPARATOR; // Ensure the constant is always used
+		this.settings.chatSeparator = CHAT_SEPARATOR;
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
 
-		// Update command map when settings change
 		this.updateCommandMap();
-		initializeLogger(this.settings); // Re-initialize logger with new settings
+		initializeLogger(this.settings);
 		this.lastSettingsHash = this.getSettingsHash();
 	}
 
 	/**
-	 * Creates a hash string representing the current command phrase settings
-	 * to detect when settings change.
+	 * Creates a hash to detect command phrase setting changes.
 	 */
 	private getSettingsHash(): string {
 		return [
@@ -251,9 +241,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		].join('|');
 	}
 
-	/**
-	 * Updates the command map based on current settings.
-	 */
 	private updateCommandMap() {
 		this.commandMap = {};
 
@@ -277,20 +264,18 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 	/**
 	 * Handles keydown events for stream cancellation and command triggers.
-	 * @param view The MarkdownView instance where the event occurred.
-	 * @param evt The keyboard event.
 	 */
 	private handleKeyDown(view: MarkdownView, evt: KeyboardEvent): void {
 		const file = view.file;
 
-		// 1. Basic checks
 		if (!file) {
 			log.debug("Keydown ignored: No file associated with the view.");
 			return;
 		}
 		const filePath = file.path;
 
-		// Refined Spacebar Timeout Clearing (Requirement 6)
+		// Clear any pending spacebar timeout when any non-space key is pressed.
+		// This prevents false command triggers when users type after a space.
 		const existingTimeoutId = this.spacebarCommandTimeoutIds.get(filePath);
 		if (existingTimeoutId && evt.key !== ' ') {
 			clearTimeout(existingTimeoutId);
@@ -298,12 +283,10 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			log.debug(`Cleared spacebar command timeout for ${filePath} due to subsequent non-space key press: ${evt.key}`);
 		}
 
-		// Handle Escape key
 		if (this.handleEscapeKey(view, evt)) {
-			return; // Escape was handled
+			return;
 		}
 
-		// If a stream is active, ignore further processing for Enter and Space
 		if (this.chatService.isStreamActive(filePath)) {
 			if (evt.key === 'Enter' || evt.key === ' ') {
 				log.debug(`${evt.key} key ignored: Stream active for ${filePath}.`);
@@ -311,17 +294,16 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			}
 		}
 
-		// Implement Early Exit for Non-Command Keys
 		const isEnterKey = evt.key === 'Enter';
 		const isSpaceKeyForCommand = evt.key === ' ' && this.settings.enableSpacebarDetection;
 
 		if (!isEnterKey && !isSpaceKeyForCommand) {
-			return; // Most keystrokes exit here
+			return;
 		}
 
-		// At this point, only Enter or Space (if enabled) will proceed.
-
-		// Dispatch to specific key handlers
+		// Enter and Space require different processing paths:
+		// - Enter: immediate command execution on previous line
+		// - Space: delayed execution with timeout to allow typing continuation
 		if (isEnterKey) {
 			this.handleEnterKey(view, evt);
 			return;
@@ -334,16 +316,13 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	}
 
 	/**
-	 * Handles the Escape key press, primarily for stream cancellation.
-	 * @param view The MarkdownView instance.
-	 * @param evt The keyboard event.
-	 * @returns True if the event was handled, false otherwise.
+	 * Handles Escape key for stream cancellation.
 	 */
 	private handleEscapeKey(view: MarkdownView, evt: KeyboardEvent): boolean {
 		if (evt.key !== 'Escape') return false;
 
 		const editor = view.editor;
-		const file = view.file; // Already checked for null in handleKeyDown
+		const file = view.file;
 		const filePath = file!.path;
 
 		log.debug(`Key: Escape, File: ${filePath}`);
@@ -355,24 +334,21 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			return true;
 		} else if (isActive) {
 			log.debug("Stream cancellation via Escape failed or no stream to cancel.");
-			return true; // Still handled as Escape's purpose here is stream-related
+			return true;
 		}
-		return false; // No active stream to cancel
+		return false;
 	}
 
 	/**
-	 * Handles the Enter key press for command execution.
-	 * @param view The MarkdownView instance.
-	 * @param evt The keyboard event.
+	 * Handles Enter key for command execution.
 	 */
 	private handleEnterKey(view: MarkdownView, evt: KeyboardEvent): void {
 		const editor = view.editor;
-		const file = view.file!; // Already checked for null in handleKeyDown
+		const file = view.file!
 		const filePath = file.path;
 
 		log.debug(`Key: Enter, File: ${filePath}`);
 
-		// Defer Settings Hash Check (Requirement 5)
 		const currentSettingsHash = this.getSettingsHash();
 		if (this.lastSettingsHash !== currentSettingsHash) {
 			this.updateCommandMap();
@@ -397,19 +373,15 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	}
 
 	/**
-	 * Handles the Space key press for command execution (if enabled).
-	 * @param view The MarkdownView instance.
-	 * @param evt The keyboard event.
+	 * Handles Space key for delayed command execution when spacebar detection is enabled.
 	 */
 	private handleSpaceKey(view: MarkdownView, evt: KeyboardEvent): void {
 		const editor = view.editor;
-		const file = view.file!; // Already checked for null in handleKeyDown
+		const file = view.file!
 		const filePath = file.path;
 
 		log.debug(`Key: Space, File: ${filePath}, Spacebar detection enabled.`);
-		// Space key itself should be typed. Do not preventDefault/stopPropagation here.
 
-		// Defer Settings Hash Check (Requirement 5)
 		const currentSettingsHash = this.getSettingsHash();
 		if (this.lastSettingsHash !== currentSettingsHash) {
 			this.updateCommandMap();
@@ -417,14 +389,16 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			log.debug("Command map updated due to settings change (triggered by Space).");
 		}
 
-		// Clear any existing timeout for this specific file path before setting a new one
 		const oldTimeoutId = this.spacebarCommandTimeoutIds.get(filePath);
 		if (oldTimeoutId) {
 			clearTimeout(oldTimeoutId);
 			log.debug(`Cleared previous spacebar timeout for ${filePath} due to new space press.`);
 		}
 
-		const triggerCursor = editor.getCursor(); // Store cursor position at the time space was pressed
+		// Capture cursor position at space-press time, not timeout execution time.
+		// This ensures command detection uses the correct line/column even if
+		// the cursor moves during the timeout delay.
+		const triggerCursor = editor.getCursor();
 
 		const newTimeoutId = window.setTimeout(() => {
 			this.spacebarCommandTimeoutIds.delete(filePath);

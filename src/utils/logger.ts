@@ -1,15 +1,12 @@
 import { PluginSettings, LogLevel } from '../types';
 
 /**
- * Simple logger utility.
- * Logging behavior is controlled by plugin settings.
+ * Logger utility with configurable levels controlled by plugin settings.
  */
 
-// Module-level variables to store current logging settings
 let loggingEnabled = false;
 let currentLogLevel = LogLevel.ERROR;
 
-// Map LogLevel enum to numeric values for easier comparison
 const LogLevelValue: { [key in LogLevel]: number } = {
 	[LogLevel.ERROR]: 1,
 	[LogLevel.WARN]: 2,
@@ -18,14 +15,11 @@ const LogLevelValue: { [key in LogLevel]: number } = {
 };
 
 /**
- * Initializes or updates the logger settings.
- * Called by the main plugin on load and when settings change.
- * @param settings The current plugin settings.
+ * Initializes logger with current plugin settings.
  */
 export const initializeLogger = (settings: PluginSettings): void => {
 	loggingEnabled = settings.enableLogging;
 	currentLogLevel = settings.logLevel;
-	// Log initialization status itself if INFO level is enabled
 	if (loggingEnabled && LogLevelValue[currentLogLevel] >= LogLevelValue[LogLevel.INFO]) {
 		console.info(`Logger initialized. Logging enabled: ${loggingEnabled}, Level: ${currentLogLevel}`);
 	}
@@ -48,7 +42,6 @@ export const log = {
 		}
 	},
 	error: (message: string, ...args: any[]): void => {
-		// Errors are logged if logging is enabled, regardless of level (minimum level is ERROR)
 		if (loggingEnabled && LogLevelValue[currentLogLevel] >= LogLevelValue[LogLevel.ERROR]) {
 			console.error(`[ERROR] ${message}`, ...args);
 		}

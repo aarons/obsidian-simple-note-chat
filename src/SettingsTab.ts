@@ -64,26 +64,21 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			.setName('Model sorting')
 			.setDesc('Choose how to sort the OpenRouter model lists in the dropdowns below.')
 			.addDropdown(dropdown => {
-				// Add options based on the ModelSortOption enum
 				dropdown
 					.addOption(ModelSortOption.ALPHABETICAL, 'Alphabetical')
 					.addOption(ModelSortOption.PROMPT_PRICE_ASC, 'Prompt price: ascending')
 					.addOption(ModelSortOption.PROMPT_PRICE_DESC, 'Prompt price: descending')
 					.addOption(ModelSortOption.COMPLETION_PRICE_ASC, 'Completion price: ascending')
 					.addOption(ModelSortOption.COMPLETION_PRICE_DESC, 'Completion price: descending')
-					// Set the current value from settings
 					.setValue(this.plugin.settings.modelSortOrder)
 					.onChange(async (value) => {
-						// Ensure the value is a valid ModelSortOption before saving
 						if (Object.values(ModelSortOption).includes(value as ModelSortOption)) {
 							this.plugin.settings.modelSortOrder = value as ModelSortOption;
 							await this.plugin.saveSettings();
 							new Notice(`Model sort order set to: ${dropdown.selectEl.selectedOptions[0]?.text || value}`);
-							// Re-populate dropdowns with new sort order
 							this.populateModelDropdowns();
 						} else {
 							log.warn(`SettingsTab: Invalid sort option selected: ${value}`);
-							// Optionally revert dropdown to saved setting or default
 							dropdown.setValue(this.plugin.settings.modelSortOrder);
 						}
 					});
@@ -127,7 +122,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					const trimmedValue = value.trim();
 					this.plugin.settings.chatCommandPhrase = trimmedValue;
 					await this.plugin.saveSettings();
-					this.updateNewNotePathPreview(); // Update preview
+					this.updateNewNotePathPreview();
 				}));
 
 		new Setting(containerEl)
@@ -185,12 +180,12 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					this.plugin.settings.enableSpacebarDetection = value;
 					await this.plugin.saveSettings();
 					new Notice(`Spacebar command detection ${value ? 'enabled' : 'disabled'}.`);
-					if (spacebarDelaySetting) { // Check if spacebarDelaySetting is initialized
+					if (spacebarDelaySetting) {
 						spacebarDelaySetting.settingEl.toggleClass('snc-hidden', !value);
 					}
 				}));
 
-		spacebarDelaySetting = new Setting(containerEl) // Assign here
+		spacebarDelaySetting = new Setting(containerEl)
 			.setName('Spacebar detection delay')
 			.setDesc('Wait time in seconds before acting after spacebar detection (e.g., 0.5 for half a second).')
 			.addText(text => text
@@ -215,8 +210,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}
 			});
 
-		// Set initial visibility of the delay setting
-		if (spacebarDelaySetting) { // Check if spacebarDelaySetting is initialized
+		if (spacebarDelaySetting) {
 			spacebarDelaySetting.settingEl.toggleClass('snc-hidden', !this.plugin.settings.enableSpacebarDetection);
 		}
 
@@ -249,13 +243,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					this.plugin.settings.enableArchiveRenameDate = value;
 					await this.plugin.saveSettings();
 					new Notice(`Archive renaming ${value ? 'enabled' : 'disabled'}.`);
-					// Show/hide the date format setting
 					if (dateTimeFormatSetting) {
 						dateTimeFormatSetting.settingEl.toggleClass('snc-hidden', !value);
 					}
 				}));
 
-		// Store the setting instance to control its visibility
 		const dateTimeFormatSetting = new Setting(containerEl)
 			.setName('Date and time format')
 			.setDesc('This uses moment.js for specifying the date and time format to use on the archived note. Default: (YYYY-MM-DD-HH-mm)')
@@ -273,7 +265,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					}
 				}));
 
-		// Set initial visibility based on the toggle state
 		dateTimeFormatSetting.settingEl.toggleClass('snc-hidden', !this.plugin.settings.enableArchiveRenameDate);
 
 		new Setting(containerEl)
@@ -285,7 +276,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					this.plugin.settings.enableArchiveRenameLlm = value;
 					await this.plugin.saveSettings();
 					new Notice(`LLM title renaming ${value ? 'enabled' : 'disabled'}.`);
-					// No need to update description here anymore
 					llmSettingsContainer.toggleClass('snc-hidden', !value);
 				}));
 
@@ -295,7 +285,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			.setName('Note title model')
 			.setDesc('Choose which model will generate the note title. By default, it uses the same model as your chat conversations.')
 			.addDropdown(dropdown => {
-				this.llmModelDropdown = dropdown; // Assign to the class property
+				this.llmModelDropdown = dropdown;
 				dropdown.addOption('', 'Use current chat model');
 				dropdown.setValue(this.plugin.settings.llmRenameModel);
 				dropdown.onChange(async (value) => {
@@ -347,7 +337,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		containerEl.createEl('p', { text: 'Configure how new chat notes are created and where they are placed in your vault.', cls: 'snc-setting-section-description' });
 		this.newNotePreviewEl = containerEl.createEl('p', { cls: 'snc-setting-section-description' });
 
-		// Initial update for the consolidated preview
 		this.updateNewNotePathPreview();
 
 		new Setting(containerEl)
@@ -365,15 +354,14 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 							new Notice(`New note location set to: ${dropdown.selectEl.selectedOptions[0]?.text || value}`);
 							customFolderSetting.settingEl.toggleClass('snc-hidden', value !== 'custom');
-							this.updateNewNotePathPreview(); // Update the consolidated preview
+							this.updateNewNotePathPreview();
 						} else {
 							log.warn(`SettingsTab: Invalid new note location selected: ${value}`);
-							dropdown.setValue(this.plugin.settings.newNoteLocation); // Revert
+							dropdown.setValue(this.plugin.settings.newNoteLocation);
 						}
 					});
 			});
 
-		// --- Custom Folder Setting (only shown when location is 'custom') ---
 		const customFolderSetting = new Setting(containerEl)
 			.setName('Custom folder')
 			.setDesc(`Which folder should new chat notes be placed in? If the folder doesn't exist then it will get created when the next chat note is created.`)
@@ -385,15 +373,13 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					if (this.plugin.settings.newNoteCustomFolder !== trimmedValue) {
 						this.plugin.settings.newNoteCustomFolder = trimmedValue;
 						await this.plugin.saveSettings();
-						this.updateNewNotePathPreview(); // Update preview when custom folder changes
+						this.updateNewNotePathPreview();
 					}
 				}));
 
-		// Initially hide the custom folder setting
 		customFolderSetting.settingEl.toggleClass('snc-hidden', this.plugin.settings.newNoteLocation !== 'custom');
 
-		// --- New Note Date & Time ---
-		new Setting(containerEl) // Store the setting instance
+		new Setting(containerEl)
 			.setName('Optional date & time')
 			.setDesc('Uses moment.js format for date/time in the title. Leave empty if no date/time is desired. Default: (YYYY-MM-DD-HH-mm)')
 			.addText(text => { text
@@ -406,8 +392,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				});
 			});
 
-		// --- New Note Title Prefix ---
-		new Setting(containerEl) // Store the setting instance
+		new Setting(containerEl)
 		.setName('Optional prefix')
 		.setDesc('Text to add before the date/time in the new chat note title.')
 		.addText(text => { text
@@ -420,8 +405,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			});
 		});
 
-		// --- New Note Title Suffix ---
-		new Setting(containerEl) // Store the setting instance
+		new Setting(containerEl)
 			.setName('Optional suffix')
 			.setDesc('Text to add after the date/time in the new chat note title.')
 			.addText(text => { text
@@ -437,7 +421,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		// Initial update for the consolidated preview
 		this.updateNewNotePathPreview();
 
-		// Fetch models and populate dropdowns on display (handles missing API key internally)
 		this.fetchAndStoreModels(false);
 		new Setting(containerEl).setName('Logging').setHeading();
 		containerEl.createEl('p', {
@@ -457,7 +440,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 					initializeLogger(this.plugin.settings); // Update logger immediately
 					if (loggingLevelSetting) {
-						loggingLevelSetting.settingEl.toggleClass('snc-hidden', !value); // Show/hide level dropdown
+						loggingLevelSetting.settingEl.toggleClass('snc-hidden', !value);
 					}
 					new Notice(`Logging ${value ? 'enabled' : 'disabled'}.`);
 				}));
@@ -476,16 +459,15 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 						if (Object.values(LogLevel).includes(value as LogLevel)) {
 							this.plugin.settings.logLevel = value as LogLevel;
 							await this.plugin.saveSettings();
-							initializeLogger(this.plugin.settings); // Update logger immediately
+							initializeLogger(this.plugin.settings);
 							new Notice(`Log level set to ${value}`);
 						} else {
 							log.warn(`SettingsTab: Invalid log level selected: ${value}`);
-							dropdown.setValue(this.plugin.settings.logLevel); // Revert
+							dropdown.setValue(this.plugin.settings.logLevel);
 						}
 					});
 			});
 
-		// Set initial visibility of the logging level dropdown
 		if (loggingLevelSetting) {
 			loggingLevelSetting.settingEl.toggleClass('snc-hidden', !this.plugin.settings.enableLogging);
 		}
@@ -516,7 +498,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		dropdown.selectEl.empty();
 
 		if (!this.plugin.settings.apiKey) {
-			dropdown.addOption('', 'Enter API key to load models'); // Assuming noApiKeyText was 'Enter API Key to load models'
+			dropdown.addOption('', 'Enter API key to load models');
 			dropdown.setDisabled(true);
 			dropdown.setValue('');
 			return;
@@ -537,13 +519,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		});
 
 		const savedModel = this.plugin.settings[settingKey] as string;
-		// Check if the current or saved model ID exists in the formatted list
 		const valueToSelect = formattedModels.some(m => m.id === currentSelectedValue) ? currentSelectedValue : savedModel;
 
 		if (valueToSelect && formattedModels.some(m => m.id === valueToSelect)) {
 			dropdown.setValue(valueToSelect);
 		} else {
-			// If the saved model is no longer valid or wasn't set, default to empty/placeholder
 			dropdown.setValue('');
 		}
 	}
@@ -570,7 +550,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		const filename = `${prefix}${formattedDate}${suffix}.md`;
 
-		// Basic check for potentially invalid characters in filename
 		if (/[\\/:]/.test(filename)) {
 			log.warn("SettingsTab: Generated filename contains potentially invalid characters:", filename);
 			return { filename: 'Invalid characters in filename', error: true };
@@ -618,7 +597,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					previewText = `Preview: ${filename} (created in the folder of the currently active note, or root folder if none)`;
 					break;
 			}
-			// Basic check for invalid characters in folder path (relevant for custom/archive)
 			if ((location === 'custom' || location === 'archive') && /[\\:*?"<>|]/.test(folderPath)) {
 				previewText = `Preview: Invalid characters in folder path: ${folderPath}`;
 				previewClass = 'snc-preview-error';

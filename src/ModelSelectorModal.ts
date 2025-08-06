@@ -21,7 +21,7 @@ export class ModelSelectorModal extends Modal {
 			text: 'This changes the default model used for all chat notes. Currently, setting models per-note is not supported (but maybe someday!). You can change this default model again at any time using this dialog or the settings.'
 		});
 
-		const notice = new Notice('Loading models…', 0); // Indefinite notice
+		const notice = new Notice('Loading models…', 0);
 
 		try {
 			const apiKey = this.plugin.settings.apiKey;
@@ -31,7 +31,6 @@ export class ModelSelectorModal extends Modal {
 				return;
 			}
 
-			// Use cached models if available
 			let models = await this.ors.getCachedModels(apiKey);
 			if (models.length === 0) {
 				contentEl.createEl('p', { text: 'No models loaded. Check your API key or network connection.' });
@@ -39,7 +38,6 @@ export class ModelSelectorModal extends Modal {
 				return;
 			}
 
-			// Sort models based on the setting
 			models = this.ors.sortModels(models, this.plugin.settings.modelSortOrder as ModelSortOption);
 			const formatted = this.ors.getFormattedModels(models);
 
@@ -52,9 +50,8 @@ export class ModelSelectorModal extends Modal {
 					dd.onChange(async (val) => {
 						this.plugin.settings.defaultModel = val;
 						await this.plugin.saveSettings();
-						// Find the display name for the notice
 						const selectedModelInfo = formatted.find(m => m.id === val);
-						const modelDisplayName = selectedModelInfo ? selectedModelInfo.displayName.split('|')[0].trim() : val; // Extract name before price
+						const modelDisplayName = selectedModelInfo ? selectedModelInfo.displayName.split('|')[0].trim() : val;
 						new Notice(`Default chat model set to "${modelDisplayName}".`);
 						this.close();
 					});

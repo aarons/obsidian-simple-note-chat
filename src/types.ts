@@ -12,18 +12,15 @@ export interface PluginSettings {
   apiKey: string;
   defaultModel: string;
   archiveFolderName: string;
-  // Settings for the 'New Note' command
   newNoteLocation: 'current' | 'archive' | 'custom';
   newNoteCustomFolder: string;
   newNoteTitleFormat: string;
-  // Settings for the 'Archive' command
   enableArchiveRenameDate: boolean;
   archiveRenameDateFormat: string;
   enableArchiveRenameLlm: boolean;
   llmRenameWordLimit: number;
   llmRenameIncludeEmojis: boolean;
   llmRenameModel: string; // Stores the ID of the model to use for titling
-  // General settings
   newNoteTitlePrefix: string;
   newNoteTitleSuffix: string;
   modelSortOrder: string;
@@ -33,11 +30,8 @@ export interface PluginSettings {
   modelCommandPhrase: string;
   chatSeparator: string;
 
-  // Behavior Settings
   enableSpacebarDetection: boolean;
   spacebarDetectionDelay: number;
-
-  // Logging Settings
   enableLogging: boolean;
   logLevel: LogLevel;
 }
@@ -46,18 +40,15 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   apiKey: '',
   defaultModel: 'openrouter/auto',
   archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
-  // New Note settings defaults
   newNoteLocation: 'archive',
   newNoteCustomFolder: '',
   newNoteTitleFormat: DEFAULT_NN_TITLE_FORMAT,
-  // Archive settings defaults
   enableArchiveRenameDate: false,
   archiveRenameDateFormat: DEFAULT_NN_TITLE_FORMAT,
   enableArchiveRenameLlm: false,
   llmRenameWordLimit: 5,
   llmRenameIncludeEmojis: false,
-  llmRenameModel: '',
-  // General settings defaults
+  llmRenameModel: ''
   newNoteTitlePrefix: '',
   newNoteTitleSuffix: '',
   modelSortOrder: 'alphabetical',
@@ -66,10 +57,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   newChatCommandPhrase: '',
   modelCommandPhrase: '',
   chatSeparator: CHAT_SEPARATOR,
-  // Behavior Settings defaults
   enableSpacebarDetection: false,
-  spacebarDetectionDelay: 0.5,
-  // Logging Defaults
+  spacebarDetectionDelay: 0.5
   enableLogging: false,
   logLevel: LogLevel.ERROR,
 };
