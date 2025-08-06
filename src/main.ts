@@ -27,7 +27,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	editorHandler: EditorHandler;
 	fileSystemService: FileSystemService;
 
-	private activeMarkdownView: MarkdownView | null = null;
 	private commandMap: Record<string, ((editor: Editor, view: MarkdownView, line: number) => void) | undefined> = {};
 	private lastSettingsHash: string = '';
 	private spacebarCommandTimeoutIds: Map<string, number> = new Map();
@@ -53,32 +52,12 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		this.addSettingTab(new SimpleNoteChatSettingsTab(this.app, this));
 
-		this.registerEvent(this.app.workspace.on('active-leaf-change', (leaf) => {
-			if (leaf?.view instanceof MarkdownView) {
-				const view = leaf.view;
-				const target = view.containerEl;
-
-				this.registerDomEvent(target, 'keydown', (evt: KeyboardEvent) => {
-					this.handleKeyDown(view, evt);
-				});
-
-				this.activeMarkdownView = view;
-				log.debug("Registered scoped keydown handler for active MarkdownView");
-			} else {
-				this.activeMarkdownView = null;
+		this.registerDomEvent(document, 'keydown', (evt: KeyboardEvent) => {
+			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (activeView) {
+				this.handleKeyDown(activeView, evt);
 			}
-		}));
-
-		const currentLeaf = this.app.workspace.activeLeaf;
-		if (currentLeaf?.view instanceof MarkdownView) {
-			const view = currentLeaf.view;
-			const target = view.containerEl;
-			this.registerDomEvent(target, 'keydown', (evt: KeyboardEvent) => {
-				this.handleKeyDown(view, evt);
-			});
-			this.activeMarkdownView = view;
-			log.debug("Registered initial scoped keydown handler");
-		}
+		});
 
 
 		this.addCommand({
@@ -201,7 +180,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	private cleanupTimeouts() {
 		this.spacebarCommandTimeoutIds.forEach(timeoutId => clearTimeout(timeoutId));
 		this.spacebarCommandTimeoutIds.clear();
-		this.activeMarkdownView = null;
 	}
 
 
