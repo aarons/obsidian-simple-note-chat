@@ -28,8 +28,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	fileSystemService: FileSystemService;
 
 	private activeMarkdownView: MarkdownView | null = null;
-	private activeEditorKeyDownTarget: EventTarget | null = null;
-	private boundKeyDownHandler: ((evt: KeyboardEvent) => void) | null = null;
 	private commandMap: Record<string, ((editor: Editor, view: MarkdownView, line: number) => void) | undefined> = {};
 	private lastSettingsHash: string = '';
 	private spacebarCommandTimeoutIds: Map<string, number> = new Map();
@@ -56,19 +54,18 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		this.addSettingTab(new SimpleNoteChatSettingsTab(this.app, this));
 
 		this.registerEvent(this.app.workspace.on('active-leaf-change', (leaf) => {
-			this.unregisterScopedKeyDownHandler();
-
 			if (leaf?.view instanceof MarkdownView) {
 				const view = leaf.view;
 				const target = view.containerEl;
 
-				const boundHandler = this.handleKeyDown.bind(this, view);
-				this.boundKeyDownHandler = boundHandler;
-				target.addEventListener('keydown', boundHandler);
+				this.registerDomEvent(target, 'keydown', (evt: KeyboardEvent) => {
+					this.handleKeyDown(view, evt);
+				});
 
 				this.activeMarkdownView = view;
-				this.activeEditorKeyDownTarget = target;
 				log.debug("Registered scoped keydown handler for active MarkdownView");
+			} else {
+				this.activeMarkdownView = null;
 			}
 		}));
 
@@ -76,11 +73,10 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		if (currentLeaf?.view instanceof MarkdownView) {
 			const view = currentLeaf.view;
 			const target = view.containerEl;
-			const boundHandler = this.handleKeyDown.bind(this, view);
-			this.boundKeyDownHandler = boundHandler;
-			target.addEventListener('keydown', boundHandler);
+			this.registerDomEvent(target, 'keydown', (evt: KeyboardEvent) => {
+				this.handleKeyDown(view, evt);
+			});
 			this.activeMarkdownView = view;
-			this.activeEditorKeyDownTarget = target;
 			log.debug("Registered initial scoped keydown handler");
 		}
 
@@ -199,20 +195,13 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 	onunload() {
 		log.debug('Unloading Simple Note Chat plugin');
-		this.unregisterScopedKeyDownHandler();
+		this.cleanupTimeouts();
 	}
 
-	private unregisterScopedKeyDownHandler() {
-		if (this.activeEditorKeyDownTarget && this.boundKeyDownHandler) {
-			this.activeEditorKeyDownTarget.removeEventListener('keydown', this.boundKeyDownHandler);
-			log.debug("Unregistered scoped keydown handler");
-		}
+	private cleanupTimeouts() {
 		this.spacebarCommandTimeoutIds.forEach(timeoutId => clearTimeout(timeoutId));
 		this.spacebarCommandTimeoutIds.clear();
-
 		this.activeMarkdownView = null;
-		this.activeEditorKeyDownTarget = null;
-		this.boundKeyDownHandler = null;
 	}
 
 
