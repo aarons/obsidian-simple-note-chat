@@ -48,7 +48,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   enableArchiveRenameLlm: false,
   llmRenameWordLimit: 5,
   llmRenameIncludeEmojis: false,
-  llmRenameModel: ''
+  llmRenameModel: '',
   newNoteTitlePrefix: '',
   newNoteTitleSuffix: '',
   modelSortOrder: 'alphabetical',
@@ -58,7 +58,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   modelCommandPhrase: '',
   chatSeparator: CHAT_SEPARATOR,
   enableSpacebarDetection: false,
-  spacebarDetectionDelay: 0.5
+  spacebarDetectionDelay: 0.5,
   enableLogging: false,
   logLevel: LogLevel.ERROR,
 };
