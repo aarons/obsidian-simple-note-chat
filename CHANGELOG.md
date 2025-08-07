@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/aarons/obsidian-simple-note-chat/compare/1.2.8...1.3.0) (2025-08-07)
+
+
+### Features
+
+* open new notes in a new tab ([68ddef6](https://github.com/aarons/obsidian-simple-note-chat/commit/68ddef6ee7d999d77a7e2b3543ad7ad3e56082e2))
+
+
+### Bug Fixes
+
+* correct vault API calls and add missing editor parameter ([9cb219e](https://github.com/aarons/obsidian-simple-note-chat/commit/9cb219e45addfd5cc982aaf885ee96a087b6bae3))
+
 ## [1.2.8](https://github.com/aarons/obsidian-simple-note-chat/compare/1.2.7...1.2.8) (2025-06-13)
 
 
