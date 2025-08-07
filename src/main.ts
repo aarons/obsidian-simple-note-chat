@@ -107,7 +107,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 					const title = `${prefix}${formattedDate}${suffix}`;
 
 					const baseFilename = `${title}.md`;
-					const availablePath = await this.fileSystemService.findAvailablePath(targetFolder, baseFilename);
+					const availablePath = this.fileSystemService.findAvailablePath(targetFolder, baseFilename);
 
 					const newFile = await this.app.vault.create(availablePath, '');
 					await this.app.workspace.openLinkText(newFile.path, '', true);

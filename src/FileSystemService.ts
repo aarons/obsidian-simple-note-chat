@@ -130,7 +130,7 @@ export class FileSystemService {
             }
 
             let targetPath = normalizePath(`${normalizedArchivePath}/${baseFilename}`);
-            targetPath = await this.findAvailablePath(normalizedArchivePath, baseFilename);
+            targetPath = this.findAvailablePath(normalizedArchivePath, baseFilename);
             
             if (markerExists) {
                 // Two-step archiving: create new file with content below marker,
@@ -159,7 +159,7 @@ export class FileSystemService {
      * Handles file naming collisions by appending a counter to find an available path.
      * Essential for preventing overwrites when multiple files have similar generated titles.
      */
-    public async findAvailablePath(folderPath: string, baseFilename: string): Promise<string> {
+    public findAvailablePath(folderPath: string, baseFilename: string): string {
         let targetPath = normalizePath(`${folderPath}/${baseFilename}`);
         let counter = 0;
 
@@ -169,7 +169,7 @@ export class FileSystemService {
 
         // Using getAbstractFileByPath here because we need to check if ANY item (file OR folder) 
         // exists at this path to avoid naming collisions
-        while (await this.app.vault.getAbstractFileByPath(targetPath) !== null) {
+        while (this.app.vault.getAbstractFileByPath(targetPath) !== null) {
             counter++;
             targetPath = normalizePath(`${folderPath}/${targetBaseName} ${counter}${targetExtension}`);
         }
