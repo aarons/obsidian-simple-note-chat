@@ -62,7 +62,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'create-new-chat-note',
-			name: 'Create New Chat Note',
+			name: 'Create new chat note',
 			callback: async () => {
 				try {
 					let targetFolder = '';
@@ -121,7 +121,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: 'trigger-chat-completion-cc',
-			name: 'Trigger Chat Completion (cc)',
+			name: 'Trigger chat completion (cc)',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				const file = view.file;
 				if (!file) {
@@ -141,7 +141,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'archive-current-note',
-			name: 'Archive Current Note',
+			name: 'Archive current note',
 			checkCallback: (checking: boolean) => {
 				const activeFile = this.app.workspace.getActiveFile();
 				if (!activeFile) {
@@ -164,7 +164,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'change-chat-model',
-			name: 'Change Chat Model',
+			name: 'Change chat model',
 			callback: () => {
 				this.editorHandler.openModelSelectorModal();
 				log.debug("Executed 'change model' command via hotkey.");

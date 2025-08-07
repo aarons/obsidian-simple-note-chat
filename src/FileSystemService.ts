@@ -71,11 +71,11 @@ export class FileSystemService {
                 const titleModel = settings.llmRenameModel || settings.defaultModel;
 
                 if (!titleModel || !settings.apiKey) {
-                    new Notice("LLM Title generation skipped: API Key or Title/Default Model not set.");
-                    log.warn("LLM Title generation skipped: API Key or Title/Default Model not set.");
+                    new Notice("LLM title generation skipped: API key or title/default model not set.");
+                    log.warn("LLM title generation skipped: API key or title/default model not set.");
                 } else if (!content.trim()) {
-                    new Notice("LLM Title generation skipped: Note content is empty.");
-                    log.warn("LLM Title generation skipped: Note content is empty.");
+                    new Notice("LLM title generation skipped: Note content is empty.");
+                    log.warn("LLM title generation skipped: Note content is empty.");
                 }
                 else {
                     const wordLimit = settings.llmRenameWordLimit > 0 ? settings.llmRenameWordLimit : 10;

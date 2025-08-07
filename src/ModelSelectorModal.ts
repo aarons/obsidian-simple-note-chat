@@ -16,7 +16,7 @@ export class ModelSelectorModal extends Modal {
 	async onOpen() {
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.createEl('h2', { text: 'Select Default Chat Model' });
+		contentEl.createEl('h2', { text: 'Select default chat model' });
 		contentEl.createEl('p', {
 			text: 'This changes the default model used for all chat notes. Currently, setting models per-note is not supported (but maybe someday!). You can change this default model again at any time using this dialog or the settings.'
 		});
@@ -26,7 +26,7 @@ export class ModelSelectorModal extends Modal {
 		try {
 			const apiKey = this.plugin.settings.apiKey;
 			if (!apiKey) {
-				contentEl.createEl('p', { text: 'Error: OpenRouter API Key is not set in plugin settings.' });
+				contentEl.createEl('p', { text: 'Error: OpenRouter API key is not set in plugin settings.' });
 				notice.hide();
 				return;
 			}
@@ -42,7 +42,7 @@ export class ModelSelectorModal extends Modal {
 			const formatted = this.ors.getFormattedModels(models);
 
 			new Setting(contentEl)
-				.setName('Default Model')
+				.setName('Default model')
 				.setDesc('Choose the LLM to use for chat completions.')
 				.addDropdown(dd => {
 					formatted.forEach(m => dd.addOption(m.id, m.displayName));
