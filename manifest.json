@@ -2,7 +2,7 @@
 	"id": "simple-note-chat",
 	"name": "Simple Note Chat",
 	"version": "1.2.8",
-	"minAppVersion": "1.0.0",
+	"minAppVersion": "1.5.7",
 	"description": "Chat with AIs using keywords, which are a mobile friendly way to talk to LLMs without needing keyboard shortcuts.",
 	"author": "Aaron Scott",
 	"authorUrl": "https://github.com/aarons",

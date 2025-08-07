@@ -88,7 +88,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 
 					if (targetFolder !== '/') {
-						const folderExists = this.app.vault.getAbstractFileByPath(targetFolder) !== null;
+						const folderExists = this.app.vault.getFolderByPath(targetFolder) !== null;
 						if (!folderExists) {
 							try {
 								await this.app.vault.createFolder(targetFolder);

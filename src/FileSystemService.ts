@@ -46,7 +46,7 @@ export class FileSystemService {
 
             const normalizedArchivePath = normalizePath(archiveFolderName);
 
-            const folderExists = (this.app.vault.getAbstractFileByPath(normalizedArchivePath) !== null);
+            const folderExists = (this.app.vault.getFolderByPath(normalizedArchivePath) !== null);
             if (!folderExists) {
                 try {
                     await this.app.vault.createFolder(normalizedArchivePath);
@@ -167,6 +167,8 @@ export class FileSystemService {
         const targetBaseName = targetBaseNameMatch ? targetBaseNameMatch[1] : baseFilename;
         const targetExtension = targetBaseNameMatch && targetBaseNameMatch[2] ? `.${targetBaseNameMatch[2]}` : '';
 
+        // Using getAbstractFileByPath here because we need to check if ANY item (file OR folder) 
+        // exists at this path to avoid naming collisions
         while (await this.app.vault.getAbstractFileByPath(targetPath) !== null) {
             counter++;
             targetPath = normalizePath(`${folderPath}/${targetBaseName} ${counter}${targetExtension}`);
