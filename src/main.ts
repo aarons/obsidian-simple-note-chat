@@ -152,10 +152,12 @@ export default class SimpleNoteChatPlugin extends Plugin {
 					return true;
 				}
 
+				const { activeEditor } = this.app.workspace;
 				this.fileSystemService.moveFileToArchive(
 					activeFile,
 					this.settings.archiveFolderName,
-					this.settings
+					this.settings,
+					activeEditor?.editor
 				);
 
 				return true;

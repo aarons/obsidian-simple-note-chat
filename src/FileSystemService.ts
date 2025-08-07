@@ -141,7 +141,7 @@ export class FileSystemService {
                     editor.setValue(contentAboveMarker);
                     editor.setCursor(editor.lastLine());
                 } else {
-                    await this.app.vault.process(file, (_data) => contentAboveMarker);
+                    await this.app.vault.modify(file, contentAboveMarker);
                 }
             } else {
                 // No marker: standard file move (rename entire file to archive)
@@ -181,7 +181,7 @@ export class FileSystemService {
      */
     async deleteFile(file: TFile): Promise<void> {
         try {
-            await this.app.vault.trash(file, true);
+            await this.app.fileManager.trashFile(file);
         } catch (error) {
             log.error(`Error deleting file "${file.path}":`, error);
         }
