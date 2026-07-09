@@ -24,7 +24,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	constructor(app: App, plugin: SimpleNoteChatPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
-		this.openRouterService = plugin.openRouterService || new OpenRouterService();
+		this.openRouterService = plugin.openRouterService;
 	}
 
 	display(): void {
@@ -76,18 +76,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					// Set the current value from settings
 					.setValue(this.plugin.settings.modelSortOrder)
 					.onChange(async (value) => {
-						// Ensure the value is a valid ModelSortOption before saving
-						if (Object.values(ModelSortOption).includes(value as ModelSortOption)) {
-							this.plugin.settings.modelSortOrder = value as ModelSortOption;
-							await this.plugin.saveSettings();
-							new Notice(`Model sort order set to: ${dropdown.selectEl.selectedOptions[0]?.text || value}`);
-							// Re-populate dropdowns with new sort order
-							this.populateModelDropdowns();
-						} else {
-							log.warn(`SettingsTab: Invalid sort option selected: ${value}`);
-							// Optionally revert dropdown to saved setting or default
-							dropdown.setValue(this.plugin.settings.modelSortOrder);
-						}
+						this.plugin.settings.modelSortOrder = value as ModelSortOption;
+						await this.plugin.saveSettings();
+						new Notice(`Model sort order set to: ${dropdown.selectEl.selectedOptions[0]?.text || value}`);
+						// Re-populate dropdowns with new sort order
+						this.populateModelDropdowns();
 					});
 			});
 
@@ -362,16 +355,11 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					.addOption('custom', 'Custom folder')
 					.setValue(this.plugin.settings.newNoteLocation)
 					.onChange(async (value) => {
-						if (value === 'current' || value === 'archive' || value === 'custom') {
-							this.plugin.settings.newNoteLocation = value;
-							await this.plugin.saveSettings();
-							new Notice(`New note location set to: ${dropdown.selectEl.selectedOptions[0]?.text || value}`);
-							customFolderSetting.settingEl.toggleClass('snc-hidden', value !== 'custom');
-							this.updateNewNotePathPreview(); // Update the consolidated preview
-						} else {
-							log.warn(`SettingsTab: Invalid new note location selected: ${value}`);
-							dropdown.setValue(this.plugin.settings.newNoteLocation); // Revert
-						}
+						this.plugin.settings.newNoteLocation = value as PluginSettings['newNoteLocation'];
+						await this.plugin.saveSettings();
+						new Notice(`New note location set to: ${dropdown.selectEl.selectedOptions[0]?.text || value}`);
+						customFolderSetting.settingEl.toggleClass('snc-hidden', value !== 'custom');
+						this.updateNewNotePathPreview(); // Update the consolidated preview
 					});
 			});
 
@@ -475,15 +463,10 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					.addOption(LogLevel.DEBUG, 'Debug (all logs)')
 					.setValue(this.plugin.settings.logLevel)
 					.onChange(async (value) => {
-						if (Object.values(LogLevel).includes(value as LogLevel)) {
-							this.plugin.settings.logLevel = value as LogLevel;
-							await this.plugin.saveSettings();
-							initializeLogger(this.plugin.settings); // Update logger immediately
-							new Notice(`Log level set to ${value}`);
-						} else {
-							log.warn(`SettingsTab: Invalid log level selected: ${value}`);
-							dropdown.setValue(this.plugin.settings.logLevel); // Revert
-						}
+						this.plugin.settings.logLevel = value as LogLevel;
+						await this.plugin.saveSettings();
+						initializeLogger(this.plugin.settings); // Update logger immediately
+						new Notice(`Log level set to ${value}`);
 					});
 			});
 

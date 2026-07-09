@@ -429,9 +429,6 @@ export class OpenRouterService {
             }
             log.debug('OpenRouterService: Stream finished.');
 
-        } catch (error) {
-             log.error("OpenRouterService: Error during stream processing loop:", error);
-             throw error;
         } finally {
             if (!done) {
                  log.debug("OpenRouterService: Stream loop exited unexpectedly, ensuring reader cancellation.");

@@ -195,7 +195,12 @@ export class ChatService {
             } // End for await loop
 
             // 5. Handle Stream Completion
-            if (!isFirstChunk && lastPosition) { // Ensure stream actually inserted content
+            if (isFirstChunk) {
+                // No chunks received - status message should still be there
+                this.removeStatusMessageAtPos(editor, statusMessage, actualStatusStartPos, actualStatusEndPos, 'Stream ended with no content.');
+                editor.setCursor(actualStatusStartPos); // Move cursor back to where status was
+                new Notice("Chat completed with no response.");
+            } else if (lastPosition) {
                 // Append final separator and position cursor
                 lastPosition = this.insertSeparatorWithSpacing(
                     editor,
@@ -203,17 +208,6 @@ export class ChatService {
                     CHAT_SEPARATOR
                 );
                 editor.setCursor(lastPosition); // Set cursor after the separator
-            } else if (isFirstChunk) {
-                // No chunks received - status message should still be there
-                this.removeStatusMessageAtPos(editor, statusMessage, actualStatusStartPos, actualStatusEndPos, 'Stream ended with no content.');
-                editor.setCursor(actualStatusStartPos); // Move cursor back to where status was
-                new Notice("Chat completed with no response.");
-            } else if (lastPosition) {
-                 log.warn("Stream finished, content likely received, placing cursor at end of content.");
-                 editor.setCursor(lastPosition);
-            } else {
-                 log.error("Stream finished in an unexpected state. Placing cursor at status message start position.");
-                 editor.setCursor(actualStatusStartPos);
             }
         } catch (error: any) {
             // 6. Handle Errors
@@ -335,27 +329,24 @@ export class ChatService {
     /**
      * Cancels an active chat stream.
      */
-    cancelStream(filePath: string, editor: Editor): boolean {
+    cancelStream(filePath: string, editor: Editor): void {
         const streamInfo = this.activeStreams.get(filePath);
-        if (streamInfo) {
-            log.debug(`Attempting to cancel chat stream for note: ${filePath}`);
-            const reason = "Chat cancelled by user action.";
-            streamInfo.controller.abort(reason);
-
-            // Attempt status message cleanup using stored positions
-            log.debug(`Attempting status message cleanup for cancelled stream: ${filePath}`);
-            const removed = this.removeStatusMessageAtPos(editor, streamInfo.statusText, streamInfo.statusStartPos, streamInfo.statusEndPos, reason);
-            if (removed) {
-                 editor.setCursor(streamInfo.statusStartPos); // Move cursor back if status was removed
-            }
-
-            this.activeStreams.delete(filePath); // Ensure removal
-            log.debug(`Stream cancelled and removed from active streams for: ${filePath}`);
-            new Notice(reason);
-            return true;
-        } else {
+        if (!streamInfo) {
             log.debug(`No active chat stream found to cancel for note: ${filePath}`);
-            return false;
+            return;
         }
+
+        const reason = "Chat cancelled by user action.";
+        streamInfo.controller.abort(reason);
+
+        // Attempt status message cleanup using stored positions
+        const removed = this.removeStatusMessageAtPos(editor, streamInfo.statusText, streamInfo.statusStartPos, streamInfo.statusEndPos, reason);
+        if (removed) {
+             editor.setCursor(streamInfo.statusStartPos); // Move cursor back if status was removed
+        }
+
+        this.activeStreams.delete(filePath); // Ensure removal
+        log.debug(`Stream cancelled and removed from active streams for: ${filePath}`);
+        new Notice(reason);
     }
 }

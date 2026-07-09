@@ -10,7 +10,7 @@ export class ModelSelectorModal extends Modal {
 	constructor(plugin: SimpleNoteChatPlugin) {
 		super(plugin.app);
 		this.plugin = plugin;
-		this.ors = plugin.openRouterService ?? new OpenRouterService();
+		this.ors = plugin.openRouterService;
 	}
 
 	async onOpen() {

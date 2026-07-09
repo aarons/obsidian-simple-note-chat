@@ -21,26 +21,14 @@ Explicitly **out of scope** (accepted as a known limitation for now): the fragil
 
 Ordered by suggested priority: user-visible bug fixes first, then pure-subtraction cleanups, then duplication collapses, then judgment-call improvements.
 
-### Phase 1: Small, user-visible bug fixes
-
-- [x] **1.1 Fix `forceRefresh`/`showNotices` parameter conflation** — `SettingsTab.ts:695-698`. `fetchAndStoreModels` passes its `showNotices` flag as `fetchModels`'s `forceRefresh` parameter. Consequence: changing the API key calls `fetchAndStoreModels(false)`, the service's 24h cache is still valid, so models fetched with the *old* key are returned and the new key is never validated. Pass an explicit `forceRefresh` where intended (the API-key change handler should force a refresh). Note `showNotices: false` also doesn't suppress notices because `fetchModels` shows its own `Notice`s — resolved by item 4.1, or at minimum documented.
-- [x] **1.2 Un-gate `log.error`** — `utils/logger.ts:50-55`. Errors are only logged when `enableLogging` is true (default false), so all failures are silent by default. Make `log.error` always write to console; keep the toggle/level for debug/info/warn.
-- [x] **1.3 Unify boundary-marker regexes** — `ChatService.ts:36` allows any leading whitespace before `^^^` (`\s*`); `FileSystemService.ts:31` allows at most one (`\s?`). Extract one shared regex (or builder) into `constants.ts` and use it in both places. The escape-the-marker code is duplicated verbatim too.
-- [x] **1.4 Status message removal breaks if model changes mid-stream** — `ChatService.ts:273`. `removeStatusMessageAtPos` rebuilds the expected text from `settings.defaultModel` at removal time; if the user changes the default model while a stream is pending, the text comparison fails and `Calling old-model...` is stranded in the note. Capture the status text once at insertion and compare against that.
-
-### Phase 2: Delete dead machinery (pure subtraction)
-
-- [x] **2.1 Remove the settings-hash system** — `main.ts`: `getSettingsHash`, `lastSettingsHash`, and the staleness checks in `handleEnterKey` (376-381) and `handleSpaceKey` (413-418). `saveSettings()` already rebuilds the command map on every change, so the hash can never be stale; the checks are unreachable.
-- [x] **2.2 Remove unused code** — `activeMarkdownView` field (`main.ts:30`, assigned, never read); `FileSystemService.deleteFile` (no callers); `OpenRouterService.refreshModels` and `SettingsTab.refreshModels` (no callers); `COMMAND_PHRASES_DEFAULTS` (`constants.ts:6`); unused `LogLevel` import in `main.ts`.
-- [x] **2.3 Remove the phantom `chatSeparator` setting** — it's in `PluginSettings` with a default but force-overwritten to the constant in `loadSettings` (`main.ts:229`). Use `CHAT_SEPARATOR` directly and drop the setting field. Also move the `DEFAULT_SETTINGS` mutations at `main.ts:17-21` into the `DEFAULT_SETTINGS` declaration in `types.ts` — but note the command phrases must default to the `*_COMMAND_DEFAULT` constants (as the mutation currently makes them), not `''`.
-- [x] **2.4 Collapse the OpenRouterService cache-wrapper methods** — `getCachedModels`, `refreshModels`, `isCacheValid`, `isRefreshNeeded` are thin wrappers around `fetchModels`. Keep `fetchModels(apiKey, forceRefresh)` (and `backgroundRefreshIfNeeded` if retained per 4.3), inline or delete the rest.
-- [x] **2.5 Delete misc dead lines** — `FileSystemService.ts:149` (`targetPath` computed then immediately overwritten); unreachable try/catch in `fetchAndStoreModels` (`SettingsTab.ts:709`, `fetchModels` never throws); leftover note-to-self comment `EditorHandler.ts:48` and commented-out code at line 61; stray `await` on synchronous `getAbstractFileByPath` (`FileSystemService.ts:193`).
+### Phase 1: Completed
+### Phase 2: Completed
 
 ### Phase 3: Remove overly defensive code
 
-- [ ] **3.1 Drop impossible service fallbacks** — `SettingsTab.ts:27` and `ModelSelectorModal.ts:13` fall back to `new OpenRouterService()` when `plugin.openRouterService` is unset; it never is, and a second instance would have its own empty cache (a bug if ever hit). Use the plugin's instance directly.
-- [ ] **3.2 Remove can't-fail dropdown validation** — three `onChange` handlers validate the value Obsidian's own dropdown just supplied (`SettingsTab.ts:78-88`, `363-372`, `476-484`).
-- [ ] **3.3 Simplify impossible-state branches** — `removeStatusMessageAtPos` `undefined` position guard (`ChatService.ts:268`, callers always pass positions); the four-way completion branching in `startChat` (`ChatService.ts:199-218`, two branches unreachable given the invariant enforced at line 187); dead "cancellation failed" branch in `handleEscapeKey` (`main.ts:356-359`, `cancelStream` returns true whenever a stream exists); redundant outer try/catch in the stream read loop (`OpenRouterService.ts:460-462`).
+- [x] **3.1 Drop impossible service fallbacks** — `SettingsTab.ts:27` and `ModelSelectorModal.ts:13` fall back to `new OpenRouterService()` when `plugin.openRouterService` is unset; it never is, and a second instance would have its own empty cache (a bug if ever hit). Use the plugin's instance directly.
+- [x] **3.2 Remove can't-fail dropdown validation** — three `onChange` handlers validate the value Obsidian's own dropdown just supplied (`SettingsTab.ts:78-88`, `363-372`, `476-484`).
+- [x] **3.3 Simplify impossible-state branches** — `removeStatusMessageAtPos` `undefined` position guard (`ChatService.ts:268`, callers always pass positions); the four-way completion branching in `startChat` (`ChatService.ts:199-218`, two branches unreachable given the invariant enforced at line 187); dead "cancellation failed" branch in `handleEscapeKey` (`main.ts:356-359`, `cancelStream` returns true whenever a stream exists); redundant outer try/catch in the stream read loop (`OpenRouterService.ts:460-462`). Notes: the `undefined` position guard was already gone after the Phase 1 signature change (the remaining start>=end range check guards genuinely-possible stale positions and stays); `cancelStream` now returns `void` since its boolean had no remaining consumer.
 
 ### Phase 4: Collapse duplication
 

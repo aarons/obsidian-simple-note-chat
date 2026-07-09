@@ -314,15 +314,12 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		const filePath = file!.path;
 
 		log.debug(`Key: Escape, File: ${filePath}`);
-		const isActive = this.chatService.isStreamActive(filePath);
-		if (isActive && this.chatService.cancelStream(filePath, editor)) {
-			log.debug("Stream cancellation successful via Escape.");
+		if (this.chatService.isStreamActive(filePath)) {
+			this.chatService.cancelStream(filePath, editor);
+			log.debug("Stream cancelled via Escape.");
 			evt.preventDefault();
 			evt.stopPropagation();
 			return true;
-		} else if (isActive) {
-			log.debug("Stream cancellation via Escape failed or no stream to cancel.");
-			return true; // Still handled as Escape's purpose here is stream-related
 		}
 		return false; // No active stream to cancel
 	}
