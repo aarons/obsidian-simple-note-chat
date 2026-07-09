@@ -45,7 +45,7 @@ Ordered by suggested priority: user-visible bug fixes first, then pure-subtracti
 
 ### Repo hygiene
 
-- [ ] **6.1 Gitignore and remove committed junk** — `.aider.chat.history.md`, `.aider.input.history`, `.aider.tags.cache.v4/`, `.DS_Store` files. Review whether `test-vault/` chat archives and the committed `main.js` build artifact should stay in the repo.
+- [x] **6.1 Gitignore and remove committed junk** — `.aider.chat.history.md`, `.aider.input.history`, `.aider.tags.cache.v4/`, `.DS_Store` files. Review whether `test-vault/` chat archives and the committed `main.js` build artifact should stay in the repo. Note: `.gitignore` already covered `.aider*`, `main.js`, `styles.css`, and test-vault notes — none were tracked. Only a root `.DS_Store` was committed; removed it and added `.DS_Store` to `.gitignore`. Kept the test-vault `.obsidian` config JSONs (they make the manual-test vault reproducible).
 
 ## Implementation Notes
 
