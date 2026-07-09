@@ -115,22 +115,15 @@ export class EditorHandler {
 					settings,
 					editor // Pass the editor instance
 				);
-				if (newPath) {
-					// Parse new name and folder from the returned path
-					const newName = newPath.split('/').pop() || file.basename; // Fallback to original basename
-					const archiveFolder = settings.archiveFolderName; // Use the setting value
+				// Parse new name from the returned path
+				const newName = newPath.split('/').pop() || file.basename; // Fallback to original basename
 
-					// Show persistent notice
-					new Notice(`Renamed to ${newName}\nMoved to ${archiveFolder}`);
-
-				} else {
-					new Notice("Failed to archive note.");
-					log.warn("FileSystemService.moveFileToArchive returned null.");
-					// Consider adding back the command line if archive fails? Might be complex.
-				}
+				// Show persistent notice
+				new Notice(`Renamed to ${newName}\nMoved to ${settings.archiveFolderName}`);
 			} catch (error) {
-				console.error("Error during note archive:", error);
-				new Notice("Failed to archive note. Check console for details.");
+				log.error("Error during note archive:", error);
+				const message = error instanceof Error ? error.message : String(error);
+				new Notice(`Failed to archive note: ${message}`);
 			}
 		})();
 	}
@@ -147,13 +140,11 @@ export class EditorHandler {
 	): void {
 		this.removeCommandLine(editor, commandLineIndex);
 
-		// Set cursor position *before* executing the command
+		// Set cursor position *before* creating the note
 		this._setCursorBeforeCommand(editor, commandLineIndex);
 
-		// Execute the command *after* modifying the editor
-		// @ts-ignore - Assuming 'commands' exists on app
-		this.app.commands.executeCommandById('simple-note-chat:create-new-chat-note');
-		new Notice("Creating new chat note...");
+		// Create the note *after* modifying the editor
+		this.plugin.createNewChatNote();
 	}
 
 	/**

@@ -62,7 +62,8 @@ export class ModelSelectorModal extends Modal {
 
 		} catch (error) {
 			log.error('Error loading models in modal:', error);
-			contentEl.createEl('p', { text: 'An error occurred while loading models. Check the console for details.' });
+			const message = error instanceof Error ? error.message : String(error);
+			contentEl.createEl('p', { text: `Failed to load models: ${message}` });
 		} finally {
 			notice.hide();
 		}

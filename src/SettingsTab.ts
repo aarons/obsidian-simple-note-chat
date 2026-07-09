@@ -100,7 +100,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 		.setName('Refresh model list')
-		.setDesc('Fetch the latest available models from OpenRouter. The list automatically refreshes once every 24 hours in the background, as well as when the plugin first starts with Obsidian; so the list should stay pretty current on its own.')
+		.setDesc('Fetch the latest available models from OpenRouter. The list also refreshes when the plugin first starts with Obsidian and when this settings tab is opened (at most once every 24 hours); so the list should stay pretty current on its own.')
 		.addButton(button => button
 			.setButtonText('Refresh models')
 			.setCta()
@@ -677,11 +677,17 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			loadingNotice = new Notice('Fetching models from OpenRouter...', 0);
 		}
 
-		// fetchModels handles its own errors and returns [] on failure
-		this.availableModels = await this.openRouterService.fetchModels(
-			this.plugin.settings.apiKey,
-			forceRefresh
-		);
+		try {
+			this.availableModels = await this.openRouterService.fetchModels(
+				this.plugin.settings.apiKey,
+				forceRefresh
+			);
+		} catch (error) {
+			log.error('SettingsTab: Failed to fetch models:', error);
+			this.availableModels = [];
+			const message = error instanceof Error ? error.message : String(error);
+			new Notice(message);
+		}
 		this.populateModelDropdowns();
 
 		loadingNotice?.hide();

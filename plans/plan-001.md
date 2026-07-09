@@ -25,16 +25,13 @@ Ordered by suggested priority: user-visible bug fixes first, then pure-subtracti
 ### Phase 2: Completed
 ### Phase 3: Completed
 ### Phase 4: Completed
-### Phase 5: Design/UX judgment calls (do last; each is optional, discuss if unsure)
 
-- [ ] **5.1 Move notices out of the service layer** — `fetchModels` and `getChatCompletion` show `Notice`s and return `[]`/`null`, destroying error information (e.g. archive failures can only report "Failed to archive note"). Have services throw or return errors; callers decide how to notify.
-- [ ] **5.2 New-chat command indirection** — `EditorHandler.ts:175` invokes the plugin's own command via `app.commands.executeCommandById` with `@ts-ignore`, plus a duplicate notice. Extract the note-creation logic in `main.ts` into a shared method both call.
-- [ ] **5.3 Relocate `backgroundRefreshIfNeeded`** — currently called mid-`streamChatCompletion` (`OpenRouterService.ts:341`), a model-list side effect buried in the chat path. Move the periodic refresh trigger to plugin `onload` (or drop it — the settings tab already refreshes on open).
-- [ ] **5.4 Preserve undo history on archive-with-marker** — `FileSystemService.ts:158` uses `editor.setValue(contentAboveMarker)`, which resets undo history and scroll. Use `editor.replaceRange` to delete just the region from the marker down.
+### Phase 5: Design/UX judgment calls (discuss if unsure)
 
-### Repo hygiene
-
-- [x] **6.1 Gitignore and remove committed junk** — `.aider.chat.history.md`, `.aider.input.history`, `.aider.tags.cache.v4/`, `.DS_Store` files. Review whether `test-vault/` chat archives and the committed `main.js` build artifact should stay in the repo. Note: `.gitignore` already covered `.aider*`, `main.js`, `styles.css`, and test-vault notes — none were tracked. Only a root `.DS_Store` was committed; removed it and added `.DS_Store` to `.gitignore`. Kept the test-vault `.obsidian` config JSONs (they make the manual-test vault reproducible).
+- [x] **5.1 Move notices out of the service layer** — `fetchModels` and `getChatCompletion` show `Notice`s and return `[]`/`null`, destroying error information (e.g. archive failures can only report "Failed to archive note"). Have services throw or return errors; callers decide how to notify. *(Done: `OpenRouterService` no longer imports `Notice`; `fetchModels`/`getChatCompletion` throw, `moveFileToArchive` throws instead of returning null, and callers surface `error.message` in their notices.)*
+- [x] **5.2 New-chat command indirection** — `EditorHandler.ts:175` invokes the plugin's own command via `app.commands.executeCommandById` with `@ts-ignore`, plus a duplicate notice. Extract the note-creation logic in `main.ts` into a shared method both call. *(Done: extracted `SimpleNoteChatPlugin.createNewChatNote()`; command and phrase handler both call it, duplicate notice removed.)*
+- [x] ~~**5.3 Relocate `backgroundRefreshIfNeeded`**~~ — dropped entirely rather than relocated: the settings tab already refreshes on open (and `onload` prefetches), so the buried refresh in `streamChatCompletion` and the method itself were deleted.
+- [x] **5.4 Preserve undo history on archive-with-marker** — `FileSystemService.ts:158` uses `editor.setValue(contentAboveMarker)`, which resets undo history and scroll. Use `editor.replaceRange` to delete just the region from the marker down. *(Done: deletes from the marker's offset to end-of-document via `replaceRange`.)*
 
 ## Implementation Notes
 

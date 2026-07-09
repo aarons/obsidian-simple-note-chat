@@ -58,65 +58,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		this.addCommand({
 			id: 'create-new-chat-note',
 			name: 'Create New Chat Note',
-			callback: async () => {
-				try {
-					let targetFolder = '';
-					if (this.settings.newNoteLocation === 'current') {
-						const currentFile = this.app.workspace.getActiveFile();
-						if (currentFile && currentFile.parent) {
-							targetFolder = currentFile.parent.path;
-						} else {
-							targetFolder = '/';
-							log.debug("No active file or parent folder found, using vault root for new note.");
-						}
-					} else if (this.settings.newNoteLocation === 'custom') {
-						targetFolder = this.settings.newNoteCustomFolder;
-					} else {
-						targetFolder = this.settings.archiveFolderName;
-					}
-
-					// Normalize the targetFolder path
-					if (targetFolder && targetFolder !== '/') {
-						targetFolder = normalizePath(targetFolder);
-					} else if (targetFolder === '') { // Handle case where custom path might be empty
-						targetFolder = '/'; // Default to root if empty
-					}
-
-
-					// Ensure target folder exists
-					// For root, no check/creation is needed. For others, check and create.
-					if (targetFolder !== '/') {
-						const folderExists = this.app.vault.getAbstractFileByPath(targetFolder) !== null;
-						if (!folderExists) {
-							try {
-								await this.app.vault.createFolder(targetFolder);
-								log.debug(`Created target folder: ${targetFolder}`);
-							} catch (folderError) {
-								log.error(`Failed to create target folder "${targetFolder}":`, folderError);
-								new Notice(`Failed to create folder "${targetFolder}". Using vault root.`);
-								targetFolder = '/'; // Fallback to root on folder creation error
-							}
-						}
-					}
-
-					// Construct title using prefix, format, and suffix
-					const formattedDate = moment().format(this.settings.newNoteTitleFormat || DEFAULT_NN_TITLE_FORMAT);
-					const prefix = this.settings.newNoteTitlePrefix || '';
-					const suffix = this.settings.newNoteTitleSuffix || '';
-					const title = `${prefix}${formattedDate}${suffix}`;
-
-					const baseFilename = `${title}.md`;
-					const availablePath = await this.fileSystemService.findAvailablePath(targetFolder, baseFilename);
-
-					const newFile = await this.app.vault.create(availablePath, '');
-					await this.app.workspace.openLinkText(newFile.path, '', true); // Ensure leaf is open before notice
-					new Notice(`Created new chat note: ${newFile.basename}`);
-
-				} catch (error) {
-					log.error("Error creating new chat note:", error);
-					new Notice("Error creating new chat note. Check console for details.");
-				}
-			}
+			callback: () => this.createNewChatNote()
 		});
 		this.addCommand({
 			id: 'trigger-chat-completion-cc',
@@ -151,12 +93,17 @@ export default class SimpleNoteChatPlugin extends Plugin {
 					return true; // Command is available if there's an active file
 				}
 
-				// Execute the archive logic - moveFileToArchive handles notifications
 				this.fileSystemService.moveFileToArchive(
 					activeFile,
 					this.settings.archiveFolderName,
 					this.settings
-				);
+				).then(newPath => {
+					new Notice(`Archived note to ${newPath}`);
+				}).catch(error => {
+					log.error("Error archiving note via command:", error);
+					const message = error instanceof Error ? error.message : String(error);
+					new Notice(`Failed to archive note: ${message}`);
+				});
 
 				return true;
 			}
@@ -176,6 +123,70 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		log.debug('Unloading Simple Note Chat plugin');
 		// registerDomEvent removes the keydown listener automatically; just clear timeouts
 		this.unregisterScopedKeyDownHandler();
+	}
+
+	/**
+	 * Creates a new chat note in the configured location and opens it.
+	 * Used by both the command palette command and the new-chat command phrase.
+	 */
+	async createNewChatNote(): Promise<void> {
+		try {
+			let targetFolder = '';
+			if (this.settings.newNoteLocation === 'current') {
+				const currentFile = this.app.workspace.getActiveFile();
+				if (currentFile && currentFile.parent) {
+					targetFolder = currentFile.parent.path;
+				} else {
+					targetFolder = '/';
+					log.debug("No active file or parent folder found, using vault root for new note.");
+				}
+			} else if (this.settings.newNoteLocation === 'custom') {
+				targetFolder = this.settings.newNoteCustomFolder;
+			} else {
+				targetFolder = this.settings.archiveFolderName;
+			}
+
+			// Normalize the targetFolder path
+			if (targetFolder && targetFolder !== '/') {
+				targetFolder = normalizePath(targetFolder);
+			} else if (targetFolder === '') { // Handle case where custom path might be empty
+				targetFolder = '/'; // Default to root if empty
+			}
+
+
+			// Ensure target folder exists
+			// For root, no check/creation is needed. For others, check and create.
+			if (targetFolder !== '/') {
+				const folderExists = this.app.vault.getAbstractFileByPath(targetFolder) !== null;
+				if (!folderExists) {
+					try {
+						await this.app.vault.createFolder(targetFolder);
+						log.debug(`Created target folder: ${targetFolder}`);
+					} catch (folderError) {
+						log.error(`Failed to create target folder "${targetFolder}":`, folderError);
+						new Notice(`Failed to create folder "${targetFolder}". Using vault root.`);
+						targetFolder = '/'; // Fallback to root on folder creation error
+					}
+				}
+			}
+
+			// Construct title using prefix, format, and suffix
+			const formattedDate = moment().format(this.settings.newNoteTitleFormat || DEFAULT_NN_TITLE_FORMAT);
+			const prefix = this.settings.newNoteTitlePrefix || '';
+			const suffix = this.settings.newNoteTitleSuffix || '';
+			const title = `${prefix}${formattedDate}${suffix}`;
+
+			const baseFilename = `${title}.md`;
+			const availablePath = await this.fileSystemService.findAvailablePath(targetFolder, baseFilename);
+
+			const newFile = await this.app.vault.create(availablePath, '');
+			await this.app.workspace.openLinkText(newFile.path, '', true); // Ensure leaf is open before notice
+			new Notice(`Created new chat note: ${newFile.basename}`);
+
+		} catch (error) {
+			log.error("Error creating new chat note:", error);
+			new Notice("Error creating new chat note. Check console for details.");
+		}
 	}
 
 	/**

@@ -19,96 +19,94 @@ export class FileSystemService {
      * @param archiveFolderName The relative path of the archive folder from the vault root.
      * @param settings The plugin settings containing archive and LLM options.
      * @param editor Optional Editor instance if the file is currently active in an editor.
-     * @returns The new path of the archived file, or null if an error occurred.
+     * @returns The new path of the archived file.
+     * @throws Error if the archive folder cannot be created or the vault operations fail.
      */
-    async moveFileToArchive(file: TFile, archiveFolderName: string, settings: PluginSettings, editor?: Editor): Promise<string | null> {
-        try {
-            const originalContent = await this.app.vault.read(file);
+    async moveFileToArchive(file: TFile, archiveFolderName: string, settings: PluginSettings, editor?: Editor): Promise<string> {
+        const originalContent = await this.app.vault.read(file);
 
-            const boundaryRegex = createChatBoundaryRegex('m');
-            const markerExists = boundaryRegex.test(originalContent);
+        const boundaryRegex = createChatBoundaryRegex('m');
+        const markerMatch = boundaryRegex.exec(originalContent);
 
-            let contentForTitleGeneration = originalContent;
-            let contentToArchive = originalContent;
-            let contentAboveMarker = ''; // Only used if marker exists
+        let contentForTitleGeneration = originalContent;
+        let contentToArchive = originalContent;
+        let contentAboveMarker = ''; // Only used if marker exists
 
-            if (markerExists) {
-                const parts = originalContent.split(boundaryRegex);
-                contentAboveMarker = parts[0];
-                log.debug(`contentAboveMarker: ${contentAboveMarker}`);
-                // In case the marker appears multiple times, we archive everything after the first one.
-                contentToArchive = parts.slice(1).join(CHAT_BOUNDARY_MARKER).trimStart();
-                contentForTitleGeneration = contentToArchive; // Use archived part for title
-                log.debug(`Marker found. Archiving content below marker. Original file will retain content above.`);
-            } else {
-                log.debug(`Marker not found. Archiving entire file.`);
-            }
-
-
-            const normalizedArchivePath = normalizePath(archiveFolderName);
-
-            const folderExists = (this.app.vault.getAbstractFileByPath(normalizedArchivePath) !== null);
-            if (!folderExists) {
-                try {
-                    await this.app.vault.createFolder(normalizedArchivePath);
-                    log.debug(`Created archive folder: ${normalizedArchivePath}`);
-                } catch (error) {
-                    log.error(`Failed to create archive folder "${normalizedArchivePath}":`, error);
-                    return null; // Cannot proceed without the folder
-                }
-            }
-
-            let baseFilename: string;
-            const originalExtension = file.extension ? `.${file.extension}` : '';
-
-            if (settings.enableArchiveRenameDate && settings.archiveRenameDateFormat) {
-                const formattedDate = moment().format(settings.archiveRenameDateFormat);
-                baseFilename = `${formattedDate}${originalExtension}`;
-            } else {
-                baseFilename = file.name;
-            }
-
-            if (settings.enableArchiveRenameLlm) {
-                // Use the determined content (either full or below marker) for title generation
-                const llmTitle = await this.generateLlmTitle(contentForTitleGeneration, settings);
-                if (llmTitle) {
-                    if (settings.enableArchiveRenameDate) {
-                        const filenameWithoutExt = baseFilename.substring(0, baseFilename.lastIndexOf('.'));
-                        baseFilename = `${filenameWithoutExt} ${llmTitle}${originalExtension}`;
-                    } else {
-                        baseFilename = `${llmTitle}${originalExtension}`;
-                    }
-                    log.debug(`FileSystemService: Updated baseFilename with LLM title: ${baseFilename}`);
-                }
-            }
-
-            const targetPath = await this.findAvailablePath(normalizedArchivePath, baseFilename);
-            // Check if the boundary marker was present, if so we'll keep the content above the marker
-            // and only save content below it to the archived note
-            if (markerExists) {
-                await this.app.vault.create(targetPath, contentToArchive);
-                log.debug(`Created archive file at ${targetPath} with content below marker.`);
-                // Modify original file to keep content above marker
-                if (editor) {
-                    editor.setValue(contentAboveMarker);
-                    // Position cursor at the very end of the document
-                    editor.setCursor(editor.lastLine());
-                    log.debug(`Modified original file ${file.path} using Editor API to retain content above marker.`);
-                } else { // No editor instance
-                    await this.app.vault.process(file, (_data) => contentAboveMarker);
-                    log.debug(`Modified original file ${file.path} using Vault.process to retain content above marker.`);
-                }
-            } else {
-                // move the entire file to the archive
-                await this.app.fileManager.renameFile(file, targetPath);
-                log.debug(`Archived entire file ${file.path} to ${targetPath}`);
-            }
-            return targetPath; // Return the path of the archived content
-
-        } catch (error) {
-            log.error(`Error archiving file "${file.path}" to folder "${archiveFolderName}":`, error);
-            return null;
+        if (markerMatch) {
+            const parts = originalContent.split(boundaryRegex);
+            contentAboveMarker = parts[0];
+            log.debug(`contentAboveMarker: ${contentAboveMarker}`);
+            // In case the marker appears multiple times, we archive everything after the first one.
+            contentToArchive = parts.slice(1).join(CHAT_BOUNDARY_MARKER).trimStart();
+            contentForTitleGeneration = contentToArchive; // Use archived part for title
+            log.debug(`Marker found. Archiving content below marker. Original file will retain content above.`);
+        } else {
+            log.debug(`Marker not found. Archiving entire file.`);
         }
+
+
+        const normalizedArchivePath = normalizePath(archiveFolderName);
+
+        const folderExists = (this.app.vault.getAbstractFileByPath(normalizedArchivePath) !== null);
+        if (!folderExists) {
+            try {
+                await this.app.vault.createFolder(normalizedArchivePath);
+                log.debug(`Created archive folder: ${normalizedArchivePath}`);
+            } catch (error) {
+                log.error(`Failed to create archive folder "${normalizedArchivePath}":`, error);
+                throw new Error(`Could not create archive folder "${normalizedArchivePath}".`);
+            }
+        }
+
+        let baseFilename: string;
+        const originalExtension = file.extension ? `.${file.extension}` : '';
+
+        if (settings.enableArchiveRenameDate && settings.archiveRenameDateFormat) {
+            const formattedDate = moment().format(settings.archiveRenameDateFormat);
+            baseFilename = `${formattedDate}${originalExtension}`;
+        } else {
+            baseFilename = file.name;
+        }
+
+        if (settings.enableArchiveRenameLlm) {
+            // Use the determined content (either full or below marker) for title generation
+            const llmTitle = await this.generateLlmTitle(contentForTitleGeneration, settings);
+            if (llmTitle) {
+                if (settings.enableArchiveRenameDate) {
+                    const filenameWithoutExt = baseFilename.substring(0, baseFilename.lastIndexOf('.'));
+                    baseFilename = `${filenameWithoutExt} ${llmTitle}${originalExtension}`;
+                } else {
+                    baseFilename = `${llmTitle}${originalExtension}`;
+                }
+                log.debug(`FileSystemService: Updated baseFilename with LLM title: ${baseFilename}`);
+            }
+        }
+
+        const targetPath = await this.findAvailablePath(normalizedArchivePath, baseFilename);
+        // Check if the boundary marker was present, if so we'll keep the content above the marker
+        // and only save content below it to the archived note
+        if (markerMatch) {
+            await this.app.vault.create(targetPath, contentToArchive);
+            log.debug(`Created archive file at ${targetPath} with content below marker.`);
+            // Modify original file to keep content above marker
+            if (editor) {
+                // Delete from the marker down (rather than setValue) so undo history
+                // and scroll position are preserved.
+                editor.replaceRange('',
+                    editor.offsetToPos(markerMatch.index),
+                    editor.offsetToPos(editor.getValue().length));
+                editor.setCursor(editor.lastLine());
+                log.debug(`Modified original file ${file.path} using Editor API to retain content above marker.`);
+            } else { // No editor instance
+                await this.app.vault.process(file, (_data) => contentAboveMarker);
+                log.debug(`Modified original file ${file.path} using Vault.process to retain content above marker.`);
+            }
+        } else {
+            // move the entire file to the archive
+            await this.app.fileManager.renameFile(file, targetPath);
+            log.debug(`Archived entire file ${file.path} to ${targetPath}`);
+        }
+        return targetPath; // Return the path of the archived content
     }
 
     /**
@@ -136,16 +134,18 @@ export class FileSystemService {
         const messages: ChatMessage[] = [{ role: 'user', content: prompt }];
 
         log.debug(`FileSystemService: Requesting LLM title with model ${titleModel}`);
-        const llmTitle = await this.openRouterService.getChatCompletion(
-            settings.apiKey,
-            titleModel,
-            messages,
-            wordLimit * 5 // Estimate max tokens based on word limit
-        );
-
-        if (!llmTitle) {
-            log.warn("FileSystemService: LLM title generation failed.");
-            new Notice("LLM title generation failed. Archiving with current name.");
+        let llmTitle: string;
+        try {
+            llmTitle = await this.openRouterService.getChatCompletion(
+                settings.apiKey,
+                titleModel,
+                messages,
+                wordLimit * 5 // Estimate max tokens based on word limit
+            );
+        } catch (error) {
+            log.error("FileSystemService: LLM title generation failed:", error);
+            const message = error instanceof Error ? error.message : String(error);
+            new Notice(`LLM title generation failed: ${message}\nArchiving with current name.`);
             return null;
         }
 
