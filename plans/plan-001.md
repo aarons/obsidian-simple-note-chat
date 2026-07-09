@@ -23,19 +23,8 @@ Ordered by suggested priority: user-visible bug fixes first, then pure-subtracti
 
 ### Phase 1: Completed
 ### Phase 2: Completed
-
-### Phase 3: Remove overly defensive code
-
-- [x] **3.1 Drop impossible service fallbacks** — `SettingsTab.ts:27` and `ModelSelectorModal.ts:13` fall back to `new OpenRouterService()` when `plugin.openRouterService` is unset; it never is, and a second instance would have its own empty cache (a bug if ever hit). Use the plugin's instance directly.
-- [x] **3.2 Remove can't-fail dropdown validation** — three `onChange` handlers validate the value Obsidian's own dropdown just supplied (`SettingsTab.ts:78-88`, `363-372`, `476-484`).
-- [x] **3.3 Simplify impossible-state branches** — `removeStatusMessageAtPos` `undefined` position guard (`ChatService.ts:268`, callers always pass positions); the four-way completion branching in `startChat` (`ChatService.ts:199-218`, two branches unreachable given the invariant enforced at line 187); dead "cancellation failed" branch in `handleEscapeKey` (`main.ts:356-359`, `cancelStream` returns true whenever a stream exists); redundant outer try/catch in the stream read loop (`OpenRouterService.ts:460-462`). Notes: the `undefined` position guard was already gone after the Phase 1 signature change (the remaining start>=end range check guards genuinely-possible stale positions and stays); `cancelStream` now returns `void` since its boolean had no remaining consumer.
-
-### Phase 4: Collapse duplication
-
-- [x] **4.1 Extract `removeCommandLine` helper in EditorHandler** — the four `trigger*Command` methods each repeat the same ~15-line compute-range/remove-line/reposition block (`EditorHandler.ts:49-58`, `96-108`, `159-171`, `190-202`). Also drop the unused `commandLineEndPos` computations.
-- [x] **4.2 Deduplicate keydown registration** — `main.ts:61-72` vs `76-86` are the same block written twice. Extract a helper; prefer `this.registerDomEvent(...)` over raw `addEventListener` for automatic cleanup, which simplifies `unregisterScopedKeyDownHandler`. Note: `unregisterScopedKeyDownHandler` still removes the listener manually on leaf change (registerDomEvent only covers unload); also swapped deprecated `workspace.activeLeaf` for `getActiveViewOfType(MarkdownView)`.
-- [x] **4.3 Split `moveFileToArchive`** — `FileSystemService.ts:24-177` is three jobs (marker split, LLM title generation + sanitization, move/rename) in one ~150-line method under one catch-all. Extract the LLM title generation (lines 76-147) into its own function so title failures and move failures are distinguishable.
-
+### Phase 3: Completed
+### Phase 4: Completed
 ### Phase 5: Design/UX judgment calls (do last; each is optional, discuss if unsure)
 
 - [ ] **5.1 Move notices out of the service layer** — `fetchModels` and `getChatCompletion` show `Notice`s and return `[]`/`null`, destroying error information (e.g. archive failures can only report "Failed to archive note"). Have services throw or return errors; callers decide how to notify.
