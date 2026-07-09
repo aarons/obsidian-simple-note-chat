@@ -50,7 +50,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 							new Notice('API key saved. Refreshing models...');
 							this.availableModels = [];
 							this.populateModelDropdowns();
-							await this.fetchAndStoreModels(false);
+							// Force a refresh so the new key is actually used (the service
+							// cache may still hold models fetched with the old key).
+							await this.fetchAndStoreModels(false, true);
 						}
 					});
 				text.inputEl.setAttribute('type', 'password');
@@ -110,7 +112,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			.setButtonText('Refresh models')
 			.setCta()
 			.onClick(async () => {
-				await this.fetchAndStoreModels(true);
+				await this.fetchAndStoreModels(true, true);
 			}));
 
 		// ========== COMMAND PHRASES ==========
@@ -675,8 +677,9 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	/**
 	 * Fetches models from OpenRouter and updates dropdowns
 	 * @param showNotices If true, displays loading and result notices
+	 * @param forceRefresh If true, bypasses the service's model cache
 	 */
-	private async fetchAndStoreModels(showNotices: boolean = true): Promise<void> {
+	private async fetchAndStoreModels(showNotices: boolean = true, forceRefresh: boolean = false): Promise<void> {
 		if (!this.plugin.settings.apiKey) {
 			if (showNotices) {
 				new Notice('Please enter your OpenRouter API key first.');
@@ -691,34 +694,16 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			loadingNotice = new Notice('Fetching models from OpenRouter...', 0);
 		}
 
-		try {
-			const models = await this.openRouterService.fetchModels(
-				this.plugin.settings.apiKey,
-				showNotices
-			);
-			this.availableModels = models;
+		// fetchModels handles its own errors and returns [] on failure
+		this.availableModels = await this.openRouterService.fetchModels(
+			this.plugin.settings.apiKey,
+			forceRefresh
+		);
+		this.populateModelDropdowns();
 
-			this.populateModelDropdowns();
-
-			if (showNotices) {
-				if (this.availableModels.length > 0) {
-					new Notice('Model list updated successfully.');
-				}
-			}
-
-		} catch (error) {
-			log.error("SettingsTab: Error fetching or storing models:", error);
-			if (showNotices) {
-				new Notice('An unexpected error occurred while updating model list.');
-			}
-			this.availableModels = [];
-			this.populateModelDropdowns();
-		} finally {
-			loadingNotice?.hide();
+		loadingNotice?.hide();
+		if (showNotices && this.availableModels.length > 0) {
+			new Notice('Model list updated successfully.');
 		}
-	}
-
-	public async refreshModels(): Promise<void> {
-		await this.fetchAndStoreModels(true);
 	}
 }

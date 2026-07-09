@@ -2,10 +2,11 @@ import { Notice, Plugin, Editor, TFile, EditorPosition } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
 import { OpenRouterService } from './OpenRouterService';
 import { log } from './utils/logger';
-import { CHAT_BOUNDARY_MARKER } from './constants';
+import { CHAT_BOUNDARY_MARKER, CHAT_SEPARATOR, createChatBoundaryRegex } from './constants';
 
 interface ActiveStreamInfo {
     controller: AbortController;
+    statusText: string;
     statusStartPos: EditorPosition;
     statusEndPos: EditorPosition;
 }
@@ -30,10 +31,7 @@ export class ChatService {
     private parseNoteContent(fullContent: string, separator: string, parseUntilOffset: number): ChatMessage[] {
         const relevantContent = fullContent.substring(0, parseUntilOffset); // Content before the insertion point
 
-        // Regex to find the marker on its own line, allowing whitespace
-        // Needs to escape potential regex characters in the marker itself
-        const escapedMarker = CHAT_BOUNDARY_MARKER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const boundaryRegex = new RegExp('(?:^|\\n)\\s*' + escapedMarker + '\\s*(?=\\n|$)', 'g');
+        const boundaryRegex = createChatBoundaryRegex('gm');
 
         // Find the *last* occurrence of the marker pattern within the relevant content
         let lastMatch: RegExpExecArray | null = null;
@@ -132,11 +130,11 @@ export class ChatService {
 
         // 2. Parse Content *before* the status message
         const parseUntilOffset = editor.posToOffset(actualStatusStartPos);
-        const messages = this.parseNoteContent(editor.getValue(), settings.chatSeparator, parseUntilOffset);
+        const messages = this.parseNoteContent(editor.getValue(), CHAT_SEPARATOR, parseUntilOffset);
 
         if (messages.length === 0) {
             new Notice('No content found before the chat initiation point.');
-            this.removeStatusMessageAtPos(editor, settings, actualStatusStartPos, actualStatusEndPos, 'No content found.');
+            this.removeStatusMessageAtPos(editor, statusMessage, actualStatusStartPos, actualStatusEndPos, 'No content found.');
             editor.setCursor(actualStatusStartPos); // Move cursor back
             return;
         }
@@ -145,6 +143,7 @@ export class ChatService {
         const abortController = new AbortController();
         this.activeStreams.set(notePath, {
             controller: abortController,
+            statusText: statusMessage,
             statusStartPos: actualStatusStartPos,
             statusEndPos: actualStatusEndPos
         });
@@ -165,14 +164,14 @@ export class ChatService {
                 if (chunk) {
                     if (isFirstChunk) {
                         // 4a. Remove status message
-                        this.removeStatusMessageAtPos(editor, settings,
+                        this.removeStatusMessageAtPos(editor, statusMessage,
                             actualStatusStartPos, actualStatusEndPos, 'First chunk received.');
 
                         // 4b. Insert separator with normalized spacing
                         currentInsertPos = this.insertSeparatorWithSpacing(
                             editor,
                             actualStatusStartPos, // Insert where status message was
-                            settings.chatSeparator
+                            CHAT_SEPARATOR
                         );
 
                         // 4c. Insert the first chunk
@@ -201,12 +200,12 @@ export class ChatService {
                 lastPosition = this.insertSeparatorWithSpacing(
                     editor,
                     lastPosition,
-                    settings.chatSeparator
+                    CHAT_SEPARATOR
                 );
                 editor.setCursor(lastPosition); // Set cursor after the separator
             } else if (isFirstChunk) {
                 // No chunks received - status message should still be there
-                this.removeStatusMessageAtPos(editor, settings, actualStatusStartPos, actualStatusEndPos, 'Stream ended with no content.');
+                this.removeStatusMessageAtPos(editor, statusMessage, actualStatusStartPos, actualStatusEndPos, 'Stream ended with no content.');
                 editor.setCursor(actualStatusStartPos); // Move cursor back to where status was
                 new Notice("Chat completed with no response.");
             } else if (lastPosition) {
@@ -241,7 +240,7 @@ export class ChatService {
             // If the error occurred before the first chunk, status message should still be present
             if (isFirstChunk) {
                 log.debug("Error occurred before first chunk, attempting status message cleanup.");
-                this.removeStatusMessageAtPos(editor, settings, actualStatusStartPos, actualStatusEndPos, `Error/Cancel occurred: ${reason}`);
+                this.removeStatusMessageAtPos(editor, statusMessage, actualStatusStartPos, actualStatusEndPos, `Error/Cancel occurred: ${reason}`);
                 editor.setCursor(actualStatusStartPos); // Move cursor back
             } else {
                  log.debug("Error occurred after first chunk, status message should already be removed.");
@@ -258,19 +257,13 @@ export class ChatService {
     /**
      * Attempts to remove the status message inserted by startChat.
      * @param editor The editor instance.
-     * @param settings Plugin settings to get the model name.
+     * @param expectedStatusBase The exact status text that was inserted.
      * @param startPos The expected start position of the status message.
      * @param endPos The expected end position of the status message.
      * @param reason Optional reason for removal logging.
      * @returns True if the message was found and removed, false otherwise.
      */
-    private removeStatusMessageAtPos(editor: Editor, settings: PluginSettings, startPos: EditorPosition | undefined, endPos: EditorPosition | undefined, reason?: string): boolean {
-        if (!startPos || !endPos) {
-            log.warn("Attempted to remove status message but positions were undefined.", { reason });
-            return false;
-        }
-
-        const expectedStatusBase = `Calling ${settings.defaultModel}...`;
+    private removeStatusMessageAtPos(editor: Editor, expectedStatusBase: string, startPos: EditorPosition, endPos: EditorPosition, reason?: string): boolean {
         let removed = false;
 
         try {
@@ -342,7 +335,7 @@ export class ChatService {
     /**
      * Cancels an active chat stream.
      */
-    cancelStream(filePath: string, editor: Editor, settings: PluginSettings): boolean {
+    cancelStream(filePath: string, editor: Editor): boolean {
         const streamInfo = this.activeStreams.get(filePath);
         if (streamInfo) {
             log.debug(`Attempting to cancel chat stream for note: ${filePath}`);
@@ -351,7 +344,7 @@ export class ChatService {
 
             // Attempt status message cleanup using stored positions
             log.debug(`Attempting status message cleanup for cancelled stream: ${filePath}`);
-            const removed = this.removeStatusMessageAtPos(editor, settings, streamInfo.statusStartPos, streamInfo.statusEndPos, reason);
+            const removed = this.removeStatusMessageAtPos(editor, streamInfo.statusText, streamInfo.statusStartPos, streamInfo.statusEndPos, reason);
             if (removed) {
                  editor.setCursor(streamInfo.statusStartPos); // Move cursor back if status was removed
             }

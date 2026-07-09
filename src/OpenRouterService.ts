@@ -98,19 +98,9 @@ export class OpenRouterService {
      * Checks if the model cache is valid.
      * @returns true if models are cached and the cache hasn't expired.
      */
-    isCacheValid(): boolean {
+    private isCacheValid(): boolean {
         return this.availableModels.length > 0 &&
                (Date.now() - this.modelsLastFetched) < this.cacheValidityDuration;
-    }
-
-    /**
-     * Checks if a refresh is needed (cache expired) but we still have cached models.
-     * Used to determine if we should trigger a background refresh.
-     * @returns true if we have cached models but they're stale
-     */
-    isRefreshNeeded(): boolean {
-        return this.availableModels.length > 0 &&
-               (Date.now() - this.modelsLastFetched) >= this.cacheValidityDuration;
     }
 
     /**
@@ -119,8 +109,8 @@ export class OpenRouterService {
      * @param apiKey The OpenRouter API key.
      */
     backgroundRefreshIfNeeded(apiKey: string): void {
-        // Only proceed if refresh is needed and we have an API key
-        if (!this.isRefreshNeeded() || !apiKey) {
+        // Only refresh when we have cached models that have gone stale
+        if (!apiKey || this.availableModels.length === 0 || this.isCacheValid()) {
             return;
         }
 
@@ -135,24 +125,6 @@ export class OpenRouterService {
                 // Just log the error - don't show notices or disturb the user
                 log.error('OpenRouterService: Background refresh failed:', error);
             });
-    }
-
-    /**
-     * Gets cached models or fetches them if not available.
-     * @param apiKey The OpenRouter API key.
-     * @returns A promise that resolves to the cached models.
-     */
-    async getCachedModels(apiKey: string): Promise<OpenRouterModel[]> {
-        return this.fetchModels(apiKey, false);
-    }
-
-    /**
-     * Clears the model cache and forces a refresh.
-     * @param apiKey The OpenRouter API key.
-     * @returns A promise that resolves to the newly fetched models.
-     */
-    async refreshModels(apiKey: string): Promise<OpenRouterModel[]> {
-        return this.fetchModels(apiKey, true);
     }
 
     /**

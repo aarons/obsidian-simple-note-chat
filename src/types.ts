@@ -1,4 +1,11 @@
-import { DEFAULT_ARCHIVE_FOLDER, DEFAULT_NN_TITLE_FORMAT, CHAT_SEPARATOR } from './constants';
+import {
+	DEFAULT_ARCHIVE_FOLDER,
+	DEFAULT_NN_TITLE_FORMAT,
+	CHAT_COMMAND_DEFAULT,
+	ARCHIVE_COMMAND_DEFAULT,
+	NEW_CHAT_COMMAND_DEFAULT,
+	MODEL_COMMAND_DEFAULT
+} from './constants';
 
 // Define LogLevel enum
 export enum LogLevel {
@@ -31,7 +38,6 @@ export interface PluginSettings {
   archiveCommandPhrase: string;
   newChatCommandPhrase: string;
   modelCommandPhrase: string;
-  chatSeparator: string;
 
   // Behavior Settings
   enableSpacebarDetection: boolean;
@@ -61,11 +67,10 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   newNoteTitlePrefix: '',
   newNoteTitleSuffix: '',
   modelSortOrder: 'alphabetical',
-  chatCommandPhrase: '',
-  archiveCommandPhrase: '',
-  newChatCommandPhrase: '',
-  modelCommandPhrase: '',
-  chatSeparator: CHAT_SEPARATOR,
+  chatCommandPhrase: CHAT_COMMAND_DEFAULT,
+  archiveCommandPhrase: ARCHIVE_COMMAND_DEFAULT,
+  newChatCommandPhrase: NEW_CHAT_COMMAND_DEFAULT,
+  modelCommandPhrase: MODEL_COMMAND_DEFAULT,
   // Behavior Settings defaults
   enableSpacebarDetection: false,
   spacebarDetectionDelay: 0.5,

@@ -48,9 +48,7 @@ export const log = {
 		}
 	},
 	error: (message: string, ...args: any[]): void => {
-		// Errors are logged if logging is enabled, regardless of level (minimum level is ERROR)
-		if (loggingEnabled && LogLevelValue[currentLogLevel] >= LogLevelValue[LogLevel.ERROR]) {
-			console.error(`[ERROR] ${message}`, ...args);
-		}
+		// Errors always reach the console; the logging toggle only gates debug/info/warn noise.
+		console.error(`[ERROR] ${message}`, ...args);
 	}
 };

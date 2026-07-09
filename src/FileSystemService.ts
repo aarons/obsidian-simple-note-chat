@@ -2,7 +2,7 @@ import { App, TFile, normalizePath, moment, Notice, Editor } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
 import { OpenRouterService } from './OpenRouterService';
 import { log } from './utils/logger';
-import { CHAT_BOUNDARY_MARKER } from './constants';
+import { CHAT_BOUNDARY_MARKER, createChatBoundaryRegex } from './constants';
 
 export class FileSystemService {
     private app: App;
@@ -25,12 +25,7 @@ export class FileSystemService {
         try {
             const originalContent = await this.app.vault.read(file);
 
-            // Needs to escape potential regex characters in the marker itself
-            const escapedMarker = CHAT_BOUNDARY_MARKER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            log.debug(`escapedMarker: ${escapedMarker}`);
-            const boundaryRegex = new RegExp(`^\\s?${escapedMarker}\\s*$`, 'm');
-            log.debug(`boundaryRegex: ${boundaryRegex}`);
-
+            const boundaryRegex = createChatBoundaryRegex('m');
             const markerExists = boundaryRegex.test(originalContent);
 
             let contentForTitleGeneration = originalContent;
@@ -146,8 +141,7 @@ export class FileSystemService {
                 }
             }
 
-            let targetPath = normalizePath(`${normalizedArchivePath}/${baseFilename}`);
-            targetPath = await this.findAvailablePath(normalizedArchivePath, baseFilename);
+            const targetPath = await this.findAvailablePath(normalizedArchivePath, baseFilename);
             // Check if the boundary marker was present, if so we'll keep the content above the marker
             // and only save content below it to the archived note
             if (markerExists) {
@@ -190,24 +184,10 @@ export class FileSystemService {
         const targetBaseName = targetBaseNameMatch ? targetBaseNameMatch[1] : baseFilename;
         const targetExtension = targetBaseNameMatch && targetBaseNameMatch[2] ? `.${targetBaseNameMatch[2]}` : '';
 
-        while (await this.app.vault.getAbstractFileByPath(targetPath) !== null) {
+        while (this.app.vault.getAbstractFileByPath(targetPath) !== null) {
             counter++;
             targetPath = normalizePath(`${folderPath}/${targetBaseName} ${counter}${targetExtension}`);
         }
         return targetPath;
-    }
-
-    /**
-     * Deletes a file by moving it to the system trash.
-     * @param file The file to delete.
-     */
-    async deleteFile(file: TFile): Promise<void> {
-        try {
-            await this.app.vault.trash(file, true);
-            log.debug(`Moved file ${file.path} to system trash`);
-        } catch (error) {
-            log.error(`Error deleting file "${file.path}":`, error);
-            // Error is logged but not re-thrown
-        }
     }
 }

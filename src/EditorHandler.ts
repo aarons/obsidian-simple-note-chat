@@ -45,7 +45,6 @@ export class EditorHandler {
 			return;
 		}
 
-		// I think we should rename this to CommandPhraseStartPos etcc.
 		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
 		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: editor.getLine(commandLineIndex).length };
 
@@ -56,9 +55,6 @@ export class EditorHandler {
 
 		// Remove the command phrase
 		editor.replaceRange('', commandLineStartPos, rangeToRemoveEnd);
-
-		// Position cursor for incoming stream
-		// editor.setCursor(statusMessageEndPos);
 
 		// Start chat, providing the position where the status message started
 		this.plugin.chatService.startChat(

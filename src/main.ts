@@ -4,21 +4,9 @@ import { ChatService } from './ChatService';
 import { OpenRouterService } from './OpenRouterService';
 import { EditorHandler } from './EditorHandler';
 import { FileSystemService } from './FileSystemService';
-import { PluginSettings, DEFAULT_SETTINGS, LogLevel } from './types';
+import { PluginSettings, DEFAULT_SETTINGS } from './types';
 import { log, initializeLogger } from './utils/logger';
-import {
-	DEFAULT_NN_TITLE_FORMAT,
-	CHAT_COMMAND_DEFAULT,
-	ARCHIVE_COMMAND_DEFAULT,
-	NEW_CHAT_COMMAND_DEFAULT,
-	CHAT_SEPARATOR,
-	MODEL_COMMAND_DEFAULT
-} from './constants';
-DEFAULT_SETTINGS.chatCommandPhrase = CHAT_COMMAND_DEFAULT;
-DEFAULT_SETTINGS.archiveCommandPhrase = ARCHIVE_COMMAND_DEFAULT;
-DEFAULT_SETTINGS.newChatCommandPhrase = NEW_CHAT_COMMAND_DEFAULT;
-DEFAULT_SETTINGS.modelCommandPhrase = MODEL_COMMAND_DEFAULT;
-DEFAULT_SETTINGS.chatSeparator = CHAT_SEPARATOR;
+import { DEFAULT_NN_TITLE_FORMAT } from './constants';
 
 export default class SimpleNoteChatPlugin extends Plugin {
 	settings: PluginSettings;
@@ -27,11 +15,9 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	editorHandler: EditorHandler;
 	fileSystemService: FileSystemService;
 
-	private activeMarkdownView: MarkdownView | null = null;
 	private activeEditorKeyDownTarget: EventTarget | null = null;
 	private boundKeyDownHandler: ((evt: KeyboardEvent) => void) | null = null;
 	private commandMap: Record<string, ((editor: Editor, view: MarkdownView, line: number) => void) | undefined> = {};
-	private lastSettingsHash: string = '';
 	private spacebarCommandTimeoutIds: Map<string, number> = new Map();
 
 	async onload() {
@@ -40,12 +26,11 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		initializeLogger(this.settings); // Initialize logger with loaded settings
 
 		this.updateCommandMap();
-		this.lastSettingsHash = this.getSettingsHash();
 
 		this.openRouterService = new OpenRouterService();
 
 		if (this.settings.apiKey) {
-			this.openRouterService.getCachedModels(this.settings.apiKey)
+			this.openRouterService.fetchModels(this.settings.apiKey)
 				.then(() => log.debug('Models prefetched on plugin load'))
 				.catch(err => log.error('Error prefetching models:', err));
 		}
@@ -66,7 +51,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 				this.boundKeyDownHandler = boundHandler;
 				target.addEventListener('keydown', boundHandler);
 
-				this.activeMarkdownView = view;
 				this.activeEditorKeyDownTarget = target;
 				log.debug("Registered scoped keydown handler for active MarkdownView");
 			}
@@ -80,7 +64,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			const boundHandler = this.handleKeyDown.bind(this, view);
 			this.boundKeyDownHandler = boundHandler;
 			target.addEventListener('keydown', boundHandler);
-			this.activeMarkdownView = view;
 			this.activeEditorKeyDownTarget = target;
 			log.debug("Registered initial scoped keydown handler");
 		}
@@ -218,7 +201,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		this.spacebarCommandTimeoutIds.forEach(timeoutId => clearTimeout(timeoutId));
 		this.spacebarCommandTimeoutIds.clear();
 
-		this.activeMarkdownView = null;
 		this.activeEditorKeyDownTarget = null;
 		this.boundKeyDownHandler = null;
 	}
@@ -226,7 +208,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-		this.settings.chatSeparator = CHAT_SEPARATOR; // Ensure the constant is always used
 	}
 
 	async saveSettings() {
@@ -235,20 +216,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		// Update command map when settings change
 		this.updateCommandMap();
 		initializeLogger(this.settings); // Re-initialize logger with new settings
-		this.lastSettingsHash = this.getSettingsHash();
-	}
-
-	/**
-	 * Creates a hash string representing the current command phrase settings
-	 * to detect when settings change.
-	 */
-	private getSettingsHash(): string {
-		return [
-			this.settings.chatCommandPhrase,
-			this.settings.archiveCommandPhrase,
-			this.settings.modelCommandPhrase,
-			this.settings.newChatCommandPhrase,
-		].join('|');
 	}
 
 	/**
@@ -348,7 +315,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		log.debug(`Key: Escape, File: ${filePath}`);
 		const isActive = this.chatService.isStreamActive(filePath);
-		if (isActive && this.chatService.cancelStream(filePath, editor, this.settings)) {
+		if (isActive && this.chatService.cancelStream(filePath, editor)) {
 			log.debug("Stream cancellation successful via Escape.");
 			evt.preventDefault();
 			evt.stopPropagation();
@@ -371,14 +338,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		const filePath = file.path;
 
 		log.debug(`Key: Enter, File: ${filePath}`);
-
-		// Defer Settings Hash Check (Requirement 5)
-		const currentSettingsHash = this.getSettingsHash();
-		if (this.lastSettingsHash !== currentSettingsHash) {
-			this.updateCommandMap();
-			this.lastSettingsHash = currentSettingsHash;
-			log.debug("Command map updated due to settings change (triggered by Enter).");
-		}
 
 		const cursor = editor.getCursor();
 		const commandLineNum = cursor.line - 1;
@@ -408,14 +367,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		log.debug(`Key: Space, File: ${filePath}, Spacebar detection enabled.`);
 		// Space key itself should be typed. Do not preventDefault/stopPropagation here.
-
-		// Defer Settings Hash Check (Requirement 5)
-		const currentSettingsHash = this.getSettingsHash();
-		if (this.lastSettingsHash !== currentSettingsHash) {
-			this.updateCommandMap();
-			this.lastSettingsHash = currentSettingsHash;
-			log.debug("Command map updated due to settings change (triggered by Space).");
-		}
 
 		// Clear any existing timeout for this specific file path before setting a new one
 		const oldTimeoutId = this.spacebarCommandTimeoutIds.get(filePath);
