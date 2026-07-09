@@ -32,9 +32,9 @@ Ordered by suggested priority: user-visible bug fixes first, then pure-subtracti
 
 ### Phase 4: Collapse duplication
 
-- [ ] **4.1 Extract `removeCommandLine` helper in EditorHandler** — the four `trigger*Command` methods each repeat the same ~15-line compute-range/remove-line/reposition block (`EditorHandler.ts:49-58`, `96-108`, `159-171`, `190-202`). Also drop the unused `commandLineEndPos` computations.
-- [ ] **4.2 Deduplicate keydown registration** — `main.ts:61-72` vs `76-86` are the same block written twice. Extract a helper; prefer `this.registerDomEvent(...)` over raw `addEventListener` for automatic cleanup, which simplifies `unregisterScopedKeyDownHandler`.
-- [ ] **4.3 Split `moveFileToArchive`** — `FileSystemService.ts:24-177` is three jobs (marker split, LLM title generation + sanitization, move/rename) in one ~150-line method under one catch-all. Extract the LLM title generation (lines 76-147) into its own function so title failures and move failures are distinguishable.
+- [x] **4.1 Extract `removeCommandLine` helper in EditorHandler** — the four `trigger*Command` methods each repeat the same ~15-line compute-range/remove-line/reposition block (`EditorHandler.ts:49-58`, `96-108`, `159-171`, `190-202`). Also drop the unused `commandLineEndPos` computations.
+- [x] **4.2 Deduplicate keydown registration** — `main.ts:61-72` vs `76-86` are the same block written twice. Extract a helper; prefer `this.registerDomEvent(...)` over raw `addEventListener` for automatic cleanup, which simplifies `unregisterScopedKeyDownHandler`. Note: `unregisterScopedKeyDownHandler` still removes the listener manually on leaf change (registerDomEvent only covers unload); also swapped deprecated `workspace.activeLeaf` for `getActiveViewOfType(MarkdownView)`.
+- [x] **4.3 Split `moveFileToArchive`** — `FileSystemService.ts:24-177` is three jobs (marker split, LLM title generation + sanitization, move/rename) in one ~150-line method under one catch-all. Extract the LLM title generation (lines 76-147) into its own function so title failures and move failures are distinguishable.
 
 ### Phase 5: Design/UX judgment calls (do last; each is optional, discuss if unsure)
 

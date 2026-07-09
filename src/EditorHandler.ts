@@ -14,6 +14,19 @@ export class EditorHandler {
 	}
 
 	/**
+	 * Removes the command phrase line (including its trailing newline when it isn't
+	 * the last line) and returns the position where the line started.
+	 */
+	private removeCommandLine(editor: Editor, commandLineIndex: number): EditorPosition {
+		const startPos: EditorPosition = { line: commandLineIndex, ch: 0 };
+		const endPos: EditorPosition = (commandLineIndex < editor.lastLine())
+			? { line: commandLineIndex + 1, ch: 0 }
+			: { line: commandLineIndex, ch: editor.getLine(commandLineIndex).length };
+		editor.replaceRange('', startPos, endPos);
+		return startPos;
+	}
+
+	/**
 	 * Sets cursor position after command execution - either at the end of the previous line
 	 * or at document start if command was on the first line.
 	 */
@@ -45,16 +58,7 @@ export class EditorHandler {
 			return;
 		}
 
-		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
-		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: editor.getLine(commandLineIndex).length };
-
-		// Handle line endings appropriately based on position in document
-		const rangeToRemoveEnd = (commandLineIndex < editor.lastLine())
-			? { line: commandLineIndex + 1, ch: 0 } // Include newline if not last line
-			: commandLineEndPos; // Just the line content if last line
-
-		// Remove the command phrase
-		editor.replaceRange('', commandLineStartPos, rangeToRemoveEnd);
+		const commandLineStartPos = this.removeCommandLine(editor, commandLineIndex);
 
 		// Start chat, providing the position where the status message started
 		this.plugin.chatService.startChat(
@@ -88,17 +92,7 @@ export class EditorHandler {
 			return;
 		}
 
-		// Define the range for the command line itself
-		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
-		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: editor.getLine(commandLineIndex).length };
-
-		// Determine the end of the range to remove (command line + its newline, or just command line if last line)
-		const rangeToRemoveEnd = (commandLineIndex < editor.lastLine())
-			? { line: commandLineIndex + 1, ch: 0 } // Remove the line and its newline
-			: commandLineEndPos; // Just remove the content if it's the last line
-
-		// Remove the command line (and its newline if applicable)
-		editor.replaceRange('', commandLineStartPos, rangeToRemoveEnd);
+		this.removeCommandLine(editor, commandLineIndex);
 
 		// Set cursor position *before* the async operation
 		this._setCursorBeforeCommand(editor, commandLineIndex);
@@ -151,17 +145,7 @@ export class EditorHandler {
 		settings: PluginSettings,
 		commandLineIndex: number
 	): void {
-		// Define the range for the command line itself
-		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
-		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: editor.getLine(commandLineIndex).length };
-
-		// Determine the end of the range to remove (command line + its newline, or just command line if last line)
-		const rangeToRemoveEnd = (commandLineIndex < editor.lastLine())
-			? { line: commandLineIndex + 1, ch: 0 } // Remove the line and its newline
-			: commandLineEndPos; // Just remove the content if it's the last line
-
-		// Remove the command line (and its newline if applicable)
-		editor.replaceRange('', commandLineStartPos, rangeToRemoveEnd);
+		this.removeCommandLine(editor, commandLineIndex);
 
 		// Set cursor position *before* executing the command
 		this._setCursorBeforeCommand(editor, commandLineIndex);
@@ -182,17 +166,7 @@ export class EditorHandler {
 		settings: PluginSettings,
 		commandLineIndex: number
 	): void {
-		// Define the range for the command line itself
-		const commandLineStartPos: EditorPosition = { line: commandLineIndex, ch: 0 };
-		const commandLineEndPos: EditorPosition = { line: commandLineIndex, ch: editor.getLine(commandLineIndex).length };
-
-		// Determine the end of the range to remove (command line + its newline, or just command line if last line)
-		const rangeToRemoveEnd = (commandLineIndex < editor.lastLine())
-			? { line: commandLineIndex + 1, ch: 0 } // Remove the line and its newline
-			: commandLineEndPos; // Just remove the content if it's the last line
-
-		// Remove the command line (and its newline if applicable)
-		editor.replaceRange('', commandLineStartPos, rangeToRemoveEnd);
+		this.removeCommandLine(editor, commandLineIndex);
 
 		// Set cursor position *before* opening the modal
 		this._setCursorBeforeCommand(editor, commandLineIndex);

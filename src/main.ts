@@ -44,28 +44,14 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			this.unregisterScopedKeyDownHandler();
 
 			if (leaf?.view instanceof MarkdownView) {
-				const view = leaf.view;
-				const target = view.containerEl;
-
-				const boundHandler = this.handleKeyDown.bind(this, view);
-				this.boundKeyDownHandler = boundHandler;
-				target.addEventListener('keydown', boundHandler);
-
-				this.activeEditorKeyDownTarget = target;
-				log.debug("Registered scoped keydown handler for active MarkdownView");
+				this.registerScopedKeyDownHandler(leaf.view);
 			}
 		}));
 
 		// Check for active markdown view on plugin load
-		const currentLeaf = this.app.workspace.activeLeaf;
-		if (currentLeaf?.view instanceof MarkdownView) {
-			const view = currentLeaf.view;
-			const target = view.containerEl;
-			const boundHandler = this.handleKeyDown.bind(this, view);
-			this.boundKeyDownHandler = boundHandler;
-			target.addEventListener('keydown', boundHandler);
-			this.activeEditorKeyDownTarget = target;
-			log.debug("Registered initial scoped keydown handler");
+		const currentView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (currentView) {
+			this.registerScopedKeyDownHandler(currentView);
 		}
 
 
@@ -188,8 +174,22 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 	onunload() {
 		log.debug('Unloading Simple Note Chat plugin');
-		// Ensure the listener is removed when the plugin unloads
+		// registerDomEvent removes the keydown listener automatically; just clear timeouts
 		this.unregisterScopedKeyDownHandler();
+	}
+
+	/**
+	 * Attaches the keydown handler to the given view. registerDomEvent guarantees
+	 * removal on plugin unload; unregisterScopedKeyDownHandler removes it earlier
+	 * when the active leaf changes.
+	 */
+	private registerScopedKeyDownHandler(view: MarkdownView) {
+		const target = view.containerEl;
+		const boundHandler = this.handleKeyDown.bind(this, view);
+		this.boundKeyDownHandler = boundHandler;
+		this.activeEditorKeyDownTarget = target;
+		this.registerDomEvent(target, 'keydown', boundHandler);
+		log.debug("Registered scoped keydown handler for active MarkdownView");
 	}
 
 	private unregisterScopedKeyDownHandler() {
