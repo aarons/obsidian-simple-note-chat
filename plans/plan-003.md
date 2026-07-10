@@ -31,15 +31,15 @@ Where useful, the original main commits to consult (via `git show <sha>`):
 
 The latest release-please version on main is **1.3.0**. Review's files still say 1.2.8. Copy main's values:
 
-- [ ] **1.1** `.release-please-manifest.json` → `{ ".": "1.3.0" }`
-- [ ] **1.2** `manifest.json` → `"version": "1.3.0"`; also `"minAppVersion": "1.5.7"` (required by item 3.1), `"authorUrl": "https://github.com/aarons"`, and main's shorter description: `"Chat with AIs using keywords, which are a mobile friendly way to talk to LLMs without needing keyboard shortcuts."`
-- [ ] **1.3** `package.json` → `"version": "1.3.0"` (keep review's `vitest` devDependency and `test` script — those are review-only additions, do not lose them)
-- [ ] **1.4** `CHANGELOG.md` → add the 1.3.0 entry from main (`git show main:CHANGELOG.md`)
+- [x] **1.1** `.release-please-manifest.json` → `{ ".": "1.3.0" }`
+- [x] **1.2** `manifest.json` → `"version": "1.3.0"`; also `"minAppVersion": "1.5.7"` (required by item 3.1), `"authorUrl": "https://github.com/aarons"`, and main's shorter description: `"Chat with AIs using keywords, which are a mobile friendly way to talk to LLMs without needing keyboard shortcuts."`
+- [x] **1.3** `package.json` → `"version": "1.3.0"` (keep review's `vitest` devDependency and `test` script — those are review-only additions, do not lose them)
+- [x] **1.4** `CHANGELOG.md` → add the 1.3.0 entry from main (`git show main:CHANGELOG.md`)
 
 ### Phase 2: Maintainer-review compliance (required)
 
-- [ ] **2.1 Sentence-case UI text** (`56bac9a`) — convert command names, notices, and modal text from Title Case to sentence case per Obsidian style guidelines. Known sites on review: `src/main.ts` command names (`Create New Chat Note`, `Trigger Chat Completion (cc)`, `Archive Current Note`, `Change Chat Model`), `src/ModelSelectorModal.ts` (`Select Default Chat Model` h2, `Default Model` setting, `API Key` in error text), `src/FileSystemService.ts` LLM-title-skipped notices. Sweep for any other Title Case strings review introduced (e.g. in `SettingsTab.ts` and the new llmTitle feature) — main's diff only covers strings that existed at the fork.
-- [ ] **2.2 Single document-level keydown listener** (`cb58f85`) — review still uses a scoped per-view handler (`registerScopedKeyDownHandler` / `unregisterScopedKeyDownHandler` in `src/main.ts`, wired to `active-leaf-change`, with `activeMarkdownView` / `activeEditorKeyDownTarget` / `boundKeyDownHandler` fields). Replace all of it with one listener registered once in `onload`:
+- [x] **2.1 Sentence-case UI text** (`56bac9a`) — convert command names, notices, and modal text from Title Case to sentence case per Obsidian style guidelines. Known sites on review: `src/main.ts` command names (`Create New Chat Note`, `Trigger Chat Completion (cc)`, `Archive Current Note`, `Change Chat Model`), `src/ModelSelectorModal.ts` (`Select Default Chat Model` h2, `Default Model` setting, `API Key` in error text), `src/FileSystemService.ts` LLM-title-skipped notices. Sweep for any other Title Case strings review introduced (e.g. in `SettingsTab.ts` and the new llmTitle feature) — main's diff only covers strings that existed at the fork.
+- [x] **2.2 Single document-level keydown listener** (`cb58f85`) — review still uses a scoped per-view handler (`registerScopedKeyDownHandler` / `unregisterScopedKeyDownHandler` in `src/main.ts`, wired to `active-leaf-change`, with `activeMarkdownView` / `activeEditorKeyDownTarget` / `boundKeyDownHandler` fields). Replace all of it with one listener registered once in `onload`:
   ```ts
   this.registerDomEvent(document, 'keydown', (evt: KeyboardEvent) => {
       const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -49,7 +49,7 @@ The latest release-please version on main is **1.3.0**. Review's files still say
   });
   ```
   Delete the fields, both register/unregister methods, and the `active-leaf-change` wiring; `onunload` then only needs to clear the spacebar timeouts (main renamed the helper `cleanupTimeouts`).
-- [ ] **2.3 README title** — change `# Obsidian - Simple Note Chat` to `# Simple Note Chat` (title format compliance).
+- [x] **2.3 README title** — change `# Obsidian - Simple Note Chat` to `# Simple Note Chat` (title format compliance).
 
 ### Phase 3: Obsidian API corrections
 

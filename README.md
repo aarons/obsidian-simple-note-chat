@@ -1,5 +1,5 @@
 
-# Obsidian - Simple Note Chat
+# Simple Note Chat
 
 Use a keyword to chat with LLMs in a note; designed to work great on mobile and desktop. This is a comfortable way to chat without needing keyboard shortcuts or buttons.
 

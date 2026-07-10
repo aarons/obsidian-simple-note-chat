@@ -15,8 +15,6 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	editorHandler: EditorHandler;
 	fileSystemService: FileSystemService;
 
-	private activeEditorKeyDownTarget: EventTarget | null = null;
-	private boundKeyDownHandler: ((evt: KeyboardEvent) => void) | null = null;
 	private commandMap: Record<string, ((editor: Editor, view: MarkdownView, line: number) => void) | undefined> = {};
 	private spacebarCommandTimeoutIds: Map<string, number> = new Map();
 
@@ -40,29 +38,22 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		this.addSettingTab(new SimpleNoteChatSettingsTab(this.app, this));
 
-		this.registerEvent(this.app.workspace.on('active-leaf-change', (leaf) => {
-			this.unregisterScopedKeyDownHandler();
-
-			if (leaf?.view instanceof MarkdownView) {
-				this.registerScopedKeyDownHandler(leaf.view);
+		// registerDomEvent removes the listener automatically on plugin unload
+		this.registerDomEvent(document, 'keydown', (evt: KeyboardEvent) => {
+			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (activeView) {
+				this.handleKeyDown(activeView, evt);
 			}
-		}));
-
-		// Check for active markdown view on plugin load
-		const currentView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (currentView) {
-			this.registerScopedKeyDownHandler(currentView);
-		}
-
+		});
 
 		this.addCommand({
 			id: 'create-new-chat-note',
-			name: 'Create New Chat Note',
+			name: 'Create new chat note',
 			callback: () => this.createNewChatNote()
 		});
 		this.addCommand({
 			id: 'trigger-chat-completion-cc',
-			name: 'Trigger Chat Completion (cc)',
+			name: 'Trigger chat completion (cc)',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				const file = view.file;
 				if (!file) {
@@ -82,7 +73,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'archive-current-note',
-			name: 'Archive Current Note',
+			name: 'Archive current note',
 			checkCallback: (checking: boolean) => {
 				const activeFile = this.app.workspace.getActiveFile();
 				if (!activeFile) {
@@ -111,7 +102,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'change-chat-model',
-			name: 'Change Chat Model',
+			name: 'Change chat model',
 			callback: () => {
 				this.editorHandler.openModelSelectorModal();
 				log.debug("Executed 'change model' command via hotkey.");
@@ -122,7 +113,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	onunload() {
 		log.debug('Unloading Simple Note Chat plugin');
 		// registerDomEvent removes the keydown listener automatically; just clear timeouts
-		this.unregisterScopedKeyDownHandler();
+		this.cleanupTimeouts();
 	}
 
 	/**
@@ -189,33 +180,10 @@ export default class SimpleNoteChatPlugin extends Plugin {
 		}
 	}
 
-	/**
-	 * Attaches the keydown handler to the given view. registerDomEvent guarantees
-	 * removal on plugin unload; unregisterScopedKeyDownHandler removes it earlier
-	 * when the active leaf changes.
-	 */
-	private registerScopedKeyDownHandler(view: MarkdownView) {
-		const target = view.containerEl;
-		const boundHandler = this.handleKeyDown.bind(this, view);
-		this.boundKeyDownHandler = boundHandler;
-		this.activeEditorKeyDownTarget = target;
-		this.registerDomEvent(target, 'keydown', boundHandler);
-		log.debug("Registered scoped keydown handler for active MarkdownView");
-	}
-
-	private unregisterScopedKeyDownHandler() {
-		if (this.activeEditorKeyDownTarget && this.boundKeyDownHandler) {
-			this.activeEditorKeyDownTarget.removeEventListener('keydown', this.boundKeyDownHandler);
-			log.debug("Unregistered scoped keydown handler");
-		}
-		// Clear all pending spacebar timeouts when unregistering
+	private cleanupTimeouts() {
 		this.spacebarCommandTimeoutIds.forEach(timeoutId => clearTimeout(timeoutId));
 		this.spacebarCommandTimeoutIds.clear();
-
-		this.activeEditorKeyDownTarget = null;
-		this.boundKeyDownHandler = null;
 	}
-
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
