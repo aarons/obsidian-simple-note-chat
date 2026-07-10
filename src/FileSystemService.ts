@@ -1,7 +1,8 @@
 import { App, TFile, normalizePath, moment, Notice, Editor } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
-import { OpenRouterService } from './OpenRouterService';
+import { OpenRouterService, ChatCompletionError, ChatCompletionOptions } from './OpenRouterService';
 import { log } from './utils/logger';
+import { formatLlmTitle } from './utils/llmTitle';
 import { CHAT_BOUNDARY_MARKER, createChatBoundaryRegex } from './constants';
 
 export class FileSystemService {
@@ -133,45 +134,85 @@ export class FileSystemService {
         const prompt = `Create a concise functional title for the following note content, under ${wordLimit} words.${settings.llmRenameIncludeEmojis ? ' You can include relevant emojis.' : ''} Respond ONLY with the title itself, no explanations or quotation marks. Note Content:\n\n${content}`;
         const messages: ChatMessage[] = [{ role: 'user', content: prompt }];
 
-        log.debug(`FileSystemService: Requesting LLM title with model ${titleModel}`);
+        const completionOptions = this.buildTitleCompletionOptions(titleModel, settings);
+
+        log.debug(`FileSystemService: Requesting LLM title with model ${titleModel}`, completionOptions);
         let llmTitle: string;
         try {
             llmTitle = await this.openRouterService.getChatCompletion(
                 settings.apiKey,
                 titleModel,
                 messages,
-                wordLimit * 5 // Estimate max tokens based on word limit
+                completionOptions
             );
         } catch (error) {
-            log.error("FileSystemService: LLM title generation failed:", error);
-            const message = error instanceof Error ? error.message : String(error);
-            new Notice(`LLM title generation failed: ${message}\nArchiving with current name.`);
-            return null;
+            // If we asked a mandatory-reasoning model not to reason (metadata didn't
+            // warn us), the request is rejected with a 400 — retry once without the
+            // reasoning field rather than failing the whole title.
+            if (error instanceof ChatCompletionError && error.status === 400
+                && completionOptions.reasoning?.effort === 'none') {
+                log.warn("FileSystemService: Request with reasoning effort 'none' was rejected; retrying without the reasoning field.", error);
+                try {
+                    llmTitle = await this.openRouterService.getChatCompletion(
+                        settings.apiKey,
+                        titleModel,
+                        messages,
+                        { maxTokens: completionOptions.maxTokens }
+                    );
+                } catch (retryError) {
+                    return this.noticeTitleFailure(retryError);
+                }
+            } else {
+                return this.noticeTitleFailure(error);
+            }
         }
 
         log.debug(`FileSystemService: Received LLM title: "${llmTitle}"`);
-        // Whitelist approach for sanitization
-        const basicWhitelistRegex = /[^a-zA-Z0-9 ]/g;
-        // Regex to keep alphanumeric characters, spaces, and common emoji ranges (requires 'u' flag)
-        const emojiWhitelistRegex = /[^a-zA-Z0-9 \u{1F300}-\u{1F5FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/gu;
+        // Word limit is enforced here, on the response — never via request token caps.
+        const formattedTitle = formatLlmTitle(llmTitle, wordLimit, settings.llmRenameIncludeEmojis);
+        log.debug(`Formatted LLM title. Before: "${llmTitle}", After: "${formattedTitle}"`);
 
-        const sanitizedTitle = llmTitle
-            .replace(settings.llmRenameIncludeEmojis ? emojiWhitelistRegex : basicWhitelistRegex, '')
-            .trim()                 // Trim leading/trailing whitespace
-            .replace(/\s+/g, ' ')   // Collapse multiple spaces to one
-            .substring(0, 100);     // Limit length
-        log.debug(`Sanitized LLM title. Before: "${llmTitle}", After: "${sanitizedTitle}"`);
-
-        if (!sanitizedTitle) {
+        if (!formattedTitle) {
             log.warn(`FileSystemService: LLM title "${llmTitle}" became empty after sanitization.`);
             new Notice("LLM title was empty after sanitization. Archiving with current name.");
             return null;
         }
 
-        return sanitizedTitle
-            .split(' ')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
+        return formattedTitle;
+    }
+
+    private noticeTitleFailure(error: unknown): null {
+        log.error("FileSystemService: LLM title generation failed:", error);
+        const message = error instanceof Error ? error.message : String(error);
+        new Notice(`LLM title generation failed: ${message}\nArchiving with current name.`);
+        return null;
+    }
+
+    /**
+     * Builds the completion cap and reasoning config for a title request.
+     *
+     * The cap is independent of the title word count (reasoning tokens count
+     * against it, so word-derived caps starve reasoning models of content —
+     * the original titling bug). OpenRouter's effort ratios size the thinking
+     * budget from this cap, and the +500 headroom keeps content unstarved; the
+     * 1600 floor keeps the cap above Anthropic's 1024-token minimum thinking
+     * budget, which requests must strictly exceed.
+     */
+    private buildTitleCompletionOptions(model: string, settings: PluginSettings): ChatCompletionOptions {
+        const maxTokens = Math.max(settings.llmRenameReasoningMaxTokens + 500, 1600);
+        const effort = settings.llmRenameReasoningEffort;
+
+        if (effort === 'none') {
+            // Models with mandatory reasoning reject effort 'none'; omit the field
+            // so they use their default behavior instead of failing the archive.
+            if (this.openRouterService.getModelReasoningInfo(model)?.mandatory) {
+                log.debug(`FileSystemService: Model ${model} has mandatory reasoning; omitting reasoning field.`);
+                return { maxTokens };
+            }
+            return { maxTokens, reasoning: { effort: 'none' } };
+        }
+        // exclude: the title flow never reads the reasoning trace.
+        return { maxTokens, reasoning: { effort, exclude: true } };
     }
 
     /**

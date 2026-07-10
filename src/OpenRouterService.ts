@@ -1,8 +1,21 @@
 // src/OpenRouterService.ts
 import { requestUrl } from 'obsidian';
 import { OPENROUTER_API_URL } from './constants';
-import { PluginSettings, ChatMessage } from './types';
+import { PluginSettings, ChatMessage, ReasoningEffort } from './types';
 import { log } from './utils/logger';
+
+/**
+ * Per-model reasoning capabilities reported by GET /models.
+ * Absent for non-reasoning models and dynamic router models (e.g. openrouter/auto).
+ */
+export interface ModelReasoningInfo {
+    supported_efforts?: string[] | null; // null = all gateway effort values accepted
+    default_effort?: string;
+    default_enabled?: boolean;
+    supports_max_tokens?: boolean;
+    mandatory?: boolean; // true = the model rejects effort "none"
+}
+
 export interface OpenRouterModel {
     id: string;
     name: string;
@@ -27,6 +40,31 @@ export interface OpenRouterModel {
         prompt_tokens: string;
         completion_tokens: string;
     } | null;
+    reasoning?: ModelReasoningInfo; // Optional
+}
+
+/**
+ * Options for non-streaming chat completions.
+ */
+export interface ChatCompletionOptions {
+    /** Cap on total completion tokens (reasoning + content). */
+    maxTokens?: number;
+    /** OpenRouter unified reasoning config. Send effort OR max_tokens, not both. */
+    reasoning?: {
+        effort?: ReasoningEffort;
+        exclude?: boolean;
+    };
+}
+
+/**
+ * Error from a failed chat completion request, carrying the HTTP status
+ * so callers can distinguish client errors (4xx) from other failures.
+ */
+export class ChatCompletionError extends Error {
+    constructor(message: string, public readonly status?: number) {
+        super(message);
+        this.name = 'ChatCompletionError';
+    }
 }
 
 /**
@@ -156,6 +194,16 @@ export class OpenRouterService {
         this.modelsLastFetched = Date.now();
         log.debug(`Model cache updated at: ${this.modelsLastFetched}`)
         return this.availableModels;
+    }
+
+    /**
+     * Looks up a model's reasoning capabilities from the cached model list.
+     * @param modelId The model ID to look up.
+     * @returns The model's reasoning info, or undefined if the model isn't cached
+     *          or doesn't report reasoning support (treat as unknown/not applicable).
+     */
+    getModelReasoningInfo(modelId: string): ModelReasoningInfo | undefined {
+        return this.availableModels.find(model => model.id === modelId)?.reasoning;
     }
 
     /**
@@ -421,15 +469,16 @@ export class OpenRouterService {
      * @param apiKey The OpenRouter API key.
      * @param model The model ID to use for completion.
      * @param messages The chat history messages.
-     * @param maxTokens Optional maximum number of tokens for the completion.
+     * @param options Optional completion cap and reasoning configuration.
      * @returns A promise that resolves to the completion content string.
-     * @throws Error if the API key is missing, the request fails, or the response is malformed.
+     * @throws ChatCompletionError (with HTTP status) if the request fails;
+     *         Error if the API key is missing or the response has no content.
      */
     async getChatCompletion(
         apiKey: string,
         model: string,
         messages: ChatMessage[],
-        maxTokens?: number
+        options?: ChatCompletionOptions
     ): Promise<string> {
         if (!apiKey) {
             throw new Error('OpenRouter API key is not set. Please configure it in the plugin settings.');
@@ -441,8 +490,11 @@ export class OpenRouterService {
             stream: false,
         };
 
-        if (maxTokens !== undefined && maxTokens > 0) {
-            requestBody.max_tokens = maxTokens;
+        if (options?.maxTokens !== undefined && options.maxTokens > 0) {
+            requestBody.max_tokens = options.maxTokens;
+        }
+        if (options?.reasoning) {
+            requestBody.reasoning = options.reasoning;
         }
 
         log.debug('OpenRouterService: Sending non-stream request:', JSON.stringify(requestBody, null, 2));
@@ -475,15 +527,23 @@ export class OpenRouterService {
             } catch {
                 errorMessage += ` ${response.text || 'Could not read error body.'}`;
             }
-            throw new Error(errorMessage);
+            throw new ChatCompletionError(errorMessage, response.status);
         }
 
         const data = response.json;
-        const content = data?.choices?.[0]?.message?.content;
+        const choice = data?.choices?.[0];
+        const content = choice?.message?.content;
 
         if (!content) {
-            log.error('OpenRouterService: Could not extract content from non-stream response:', data);
-            throw new Error('Failed to parse LLM response from OpenRouter.');
+            // finish_reason is the key diagnostic here: "length" means the token cap
+            // starved the content (e.g. reasoning consumed the whole budget).
+            const finishReason = choice?.finish_reason ?? 'unknown';
+            const nativeFinishReason = choice?.native_finish_reason ?? 'unknown';
+            log.error(`OpenRouterService: No content in non-stream response. finish_reason: ${finishReason}, native_finish_reason: ${nativeFinishReason}`, data);
+            if (finishReason === 'length') {
+                throw new Error('Model ran out of tokens before answering (finish_reason: length). Try raising the reasoning token limit or lowering the reasoning effort.');
+            }
+            throw new Error(`LLM returned no content (finish_reason: ${finishReason}).`);
         }
 
         log.debug('OpenRouterService: Received non-stream completion.');

@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting, Notice, DropdownComponent, moment } from 'obsidian';
 import SimpleNoteChatPlugin from './main';
 import { OpenRouterService, OpenRouterModel, FormattedModelInfo, ModelSortOption } from './OpenRouterService';
-import { PluginSettings } from './types';
+import { PluginSettings, ReasoningEffort } from './types';
 import { log, initializeLogger } from './utils/logger';
 import {
 	DEFAULT_ARCHIVE_FOLDER,
@@ -322,6 +322,54 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 					inputEl.setAttribute('min', '1');
 				}
 			});
+
+		new Setting(llmSettingsContainer)
+			.setName('Title reasoning effort')
+			.setDesc(`How much internal reasoning the model may use before answering. Only matters for reasoning-capable models. 'None' asks the model not to reason; models that can't disable reasoning fall back to their default behavior.`)
+			.addDropdown(dropdown => {
+				dropdown
+					.addOption('none', 'None')
+					.addOption('minimal', 'Minimal')
+					.addOption('low', 'Low')
+					.addOption('medium', 'Medium')
+					.addOption('high', 'High')
+					.addOption('xhigh', 'Extra high')
+					.addOption('max', 'Max')
+					.setValue(this.plugin.settings.llmRenameReasoningEffort)
+					.onChange(async (value) => {
+						this.plugin.settings.llmRenameReasoningEffort = value as ReasoningEffort;
+						await this.plugin.saveSettings();
+						if (reasoningTokensSetting) {
+							reasoningTokensSetting.settingEl.toggleClass('snc-hidden', value === 'none');
+						}
+					});
+			});
+
+		const reasoningTokensSetting = new Setting(llmSettingsContainer)
+			.setName('Reasoning token limit')
+			.setDesc('Roughly limits how many tokens the model may spend on reasoning while generating the title. Higher values allow deeper reasoning but cost more.')
+			.addText(text => text
+				.setPlaceholder('1000')
+				.setValue(String(this.plugin.settings.llmRenameReasoningMaxTokens))
+				.onChange(async (value) => {
+					const numValue = parseInt(value, 10);
+					if (!isNaN(numValue) && numValue >= 1) {
+						this.plugin.settings.llmRenameReasoningMaxTokens = numValue;
+						await this.plugin.saveSettings();
+					} else {
+						new Notice('Please enter a valid number (1 or greater).');
+						text.setValue(String(this.plugin.settings.llmRenameReasoningMaxTokens));
+					}
+				}))
+			.then(setting => {
+				const inputEl = setting.controlEl.querySelector('input');
+				if (inputEl) {
+					inputEl.setAttribute('type', 'number');
+					inputEl.setAttribute('min', '1');
+				}
+			});
+
+		reasoningTokensSetting.settingEl.toggleClass('snc-hidden', this.plugin.settings.llmRenameReasoningEffort === 'none');
 
 		new Setting(llmSettingsContainer)
 			.setName('Allow emojis in LLM title?')

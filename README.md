@@ -92,6 +92,8 @@ It's fully configurable, so you can change:
 - whether to change the title of the note
 - whether to add a date/time prefix, etc.
 
+When title generation is enabled, the title word limit is strictly enforced on the model's response, and two settings control reasoning-capable models (like OpenAI's o-series or gpt-oss): the reasoning effort level (`none` through `max`) and a rough limit on how many tokens the model may spend reasoning before it answers. The defaults (minimal effort, 1000 tokens) work with both reasoning and non-reasoning title models.
+
 Currently, archiving will only work on notes that have had a chat session. Although it seems like it would be helpful to archive any note, so this will probably change to be more permissive (or configurable).
 
 ### Creating a New Chat Note (`nn`)

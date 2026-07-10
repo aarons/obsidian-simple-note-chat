@@ -7,6 +7,12 @@ import {
 	MODEL_COMMAND_DEFAULT
 } from './constants';
 
+/**
+ * Reasoning effort levels accepted by OpenRouter's unified `reasoning` parameter.
+ * 'none' asks the model not to reason (rejected by models whose reasoning is mandatory).
+ */
+export type ReasoningEffort = 'max' | 'xhigh' | 'high' | 'medium' | 'low' | 'minimal' | 'none';
+
 // Define LogLevel enum
 export enum LogLevel {
 	ERROR = 'ERROR',
@@ -30,6 +36,11 @@ export interface PluginSettings {
   llmRenameWordLimit: number;
   llmRenameIncludeEmojis: boolean;
   llmRenameModel: string; // Stores the ID of the model to use for titling
+  llmRenameReasoningEffort: ReasoningEffort;
+  // Reasoning token budget for title generation. Not sent as reasoning.max_tokens
+  // (mutually exclusive with effort); it sizes the completion cap that OpenRouter's
+  // effort ratios are applied to, so it bounds reasoning spend approximately.
+  llmRenameReasoningMaxTokens: number;
   // General settings
   newNoteTitlePrefix: string;
   newNoteTitleSuffix: string;
@@ -63,6 +74,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   llmRenameWordLimit: 5,
   llmRenameIncludeEmojis: false,
   llmRenameModel: '',
+  llmRenameReasoningEffort: 'minimal',
+  llmRenameReasoningMaxTokens: 1000,
   // General settings defaults
   newNoteTitlePrefix: '',
   newNoteTitleSuffix: '',
