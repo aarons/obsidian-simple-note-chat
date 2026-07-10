@@ -22,7 +22,7 @@ Where useful, the original main commits to consult (via `git show <sha>`):
 | `78d0f3c` | `getFolderByPath` + `minAppVersion` 1.5.7 |
 | `9cb219e` | vault API fixes + pass editor to archive command |
 | `cd56e43` | synchronous `findAvailablePath` |
-| `57f5c1b` | CLAUDE.md added, `external-docs/` removed, manifest description |
+| `57f5c1b` | `external-docs/` removed, manifest description (also added CLAUDE.md — not ported) |
 | `e72c555` | release-please 1.3.0 release commit |
 
 ## Work items
@@ -59,24 +59,25 @@ The latest release-please version on main is **1.3.0**. Review's files still say
   const { activeEditor } = this.app.workspace;
   this.fileSystemService.moveFileToArchive(activeFile, this.settings.archiveFolderName, this.settings, activeEditor?.editor)
   ```
-- [ ] **3.3 `vault.modify` in the no-editor archive path** (`9cb219e`) — main replaced `vault.process(file, (_data) => contentAboveMarker)` with `vault.modify(file, contentAboveMarker)` at what is now `src/FileSystemService.ts:102`. Rationale: the callback ignores the file's current data, so `process` (read-modify-write against *current* content) is the wrong tool; `modify` states the intent. Judgment call — verify against current Obsidian API docs (context7, see CLAUDE.md) before choosing; either is functionally acceptable, but don't leave the data-ignoring `process` callback as-is.
+- [ ] **3.3 `vault.modify` in the no-editor archive path** (`9cb219e`) — main replaced `vault.process(file, (_data) => contentAboveMarker)` with `vault.modify(file, contentAboveMarker)` at what is now `src/FileSystemService.ts:102`. Rationale: the callback ignores the file's current data, so `process` (read-modify-write against *current* content) is the wrong tool; `modify` states the intent. Judgment call — verify against the Obsidian API before choosing (see Implementation Notes); either is functionally acceptable, but don't leave the data-ignoring `process` callback as-is.
 - [ ] **3.4 Make `findAvailablePath` synchronous** (`cd56e43`) — `vault.getAbstractFileByPath` is synchronous, so the `async`/`await` on `findAvailablePath` (`src/FileSystemService.ts:224`) is noise. Change the signature to return `string`, and drop the `await` at its call sites (`src/FileSystemService.ts:86` and `src/main.ts` in `createNewChatNote`).
 
 ### Phase 4: Repo hygiene
 
-- [ ] **4.1 Add CLAUDE.md, remove `external-docs/`** (`57f5c1b`) — copy `CLAUDE.md` from main (`git show main:CLAUDE.md`) and delete the `external-docs/` directory (three OpenRouter API docs it replaced). Review CLAUDE.md's architecture notes afterward — review's refactor may have invalidated details (e.g. it documents the old command set and file responsibilities); correct anything stale, and mention the new `src/utils/llmTitle.ts` + test setup.
+- [ ] **4.1 Remove `external-docs/`** (`57f5c1b`) — delete the directory (three static OpenRouter API doc dumps; main removed them as redundant). Note: main's same commit added `CLAUDE.md` — that part is deliberately **not** ported, see "No action needed" below.
 - [ ] **4.2 Merge `.gitignore` entries from main** — main anchored the generated-styles ignore as `/styles.css` (with a comment noting the source lives in `src/styles.css`) and added `.claude`. Review added `.DS_Store`. End state should contain all three.
 
 ### No action needed (documented so nobody hunts for them)
 
 - Main's `fileManager.trashFile` fix — moot; review deleted `deleteFile` entirely in its cleanup.
 - Main's comment-cleanup commits (`b261284`, `88d3f87`) — superseded by review's own phase 3/4 refactors.
+- **Main's `CLAUDE.md` is deliberately not ported.** CLAUDE.md usage has been de-emphasized by Anthropic, its guidelines were written for less capable models, and it leans on the context7 MCP server, which is no longer available in the form the file describes. Do not copy it over or recreate it; its useful content (commands, architecture) is superseded by `plans/plan-001.md` and the repo itself.
 
 ## Implementation Notes
 
 - Work happens on the `review` branch (or a branch off it). Do **not** merge or cherry-pick from main — re-implement against review's current code.
 - Build with `npm run build` (runs `tsc -noEmit` then esbuild); `npm run test` runs vitest. `install.sh` + `test-vault/` for manual testing with hot-reload.
-- Per CLAUDE.md: verify Obsidian API assumptions against real docs via context7 (`/obsidianmd/obsidian-api`), especially for items 3.1 and 3.3.
+- Verify Obsidian API assumptions against the type definitions in `node_modules/obsidian/obsidian.d.ts` (doc comments included) or https://docs.obsidian.md, especially for items 3.1 and 3.3. The context7 MCP server previously used for this is no longer available.
 - `Plugin.registerDomEvent` auto-removes listeners on unload — no manual cleanup needed for item 2.2.
 
 ## Testing
@@ -103,6 +104,5 @@ Replace main with review wholesale — e.g. `git checkout main && git reset --ha
 
 ## Documentation
 
-- `CLAUDE.md` (item 4.1) — added and corrected for review's architecture
 - `CHANGELOG.md` (item 1.4) — 1.3.0 entry ported
 - `README.md` (item 2.3) — title only
