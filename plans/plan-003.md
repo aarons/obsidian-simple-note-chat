@@ -53,19 +53,19 @@ The latest release-please version on main is **1.3.0**. Review's files still say
 
 ### Phase 3: Obsidian API corrections
 
-- [ ] **3.1 `getFolderByPath` for folder-existence checks** (`78d0f3c`) — where the code asks "does this *folder* exist", use `vault.getFolderByPath(path) !== null` instead of `getAbstractFileByPath`. Sites on review: `src/FileSystemService.ts:51` (archive folder) and `src/main.ts` in `createNewChatNote` (target folder). Keep `getAbstractFileByPath` inside `findAvailablePath` — there we need collision detection against ANY item, file or folder. This API needs Obsidian 1.5.7+, hence the `minAppVersion` bump in item 1.2.
-- [ ] **3.2 Pass the active editor to the archive command** (`9cb219e`) — `moveFileToArchive` accepts `editor?: Editor` and review's editor path is *better* than the fallback (it preserves undo history via `replaceRange`, plan-001 item 5.4). But the `archive-current-note` command in `src/main.ts` never passes an editor, so palette-triggered archives always take the fallback path. Fix:
+- [x] **3.1 `getFolderByPath` for folder-existence checks** (`78d0f3c`) — where the code asks "does this *folder* exist", use `vault.getFolderByPath(path) !== null` instead of `getAbstractFileByPath`. Sites on review: `src/FileSystemService.ts:51` (archive folder) and `src/main.ts` in `createNewChatNote` (target folder). Keep `getAbstractFileByPath` inside `findAvailablePath` — there we need collision detection against ANY item, file or folder. This API needs Obsidian 1.5.7+, hence the `minAppVersion` bump in item 1.2.
+- [x] **3.2 Pass the active editor to the archive command** (`9cb219e`) — `moveFileToArchive` accepts `editor?: Editor` and review's editor path is *better* than the fallback (it preserves undo history via `replaceRange`, plan-001 item 5.4). But the `archive-current-note` command in `src/main.ts` never passes an editor, so palette-triggered archives always take the fallback path. Fix:
   ```ts
   const { activeEditor } = this.app.workspace;
   this.fileSystemService.moveFileToArchive(activeFile, this.settings.archiveFolderName, this.settings, activeEditor?.editor)
   ```
-- [ ] **3.3 `vault.modify` in the no-editor archive path** (`9cb219e`) — main replaced `vault.process(file, (_data) => contentAboveMarker)` with `vault.modify(file, contentAboveMarker)` at what is now `src/FileSystemService.ts:102`. Rationale: the callback ignores the file's current data, so `process` (read-modify-write against *current* content) is the wrong tool; `modify` states the intent. Judgment call — verify against the Obsidian API before choosing (see Implementation Notes); either is functionally acceptable, but don't leave the data-ignoring `process` callback as-is.
-- [ ] **3.4 Make `findAvailablePath` synchronous** (`cd56e43`) — `vault.getAbstractFileByPath` is synchronous, so the `async`/`await` on `findAvailablePath` (`src/FileSystemService.ts:224`) is noise. Change the signature to return `string`, and drop the `await` at its call sites (`src/FileSystemService.ts:86` and `src/main.ts` in `createNewChatNote`).
+- [x] **3.3 `vault.modify` in the no-editor archive path** (`9cb219e`) — main replaced `vault.process(file, (_data) => contentAboveMarker)` with `vault.modify(file, contentAboveMarker)` at what is now `src/FileSystemService.ts:102`. Rationale: the callback ignores the file's current data, so `process` (read-modify-write against *current* content) is the wrong tool; `modify` states the intent. Judgment call — verify against the Obsidian API before choosing (see Implementation Notes); either is functionally acceptable, but don't leave the data-ignoring `process` callback as-is.
+- [x] **3.4 Make `findAvailablePath` synchronous** (`cd56e43`) — `vault.getAbstractFileByPath` is synchronous, so the `async`/`await` on `findAvailablePath` (`src/FileSystemService.ts:224`) is noise. Change the signature to return `string`, and drop the `await` at its call sites (`src/FileSystemService.ts:86` and `src/main.ts` in `createNewChatNote`).
 
 ### Phase 4: Repo hygiene
 
-- [ ] **4.1 Remove `external-docs/`** (`57f5c1b`) — delete the directory (three static OpenRouter API doc dumps; main removed them as redundant). Note: main's same commit added `CLAUDE.md` — that part is deliberately **not** ported, see "No action needed" below.
-- [ ] **4.2 Merge `.gitignore` entries from main** — main anchored the generated-styles ignore as `/styles.css` (with a comment noting the source lives in `src/styles.css`) and added `.claude`. Review added `.DS_Store`. End state should contain all three.
+- [x] **4.1 Remove `external-docs/`** (`57f5c1b`) — delete the directory (three static OpenRouter API doc dumps; main removed them as redundant). Note: main's same commit added `CLAUDE.md` — that part is deliberately **not** ported, see "No action needed" below.
+- [x] **4.2 Merge `.gitignore` entries from main** — main anchored the generated-styles ignore as `/styles.css` (with a comment noting the source lives in `src/styles.css`) and added `.claude`. Review added `.DS_Store`. End state should contain all three.
 
 ### No action needed (documented so nobody hunts for them)
 

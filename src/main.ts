@@ -84,10 +84,12 @@ export default class SimpleNoteChatPlugin extends Plugin {
 					return true; // Command is available if there's an active file
 				}
 
+				const { activeEditor } = this.app.workspace;
 				this.fileSystemService.moveFileToArchive(
 					activeFile,
 					this.settings.archiveFolderName,
-					this.settings
+					this.settings,
+					activeEditor?.editor
 				).then(newPath => {
 					new Notice(`Archived note to ${newPath}`);
 				}).catch(error => {
@@ -148,7 +150,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			// Ensure target folder exists
 			// For root, no check/creation is needed. For others, check and create.
 			if (targetFolder !== '/') {
-				const folderExists = this.app.vault.getAbstractFileByPath(targetFolder) !== null;
+				const folderExists = this.app.vault.getFolderByPath(targetFolder) !== null;
 				if (!folderExists) {
 					try {
 						await this.app.vault.createFolder(targetFolder);
@@ -168,7 +170,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 			const title = `${prefix}${formattedDate}${suffix}`;
 
 			const baseFilename = `${title}.md`;
-			const availablePath = await this.fileSystemService.findAvailablePath(targetFolder, baseFilename);
+			const availablePath = this.fileSystemService.findAvailablePath(targetFolder, baseFilename);
 
 			const newFile = await this.app.vault.create(availablePath, '');
 			await this.app.workspace.openLinkText(newFile.path, '', true); // Ensure leaf is open before notice

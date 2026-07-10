@@ -146,6 +146,10 @@ test-vault/*/*.md
 .roomodes
 main.js
 
-styles.css
+# Generated styles file (source is in src/styles.css)
+/styles.css
+
+# ai agents
+.claude
 
 .DS_Store

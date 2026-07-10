@@ -48,7 +48,7 @@ export class FileSystemService {
 
         const normalizedArchivePath = normalizePath(archiveFolderName);
 
-        const folderExists = (this.app.vault.getAbstractFileByPath(normalizedArchivePath) !== null);
+        const folderExists = (this.app.vault.getFolderByPath(normalizedArchivePath) !== null);
         if (!folderExists) {
             try {
                 await this.app.vault.createFolder(normalizedArchivePath);
@@ -83,7 +83,7 @@ export class FileSystemService {
             }
         }
 
-        const targetPath = await this.findAvailablePath(normalizedArchivePath, baseFilename);
+        const targetPath = this.findAvailablePath(normalizedArchivePath, baseFilename);
         // Check if the boundary marker was present, if so we'll keep the content above the marker
         // and only save content below it to the archived note
         if (markerMatch) {
@@ -99,8 +99,8 @@ export class FileSystemService {
                 editor.setCursor(editor.lastLine());
                 log.debug(`Modified original file ${file.path} using Editor API to retain content above marker.`);
             } else { // No editor instance
-                await this.app.vault.process(file, (_data) => contentAboveMarker);
-                log.debug(`Modified original file ${file.path} using Vault.process to retain content above marker.`);
+                await this.app.vault.modify(file, contentAboveMarker);
+                log.debug(`Modified original file ${file.path} using Vault.modify to retain content above marker.`);
             }
         } else {
             // move the entire file to the archive
@@ -219,9 +219,9 @@ export class FileSystemService {
      * Finds an available file path in a folder by appending a number if the base name exists.
      * @param folderPath The normalized path of the target folder.
      * @param baseFilename The desired filename (including extension).
-     * @returns A promise that resolves to an available, normalized full path.
+     * @returns An available, normalized full path.
      */
-    public async findAvailablePath(folderPath: string, baseFilename: string): Promise<string> {
+    public findAvailablePath(folderPath: string, baseFilename: string): string {
         let targetPath = normalizePath(`${folderPath}/${baseFilename}`);
         let counter = 0;
 
