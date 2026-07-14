@@ -9,22 +9,23 @@ if [ $? -ne 0 ]; then
 fi
 
 # Determine target vault path
-TARGET_VAULT_PATH="test-vault" # Default vault
+TARGET_VAULT_PATH="manual-test-vault" # Default vault
 if [ -n "$1" ]; then
   TARGET_VAULT_PATH="$1"
   echo "Using custom vault path: $TARGET_VAULT_PATH"
 else
   echo "Using default vault path: $TARGET_VAULT_PATH"
-  # Create default test-vault directory if it doesn't exist and we're using it
+  # Create default manual-test-vault directory if it doesn't exist and we're using it
   if [ ! -d "$TARGET_VAULT_PATH" ]; then
     echo "Creating $TARGET_VAULT_PATH directory..."
     mkdir -p "$TARGET_VAULT_PATH"
   fi
 
-  # Create welcome.md file in the default test-vault if it doesn't exist
-  WELCOME_FILE="$TARGET_VAULT_PATH/welcome.md"
+  # Create welcome.md file in the default manual-test-vault if it doesn't exist
+  WELCOME_FILE="$TARGET_VAULT_PATH/playground/welcome.md"
   if [ ! -f "$WELCOME_FILE" ]; then
     echo "Creating $WELCOME_FILE file..."
+    mkdir -p "$TARGET_VAULT_PATH/playground"
     if [ -f "welcome.md.template" ]; then
       cp welcome.md.template "$WELCOME_FILE"
       echo "Created $WELCOME_FILE from template."

@@ -143,6 +143,13 @@ test-vault/.obsidian/data.json
 test-vault/*.md
 test-vault/*/*.md
 
+# manual test vault - exclude all user content, only track specific source files
+manual-test-vault/.obsidian/
+manual-test-vault/*.md
+manual-test-vault/*/*.md
+# Only track the README
+!manual-test-vault/README.md
+
 .roomodes
 main.js
 
