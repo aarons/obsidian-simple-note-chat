@@ -1,3 +1,4 @@
+import { isModelConfigured } from './ModelProvider';
 import { App, Editor, MarkdownView, TFile, EditorPosition, Notice } from 'obsidian';
 import SimpleNoteChat from './main'; // Assuming main exports the class as default
 import { PluginSettings } from './types';
@@ -100,10 +101,10 @@ export class EditorHandler {
 		// Show status *before* calling the potentially slow archive function if using model
 		if (settings.enableArchiveRenameLlm) {
 			const titleModel = settings.llmRenameModel || settings.defaultModel;
-			if (titleModel && settings.apiKey) {
+			if (isModelConfigured(titleModel, settings)) {
 				new Notice(`Calling ${titleModel} to generate title...`, 5000); // Temporary notice
 			} else {
-				log.warn("Archive rename with LLM enabled, but API key or model not set. Skipping notice.");
+				log.warn("Archive rename with LLM enabled, but the selected model's provider is not configured. Skipping notice.");
 			}
 		}
 

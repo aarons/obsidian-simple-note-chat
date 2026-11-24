@@ -2,6 +2,8 @@ import { Editor, MarkdownView, Notice, Plugin, moment, normalizePath } from 'obs
 import { SimpleNoteChatSettingsTab } from './SettingsTab';
 import { ChatService } from './ChatService';
 import { OpenRouterService } from './OpenRouterService';
+import { ChatGptService } from './ChatGptService';
+import { ProviderService } from './ProviderService';
 import { EditorHandler } from './EditorHandler';
 import { FileSystemService } from './FileSystemService';
 import { PluginSettings, DEFAULT_SETTINGS } from './types';
@@ -12,6 +14,8 @@ export default class SimpleNoteChatPlugin extends Plugin {
 	settings: PluginSettings;
 	chatService: ChatService;
 	openRouterService: OpenRouterService;
+	chatGptService: ChatGptService;
+	providerService: ProviderService;
 	editorHandler: EditorHandler;
 	fileSystemService: FileSystemService;
 
@@ -27,13 +31,11 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 		this.openRouterService = new OpenRouterService();
 
-		if (this.settings.apiKey) {
-			this.openRouterService.fetchModels(this.settings.apiKey)
-				.then(() => log.debug('Models prefetched on plugin load'))
-				.catch(err => log.error('Error prefetching models:', err));
-		}
-		this.chatService = new ChatService(this, this.openRouterService);
-		this.fileSystemService = new FileSystemService(this.app, this.openRouterService);
+		this.chatGptService = new ChatGptService();
+		this.providerService = new ProviderService(this.openRouterService, this.chatGptService, () => this.settings);
+		void this.providerService.fetchModels().catch(err => log.error('Error prefetching models:', err));
+		this.chatService = new ChatService(this, this.providerService);
+		this.fileSystemService = new FileSystemService(this.app, this.providerService);
 		this.editorHandler = new EditorHandler(this.app, this);
 
 		this.addSettingTab(new SimpleNoteChatSettingsTab(this.app, this));
@@ -114,6 +116,7 @@ export default class SimpleNoteChatPlugin extends Plugin {
 
 	onunload() {
 		log.debug('Unloading Simple Note Chat plugin');
+		this.chatGptService.dispose();
 		// registerDomEvent removes the keydown listener automatically; just clear timeouts
 		this.cleanupTimeouts();
 	}

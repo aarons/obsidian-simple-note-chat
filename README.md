@@ -7,7 +7,7 @@ The keyword is `cc` in this example (it can be changed):
 
 ![Demo Gif](documentation-assets/demo6.gif)
 
-Any large language model from OpenRouter is accessible. You will need to bring your own API key for this plugin to work.
+Connect OpenRouter with your own API key, a ChatGPT subscription on desktop, or both. Choose the connection for each request by selecting its model.
 
 Conversations have separators added so that messages from the user and the AI are clearly differentiated. This helps LLMs track conversations better, and enables caching which saves money and improves response speeds.
 
@@ -25,6 +25,26 @@ This plugin enables Obsidian to act as a lightweight chat interface for most any
 * Responses are streamed
 * Press `Escape` to quickly stop a stream
 * Nearly everything is configurable
+
+## Connections
+
+**OpenRouter:** Add your API key in **Settings → Simple Note Chat → Connections**. This works on desktop and mobile, with usage billed by OpenRouter. Existing keys and selected models continue to work.
+
+**ChatGPT subscription (desktop):**
+
+1. Enable **ChatGPT subscription** in **Settings → Simple Note Chat → Connections**.
+2. Click **Continue with ChatGPT** and approve sign-in and token sharing in your browser.
+3. Select a model from **ChatGPT subscription · Using ChatGPT plan** in the chat model dropdown or the `cm` picker. You can also select a subscription model for note titles.
+
+This connection uses OpenAI's official [Sign in with ChatGPT](https://developers.openai.com/siwc/token-sharing-open-source/sign-in) flow for local open-source apps. Requests go directly to the [Responses API](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference) using your ChatGPT plan allowance. No Codex installation, API key, or separate app registration is needed. Available models and sharing limits depend on your account. Use **Manage usage** in settings to review your allowance at [ChatGPT usage settings](https://chatgpt.com/settings/usage).
+
+Subscription models appear in their own section above OpenRouter, in the order OpenAI returns them. Your sorting preference applies to OpenRouter. The same model offered through both connections has separate entries. Failed requests never automatically switch providers or billing accounts; if one connection fails while loading models, the other connection's models remain available.
+
+Sign-in uses a temporary callback listener bound to `127.0.0.1`, PKCE, and verified OpenAI identity tokens. Credentials are stored in `~/.simple-note-chat/chatgpt.json`, outside the vault, with owner-only permissions on Unix and atomic updates. This file contains sensitive tokens; do not share or sync it. Sign in separately on each computer. **Sign out** removes local credentials and attempts to revoke the renewable session with OpenAI. Disabling the connection stops active requests while preserving sign-in. OpenRouter remains available on mobile.
+
+Only the conversation selected by the normal chat boundaries is submitted. Requests send native user/assistant messages, use `store: false`, and offer no tools or filesystem access. Title reasoning effort and token-limit settings currently apply only to OpenRouter; the direct ChatGPT connection uses model defaults.
+
+**Migrating from the earlier Codex connection:** Sign in again using **Continue with ChatGPT**. Existing `chatgpt/` model selections are preserved, but you may need to select a replacement from the new catalog. The new connection does not read or reuse the old Codex credentials in `~/.simple-note-chat/codex`; signing out here only disconnects the new connection. You can separately remove the old isolated Codex directory if you no longer use it.
 
 ## Detailed Examples
 
@@ -92,7 +112,7 @@ It's fully configurable, so you can change:
 - whether to change the title of the note
 - whether to add a date/time prefix, etc.
 
-When title generation is enabled, the title word limit is strictly enforced on the model's response, and two settings control reasoning-capable models (like OpenAI's o-series or gpt-oss): the reasoning effort level (`none` through `max`) and a rough limit on how many tokens the model may spend reasoning before it answers. The defaults (minimal effort, 1000 tokens) work with both reasoning and non-reasoning title models.
+When title generation is enabled, the title word limit is strictly enforced on the model's response, and two OpenRouter settings control reasoning-capable models (like OpenAI's o-series or gpt-oss): the reasoning effort level (`none` through `max`) and a rough limit on how many tokens the model may spend reasoning before it answers. The defaults (minimal effort, 1000 tokens) work with both reasoning and non-reasoning title models.
 
 Currently, archiving will only work on notes that have had a chat session. Although it seems like it would be helpful to archive any note, so this will probably change to be more permissive (or configurable).
 

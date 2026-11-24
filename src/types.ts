@@ -23,6 +23,7 @@ export enum LogLevel {
 
 export interface PluginSettings {
   apiKey: string;
+  chatGptEnabled: boolean;
   defaultModel: string;
   archiveFolderName: string;
   // Settings for the 'New Note' command
@@ -61,6 +62,7 @@ export interface PluginSettings {
 
 export const DEFAULT_SETTINGS: PluginSettings = {
   apiKey: '',
+  chatGptEnabled: false,
   defaultModel: 'openrouter/auto',
   archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
   // New Note settings defaults

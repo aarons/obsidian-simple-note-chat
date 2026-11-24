@@ -11,6 +11,19 @@ vi.mock('obsidian', () => ({
 }));
 
 import { FileSystemService } from './FileSystemService';
+import { DEFAULT_SETTINGS } from './types';
+
+it('generates archive titles through ChatGPT without requiring an OpenRouter key', async () => {
+    const provider = {
+        getChatCompletion: vi.fn().mockResolvedValue('A Useful Title'),
+        getModelReasoningInfo: vi.fn(),
+    };
+    const service = new FileSystemService({} as any, provider as any);
+    const settings = { ...DEFAULT_SETTINGS, chatGptEnabled: true, defaultModel: 'chatgpt/example' };
+    const title = await (service as any).generateLlmTitle('Some note content', settings);
+    expect(title).toBe('A Useful Title');
+    expect(provider.getChatCompletion).toHaveBeenCalledWith('', 'chatgpt/example', expect.any(Array), expect.any(Object));
+});
 
 // findAvailablePath decides where an archived or new note lands when its
 // preferred name is taken. A wrong split of name vs. extension produces

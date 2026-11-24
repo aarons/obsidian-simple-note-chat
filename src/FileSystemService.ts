@@ -1,17 +1,18 @@
 import { App, TFile, normalizePath, moment, Notice, Editor } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
-import { OpenRouterService, ChatCompletionError, ChatCompletionOptions } from './OpenRouterService';
+import { ChatCompletionError, ChatCompletionOptions } from './OpenRouterService';
 import { log } from './utils/logger';
+import { CompletionProvider, isModelConfigured } from './ModelProvider';
 import { formatLlmTitle } from './utils/llmTitle';
 import { CHAT_BOUNDARY_MARKER, createChatBoundaryRegex } from './constants';
 
 export class FileSystemService {
     private app: App;
-    private openRouterService: OpenRouterService;
+    private provider: CompletionProvider;
 
-    constructor(app: App, openRouterService: OpenRouterService) {
+    constructor(app: App, provider: CompletionProvider) {
         this.app = app;
-        this.openRouterService = openRouterService;
+        this.provider = provider;
     }
 
     /**
@@ -119,9 +120,9 @@ export class FileSystemService {
     private async generateLlmTitle(content: string, settings: PluginSettings): Promise<string | null> {
         const titleModel = settings.llmRenameModel || settings.defaultModel;
 
-        if (!titleModel || !settings.apiKey) {
-            new Notice("LLM title generation skipped: API key or title/default model not set.");
-            log.warn("LLM title generation skipped: API key or title/default model not set.");
+        if (!isModelConfigured(titleModel, settings)) {
+            new Notice("LLM title generation skipped: Connect the provider for the selected title/default model.");
+            log.warn("LLM title generation skipped: Connect the provider for the selected title/default model.");
             return null;
         }
         if (!content.trim()) {
@@ -139,7 +140,7 @@ export class FileSystemService {
         log.debug(`FileSystemService: Requesting LLM title with model ${titleModel}`, completionOptions);
         let llmTitle: string;
         try {
-            llmTitle = await this.openRouterService.getChatCompletion(
+            llmTitle = await this.provider.getChatCompletion(
                 settings.apiKey,
                 titleModel,
                 messages,
@@ -153,7 +154,7 @@ export class FileSystemService {
                 && completionOptions.reasoning?.effort === 'none') {
                 log.warn("FileSystemService: Request with reasoning effort 'none' was rejected; retrying without the reasoning field.", error);
                 try {
-                    llmTitle = await this.openRouterService.getChatCompletion(
+                    llmTitle = await this.provider.getChatCompletion(
                         settings.apiKey,
                         titleModel,
                         messages,
@@ -205,7 +206,7 @@ export class FileSystemService {
         if (effort === 'none') {
             // Models with mandatory reasoning reject effort 'none'; omit the field
             // so they use their default behavior instead of failing the archive.
-            if (this.openRouterService.getModelReasoningInfo(model)?.mandatory) {
+            if (this.provider.getModelReasoningInfo(model)?.mandatory) {
                 log.debug(`FileSystemService: Model ${model} has mandatory reasoning; omitting reasoning field.`);
                 return { maxTokens };
             }

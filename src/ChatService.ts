@@ -1,6 +1,6 @@
 import { Notice, Plugin, Editor, TFile, EditorPosition } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
-import { OpenRouterService } from './OpenRouterService';
+import { CompletionProvider } from './ModelProvider';
 import { log } from './utils/logger';
 import { CHAT_BOUNDARY_MARKER, CHAT_SEPARATOR, createChatBoundaryRegex } from './constants';
 
@@ -13,12 +13,12 @@ interface ActiveStreamInfo {
 
 export class ChatService {
     private plugin: Plugin;
-    private openRouterService: OpenRouterService;
+    private provider: CompletionProvider;
     private activeStreams: Map<string, ActiveStreamInfo> = new Map(); // Key: note path
 
-    constructor(plugin: Plugin, openRouterService: OpenRouterService) {
+    constructor(plugin: Plugin, provider: CompletionProvider) {
         this.plugin = plugin;
-        this.openRouterService = openRouterService;
+        this.provider = provider;
     }
 
     /**
@@ -154,7 +154,7 @@ export class ChatService {
 
         try {
             // 4. Call API and Stream Response
-            const streamGenerator = this.openRouterService.streamChatCompletion(
+            const streamGenerator = this.provider.streamChatCompletion(
                 messages,
                 settings,
                 abortController.signal

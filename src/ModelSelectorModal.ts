@@ -1,16 +1,14 @@
-import { App, Modal, Setting, Notice } from 'obsidian';
+import { Modal, Setting, Notice } from 'obsidian';
 import SimpleNoteChatPlugin from './main';
-import { OpenRouterService, ModelSortOption } from './OpenRouterService';
+import { populateModelOptions } from './ModelProvider';
 import { log } from './utils/logger';
 
 export class ModelSelectorModal extends Modal {
 	plugin: SimpleNoteChatPlugin;
-	ors: OpenRouterService;
 
 	constructor(plugin: SimpleNoteChatPlugin) {
 		super(plugin.app);
 		this.plugin = plugin;
-		this.ors = plugin.openRouterService;
 	}
 
 	async onOpen() {
@@ -24,32 +22,21 @@ export class ModelSelectorModal extends Modal {
 		const notice = new Notice('Loading models…', 0); // Indefinite notice
 
 		try {
-			const apiKey = this.plugin.settings.apiKey;
-			if (!apiKey) {
-				contentEl.createEl('p', { text: 'Error: OpenRouter API key is not set in plugin settings.' });
-				notice.hide();
+			const { models: formatted, errors } = await this.plugin.providerService.fetchModels();
+			errors.forEach(message => contentEl.createEl('p', { text: message }));
+			if (formatted.length === 0) {
+				contentEl.createEl('p', { text: 'No models available. Connect ChatGPT or OpenRouter in plugin settings.' });
 				return;
 			}
-
-			// Use cached models if available
-			let models = await this.ors.fetchModels(apiKey);
-			if (models.length === 0) {
-				contentEl.createEl('p', { text: 'No models loaded. Check your API key or network connection.' });
-				notice.hide();
-				return;
-			}
-
-			// Sort models based on the setting
-			models = this.ors.sortModels(models, this.plugin.settings.modelSortOrder as ModelSortOption);
-			const formatted = this.ors.getFormattedModels(models);
 
 			new Setting(contentEl)
 				.setName('Default model')
 				.setDesc('Choose the LLM to use for chat completions.')
 				.addDropdown(dd => {
-					formatted.forEach(m => dd.addOption(m.id, m.displayName));
+					populateModelOptions(dd.selectEl, formatted, this.plugin.settings.defaultModel, '-- Select a model --');
 					dd.setValue(this.plugin.settings.defaultModel);
 					dd.onChange(async (val) => {
+						if (!val) return;
 						this.plugin.settings.defaultModel = val;
 						await this.plugin.saveSettings();
 						// Find the display name for the notice

@@ -1,6 +1,7 @@
-import { App, PluginSettingTab, Setting, Notice, DropdownComponent, moment } from 'obsidian';
+import { App, PluginSettingTab, Setting, Notice, DropdownComponent, moment, Platform } from 'obsidian';
 import SimpleNoteChatPlugin from './main';
-import { OpenRouterService, OpenRouterModel, FormattedModelInfo, ModelSortOption } from './OpenRouterService';
+import { ModelSortOption } from './OpenRouterService';
+import { ProviderModel, populateModelOptions } from './ModelProvider';
 import { PluginSettings, ReasoningEffort } from './types';
 import { log, initializeLogger } from './utils/logger';
 import {
@@ -15,8 +16,9 @@ import { LogLevel } from './types'; // Import LogLevel
 
 export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	plugin: SimpleNoteChatPlugin;
-	openRouterService: OpenRouterService;
-	private availableModels: OpenRouterModel[] = [];
+	private availableModels: ProviderModel[] = [];
+	private fetchGeneration = 0;
+	private displayGeneration = 0;
 	private modelDropdown: DropdownComponent | null = null;
 	private llmModelDropdown: DropdownComponent | null = null;
 	private newNotePreviewEl: HTMLElement | null = null;
@@ -24,16 +26,16 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	constructor(app: App, plugin: SimpleNoteChatPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
-		this.openRouterService = plugin.openRouterService;
 	}
 
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
+		const displayGeneration = ++this.displayGeneration;
 
 		// ========== CONNECTIONS ==========
 		new Setting(containerEl).setName('Connections').setHeading();
-		containerEl.createEl('p', { text: 'Configure connection to LLM providers.', cls: 'snc-setting-section-description' });
+		containerEl.createEl('p', { text: 'Connect ChatGPT, OpenRouter, or both. Choose which connection to use by selecting a model.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('OpenRouter API key')
@@ -58,13 +60,68 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				text.inputEl.setAttribute('type', 'password');
 			});
 
+		new Setting(containerEl)
+			.setName('ChatGPT subscription')
+			.setDesc(Platform.isDesktopApp
+				? 'Connect your ChatGPT account to use your plan allowance directly. Available models depend on your account.'
+				: 'Sign in with ChatGPT requires Obsidian desktop. Use OpenRouter on mobile.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.chatGptEnabled)
+				.setDisabled(!Platform.isDesktopApp)
+				.onChange(async enabled => {
+					this.plugin.settings.chatGptEnabled = enabled;
+					if (!enabled) this.plugin.chatGptService.dispose();
+					await this.plugin.saveSettings();
+					this.display();
+				}));
+
+		if (Platform.isDesktopApp && this.plugin.settings.chatGptEnabled) {
+			const accountSetting = new Setting(containerEl)
+				.setName('ChatGPT account')
+				.setDesc('Checking connection…');
+			void this.plugin.chatGptService.getAccount().then(account => {
+				if (displayGeneration !== this.displayGeneration) return;
+				accountSetting.setDesc(account
+					? `Connected${account.email ? ` as ${account.email}` : ''}. Uses subscription limits.`
+					: 'Not connected. Sign in with your ChatGPT account.');
+			}).catch(error => {
+				if (displayGeneration === this.displayGeneration) accountSetting.setDesc(error.message);
+			});
+			accountSetting.addButton(button => button.setButtonText('Continue with ChatGPT').onClick(async () => {
+				button.setDisabled(true);
+				accountSetting.setDesc('Finish signing in using your browser.');
+				try {
+					await this.plugin.chatGptService.signIn(url => { window.open(url); });
+					new Notice('ChatGPT connected. Requests use your ChatGPT plan allowance. Select a model from the ChatGPT subscription section.');
+					this.display();
+				} catch (error) {
+					const message = error instanceof Error ? error.message : String(error);
+					accountSetting.setDesc(message);
+					new Notice(message);
+				} finally { button.setDisabled(false); }
+			}));
+			new Setting(containerEl).setName('ChatGPT plan usage').setDesc('Manage how much of your plan this connection can use.').addButton(button => button.setButtonText('Manage usage').onClick(() => { window.open('https://chatgpt.com/settings/usage'); }));
+			accountSetting.addButton(button => button.setButtonText('Sign out').onClick(async () => {
+				button.setDisabled(true);
+				try {
+					await this.plugin.chatGptService.signOut();
+					new Notice('ChatGPT signed out.');
+					this.display();
+				} catch (error) {
+					new Notice(error instanceof Error ? error.message : String(error));
+					this.display();
+				}
+				finally { button.setDisabled(false); }
+			}));
+		}
+
 		// ========== MODEL MANAGEMENT ==========
 		new Setting(containerEl).setName('Model management').setHeading();
 		containerEl.createEl('p', { text: 'Configure model selection and sorting options.', cls: 'snc-setting-section-description' });
 
 		new Setting(containerEl)
 			.setName('Model sorting')
-			.setDesc('Choose how to sort the OpenRouter model lists in the dropdowns below.')
+			.setDesc('Sort the OpenRouter section. ChatGPT plan models appear first in the order returned by OpenAI.')
 			.addDropdown(dropdown => {
 				// Add options based on the ModelSortOption enum
 				dropdown
@@ -80,7 +137,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 						new Notice(`Model sort order set to: ${dropdown.selectEl.selectedOptions[0]?.text || value}`);
 						// Re-populate dropdowns with new sort order
-						this.populateModelDropdowns();
+						await this.fetchAndStoreModels(false);
 					});
 			});
 
@@ -100,7 +157,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 		.setName('Refresh model list')
-		.setDesc('Fetch the latest available models from OpenRouter. The list also refreshes when the plugin first starts with Obsidian and when this settings tab is opened (at most once every 24 hours); so the list should stay pretty current on its own.')
+		.setDesc('Refresh models from connected providers. ChatGPT subscription models appear in their own section above OpenRouter models.')
 		.addButton(button => button
 			.setButtonText('Refresh models')
 			.setCta()
@@ -325,7 +382,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(llmSettingsContainer)
 			.setName('Title reasoning effort')
-			.setDesc(`How much internal reasoning the model may use before answering. Only matters for reasoning-capable models. 'None' asks the model not to reason; models that can't disable reasoning fall back to their default behavior.`)
+			.setDesc(`For OpenRouter, how much internal reasoning the model may use before answering. ChatGPT uses its model defaults. 'None' asks the model not to reason; models that can't disable reasoning fall back to their default behavior.`)
 			.addDropdown(dropdown => {
 				dropdown
 					.addOption('none', 'None')
@@ -347,7 +404,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		const reasoningTokensSetting = new Setting(llmSettingsContainer)
 			.setName('Reasoning token limit')
-			.setDesc('Roughly limits how many tokens the model may spend on reasoning while generating the title. Higher values allow deeper reasoning but cost more.')
+			.setDesc('For OpenRouter, roughly limits reasoning tokens while generating titles. ChatGPT uses its model defaults for token limits. Higher values allow deeper reasoning but cost more.')
 			.addText(text => text
 				.setPlaceholder('1000')
 				.setValue(String(this.plugin.settings.llmRenameReasoningMaxTokens))
@@ -524,63 +581,6 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		}
 	} // End of display() method
 
-
-
-	/**
-	 * @param dropdown The DropdownComponent instance
-	 * @param formattedModels Array of formatted models to populate with
-	 * @param settingKey The key in PluginSettings that this dropdown controls
-	 * @param noApiKeyText Text to display when API key is missing
-	 * @param placeholderText Default placeholder text when models are loaded
-	 */
-	private populateModelDropdown(
-		dropdown: DropdownComponent | null,
-		formattedModels: FormattedModelInfo[],
-		settingKey: keyof PluginSettings,
-		noApiKeyText: string,
-		placeholderText: string
-	): void {
-		if (!dropdown) {
-			log.warn(`SettingsTab: Dropdown for setting key "${String(settingKey)}" is null.`);
-			return;
-		}
-
-		const currentSelectedValue = dropdown.getValue();
-		dropdown.selectEl.empty();
-
-		if (!this.plugin.settings.apiKey) {
-			dropdown.addOption('', 'Enter API key to load models'); // Assuming noApiKeyText was 'Enter API Key to load models'
-			dropdown.setDisabled(true);
-			dropdown.setValue('');
-			return;
-		}
-
-		dropdown.setDisabled(false);
-
-		if (formattedModels.length === 0) {
-			dropdown.addOption('', 'No models found or API key invalid');
-			dropdown.setValue('');
-			return;
-		}
-
-		dropdown.addOption('', placeholderText);
-
-		formattedModels.forEach(model => {
-			dropdown.addOption(model.id, model.displayName);
-		});
-
-		const savedModel = this.plugin.settings[settingKey] as string;
-		// Check if the current or saved model ID exists in the formatted list
-		const valueToSelect = formattedModels.some(m => m.id === currentSelectedValue) ? currentSelectedValue : savedModel;
-
-		if (valueToSelect && formattedModels.some(m => m.id === valueToSelect)) {
-			dropdown.setValue(valueToSelect);
-		} else {
-			// If the saved model is no longer valid or wasn't set, default to empty/placeholder
-			dropdown.setValue('');
-		}
-	}
-
 	/** Generates a preview filename based on current settings */
 	private generateFilenamePreview(): { filename: string, error: boolean } {
 		const format = this.plugin.settings.newNoteTitleFormat;
@@ -662,85 +662,25 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		this.newNotePreviewEl.className = `snc-setting-section-description ${previewClass}`;
 	}
 
-	/**
-	 * Sorts models, formats them, and populates dropdown menus
-	 */
 	private populateModelDropdowns(): void {
-		let formattedModels: FormattedModelInfo[] = [];
-		if (this.plugin.settings.apiKey && this.availableModels.length > 0) {
-			try {
-				const sortedModels = this.openRouterService.sortModels(
-					this.availableModels,
-					this.plugin.settings.modelSortOrder as ModelSortOption
-				);
-				formattedModels = this.openRouterService.getFormattedModels(sortedModels);
-
-			} catch (error) {
-				log.error("SettingsTab: Error sorting or formatting models:", error);
-				new Notice("Error preparing model list. Check console.");
-				// Format unsorted models as fallback
-				try {
-					formattedModels = this.openRouterService.getFormattedModels(this.availableModels);
-				} catch (formatError) {
-					log.error("SettingsTab: Fallback formatting failed:", formatError);
-					formattedModels = []; // Ensure it's an empty array on complete failure
-				}
-			}
+		if (this.modelDropdown) {
+			populateModelOptions(this.modelDropdown.selectEl, this.availableModels, this.plugin.settings.defaultModel, '-- Select a model --');
 		}
-
-		this.populateModelDropdown(
-			this.modelDropdown,
-			formattedModels,
-			'defaultModel',
-			'Enter API key to load models',
-			'-- Select a model --'
-		);
-		this.populateModelDropdown(
-			this.llmModelDropdown,
-			formattedModels,
-			'llmRenameModel',
-			'Enter API key to load models',
-			'Use default chat model'
-		);
+		if (this.llmModelDropdown) {
+			populateModelOptions(this.llmModelDropdown.selectEl, this.availableModels, this.plugin.settings.llmRenameModel, 'Use default chat model');
+		}
 	}
 
-
-	/**
-	 * Fetches models from OpenRouter and updates dropdowns
-	 * @param showNotices If true, displays loading and result notices
-	 * @param forceRefresh If true, bypasses the service's model cache
-	 */
-	private async fetchAndStoreModels(showNotices: boolean = true, forceRefresh: boolean = false): Promise<void> {
-		if (!this.plugin.settings.apiKey) {
-			if (showNotices) {
-				new Notice('Please enter your OpenRouter API key first.');
-			}
-			this.availableModels = [];
-			this.populateModelDropdowns();
-			return;
-		}
-
-		let loadingNotice;
-		if (showNotices) {
-			loadingNotice = new Notice('Fetching models from OpenRouter...', 0);
-		}
-
+	private async fetchAndStoreModels(showNotices = true, forceRefresh = false): Promise<void> {
+		const generation = ++this.fetchGeneration;
+		const loadingNotice = showNotices ? new Notice('Fetching models from connected providers…', 0) : undefined;
 		try {
-			this.availableModels = await this.openRouterService.fetchModels(
-				this.plugin.settings.apiKey,
-				forceRefresh
-			);
-		} catch (error) {
-			log.error('SettingsTab: Failed to fetch models:', error);
-			this.availableModels = [];
-			const message = error instanceof Error ? error.message : String(error);
-			new Notice(message);
-		}
-		this.populateModelDropdowns();
-
-		loadingNotice?.hide();
-		if (showNotices && this.availableModels.length > 0) {
-			new Notice('Model list updated successfully.');
-		}
+			const { models, errors } = await this.plugin.providerService.fetchModels(forceRefresh);
+			if (generation !== this.fetchGeneration) return;
+			this.availableModels = models;
+			this.populateModelDropdowns();
+			errors.forEach(message => new Notice(message));
+			if (showNotices && !errors.length) new Notice(models.length ? 'Model list updated.' : 'Connect ChatGPT or OpenRouter to load models.');
+		} finally { loadingNotice?.hide(); }
 	}
 }
