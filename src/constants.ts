@@ -18,4 +18,16 @@ export function createChatBoundaryRegex(flags = 'm'): RegExp {
 	return new RegExp(`^[ \\t]*${ESCAPED_BOUNDARY_MARKER}[ \\t]*$`, flags);
 }
 
+/** Start of the content after the last boundary, considering only text before end. */
+export function getChatContentStart(content: string, end = content.length): number {
+	const regex = createChatBoundaryRegex('gm');
+	let start = 0;
+	let match: RegExpExecArray | null;
+	const relevantContent = content.slice(0, end);
+	while ((match = regex.exec(relevantContent)) !== null) {
+		start = match.index + match[0].length;
+	}
+	return start;
+}
+
 export const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1';

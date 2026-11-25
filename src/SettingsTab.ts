@@ -13,6 +13,7 @@ import {
 	MODEL_COMMAND_DEFAULT
 } from './constants';
 import { LogLevel } from './types'; // Import LogLevel
+import { normalizeNoteLinkDepth } from './LinkedNoteContext';
 
 export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 	plugin: SimpleNoteChatPlugin;
@@ -164,6 +165,50 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 			.onClick(async () => {
 				await this.fetchAndStoreModels(true, true);
 			}));
+
+		new Setting(containerEl).setName('Linked notes').setHeading();
+		new Setting(containerEl)
+			.setName('Follow note links')
+			.setDesc('Send full linked Markdown notes to the selected model. Supports [[note]], [description](note.md), and embedded notes. Off by default. The ^^^ boundary applies only to the current note.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.followNoteLinks)
+				.onChange(async value => {
+					this.plugin.settings.followNoteLinks = value;
+					await this.plugin.saveSettings();
+				}));
+
+		const linkDepth = normalizeNoteLinkDepth(this.plugin.settings.noteLinkDepth);
+		new Setting(containerEl)
+			.setName('Unlimited link depth')
+			.setDesc('Follow all reachable notes, including links in linked notes. Each note is included once. This can send a large amount of text.')
+			.addToggle(toggle => toggle
+				.setValue(linkDepth === 'unlimited')
+				.onChange(async value => {
+					this.plugin.settings.noteLinkDepth = value ? 'unlimited' : 2;
+					await this.plugin.saveSettings();
+					this.display();
+				}));
+		const depthSetting = new Setting(containerEl)
+			.setName('Link depth')
+			.setDesc('1 includes directly linked notes. 2 also includes their linked notes, and nothing beyond that. Default: 2.')
+			.addText(text => {
+				text.setValue(String(linkDepth === 'unlimited' ? 2 : linkDepth))
+					.onChange(async value => {
+						const depth = Number(value);
+						const valid = Number.isSafeInteger(depth) && depth >= 1;
+						text.inputEl.setCustomValidity(valid ? '' : 'Enter a whole number of at least 1.');
+						if (!valid) {
+							text.inputEl.reportValidity();
+							return;
+						}
+						this.plugin.settings.noteLinkDepth = depth;
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.type = 'number';
+				text.inputEl.min = '1';
+				text.inputEl.step = '1';
+			});
+		depthSetting.settingEl.toggleClass('snc-hidden', linkDepth === 'unlimited');
 
 		// ========== COMMAND PHRASES ==========
 		new Setting(containerEl).setName('Command phrases').setHeading();

@@ -2,7 +2,8 @@ import { Notice, Plugin, Editor, TFile, EditorPosition } from 'obsidian';
 import { PluginSettings, ChatMessage } from './types';
 import { CompletionProvider } from './ModelProvider';
 import { log } from './utils/logger';
-import { CHAT_BOUNDARY_MARKER, CHAT_SEPARATOR, createChatBoundaryRegex } from './constants';
+import { CHAT_SEPARATOR, getChatContentStart } from './constants';
+import { LinkedNoteContext, withLinkedNoteContext } from './LinkedNoteContext';
 
 interface ActiveStreamInfo {
     controller: AbortController;
@@ -29,27 +30,8 @@ export class ChatService {
      * @returns An array of ChatMessage objects.
      */
     private parseNoteContent(fullContent: string, separator: string, parseUntilOffset: number): ChatMessage[] {
-        const relevantContent = fullContent.substring(0, parseUntilOffset); // Content before the insertion point
-
-        const boundaryRegex = createChatBoundaryRegex('gm');
-
-        // Find the *last* occurrence of the marker pattern within the relevant content
-        let lastMatch: RegExpExecArray | null = null;
-        let currentMatch: RegExpExecArray | null;
-        while ((currentMatch = boundaryRegex.exec(relevantContent)) !== null) {
-            lastMatch = currentMatch;
-        }
-
-        let contentToParse: string;
-        if (lastMatch) {
-            // If marker found, parse only the content *after* the full match
-            const startIndex = lastMatch.index + lastMatch[0].length;
-            contentToParse = relevantContent.substring(startIndex);
-            log.debug(`Found last chat boundary marker "${CHAT_BOUNDARY_MARKER}" ending at index ${startIndex -1}. Parsing content after marker up to offset ${parseUntilOffset}.`);
-        } else {
-            // If no marker found, parse all relevant content
-            contentToParse = relevantContent;
-        }
+        const start = getChatContentStart(fullContent, parseUntilOffset);
+        const contentToParse = fullContent.slice(start, parseUntilOffset);
 
         // Proceed with splitting the correctly selected content
         const parts = contentToParse.split(separator)
@@ -130,7 +112,8 @@ export class ChatService {
 
         // 2. Parse Content *before* the status message
         const parseUntilOffset = editor.posToOffset(actualStatusStartPos);
-        const messages = this.parseNoteContent(editor.getValue(), CHAT_SEPARATOR, parseUntilOffset);
+        const sourceContent = editor.getValue();
+        let messages = this.parseNoteContent(sourceContent, CHAT_SEPARATOR, parseUntilOffset);
 
         if (messages.length === 0) {
             new Notice('No content found before the chat initiation point.');
@@ -153,6 +136,17 @@ export class ChatService {
         let lastPosition: EditorPosition | null = null; // Tracks the end of the last inserted chunk
 
         try {
+            if (settings.followNoteLinks) {
+                const { notes, skipped } = await new LinkedNoteContext(this.plugin.app).collect(
+                    file, sourceContent, parseUntilOffset, settings.noteLinkDepth, abortController.signal
+                );
+                if (skipped.length) {
+                    new Notice(`Could not fully load ${skipped.length} linked note(s). Some linked context may be missing.`);
+                }
+                messages = withLinkedNoteContext(messages, notes);
+            }
+            if (abortController.signal.aborted) throw new DOMException('Chat cancelled', 'AbortError');
+
             // 4. Call API and Stream Response
             const streamGenerator = this.provider.streamChatCompletion(
                 messages,
@@ -242,7 +236,9 @@ export class ChatService {
             }
         } finally {
             // 7. Final Cleanup
-            this.activeStreams.delete(notePath);
+            if (this.activeStreams.get(notePath)?.controller === abortController) {
+                this.activeStreams.delete(notePath);
+            }
             log.debug(`Removed active stream tracker for note: ${notePath}`);
         }
     }

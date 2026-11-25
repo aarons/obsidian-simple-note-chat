@@ -52,6 +52,8 @@ export interface PluginSettings {
   modelCommandPhrase: string;
 
   // Behavior Settings
+  followNoteLinks: boolean;
+  noteLinkDepth: number | 'unlimited';
   enableSpacebarDetection: boolean;
   spacebarDetectionDelay: number;
 
@@ -87,6 +89,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   newChatCommandPhrase: NEW_CHAT_COMMAND_DEFAULT,
   modelCommandPhrase: MODEL_COMMAND_DEFAULT,
   // Behavior Settings defaults
+  followNoteLinks: false,
+  noteLinkDepth: 2,
   enableSpacebarDetection: false,
   spacebarDetectionDelay: 0.5,
   // Logging Defaults
