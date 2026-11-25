@@ -168,8 +168,8 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl).setName('Linked notes').setHeading();
 		new Setting(containerEl)
-			.setName('Follow note links')
-			.setDesc('Send full linked Markdown notes to the selected model. Supports [[note]], [description](note.md), and embedded notes. Off by default. The ^^^ boundary applies only to the current note.')
+			.setName('Include linked notes')
+			.setDesc('Include the full contents of notes linked in your conversation (such as [[note.md]]) for the AI to use.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.followNoteLinks)
 				.onChange(async value => {
@@ -178,21 +178,14 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 				}));
 
 		const linkDepth = normalizeNoteLinkDepth(this.plugin.settings.noteLinkDepth);
+		let finiteDepth = linkDepth === 'unlimited' ? this.plugin.settings.lastNoteLinkDepth : linkDepth;
+		if (!Number.isSafeInteger(finiteDepth) || finiteDepth < 1) finiteDepth = 2;
 		new Setting(containerEl)
-			.setName('Unlimited link depth')
-			.setDesc('Follow all reachable notes, including links in linked notes. Each note is included once. This can send a large amount of text.')
-			.addToggle(toggle => toggle
-				.setValue(linkDepth === 'unlimited')
-				.onChange(async value => {
-					this.plugin.settings.noteLinkDepth = value ? 'unlimited' : 2;
-					await this.plugin.saveSettings();
-					this.display();
-				}));
-		const depthSetting = new Setting(containerEl)
-			.setName('Link depth')
-			.setDesc('1 includes directly linked notes. 2 also includes their linked notes, and nothing beyond that. Default: 2.')
+			.setName('Linked note depth')
+			.setDesc('Control how far to follow links from your conversation. Greater depth includes more distantly connected notes by following links inside linked notes.')
 			.addText(text => {
-				text.setValue(String(linkDepth === 'unlimited' ? 2 : linkDepth))
+				text.setValue(String(finiteDepth))
+					.setDisabled(linkDepth === 'unlimited')
 					.onChange(async value => {
 						const depth = Number(value);
 						const valid = Number.isSafeInteger(depth) && depth >= 1;
@@ -201,14 +194,26 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 							text.inputEl.reportValidity();
 							return;
 						}
+						finiteDepth = depth;
 						this.plugin.settings.noteLinkDepth = depth;
+						this.plugin.settings.lastNoteLinkDepth = depth;
 						await this.plugin.saveSettings();
 					});
 				text.inputEl.type = 'number';
 				text.inputEl.min = '1';
 				text.inputEl.step = '1';
 			});
-		depthSetting.settingEl.toggleClass('snc-hidden', linkDepth === 'unlimited');
+		new Setting(containerEl)
+			.setName('Unlimited depth')
+			.setDesc('Keep following links through connected notes without a depth limit. This overrides the above setting and can result in a large amount of text sent to the AI.')
+			.addToggle(toggle => toggle
+				.setValue(linkDepth === 'unlimited')
+				.onChange(async value => {
+					this.plugin.settings.lastNoteLinkDepth = finiteDepth;
+					this.plugin.settings.noteLinkDepth = value ? 'unlimited' : finiteDepth;
+					await this.plugin.saveSettings();
+					this.display();
+				}));
 
 		// ========== COMMAND PHRASES ==========
 		new Setting(containerEl).setName('Command phrases').setHeading();

@@ -54,6 +54,7 @@ export interface PluginSettings {
   // Behavior Settings
   followNoteLinks: boolean;
   noteLinkDepth: number | 'unlimited';
+  lastNoteLinkDepth: number; // Preserves the finite depth while unlimited is enabled.
   enableSpacebarDetection: boolean;
   spacebarDetectionDelay: number;
 
@@ -91,6 +92,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   // Behavior Settings defaults
   followNoteLinks: false,
   noteLinkDepth: 2,
+  lastNoteLinkDepth: 2,
   enableSpacebarDetection: false,
   spacebarDetectionDelay: 0.5,
   // Logging Defaults

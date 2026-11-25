@@ -43,7 +43,7 @@ Subscription models appear in their own section above OpenRouter, in the order O
 
 Sign-in uses a temporary callback listener bound to `127.0.0.1`, PKCE, and verified OpenAI identity tokens. Credentials are stored in `~/.simple-note-chat/chatgpt.json`, outside the vault, with owner-only permissions on Unix and atomic updates. This file contains sensitive tokens; do not share or sync it. Sign in separately on each computer. **Sign out** removes local credentials and attempts to revoke the renewable session with OpenAI. Disabling the connection stops active requests while preserving sign-in. OpenRouter remains available on mobile.
 
-The conversation selected by the normal chat boundaries is submitted, along with linked note context if **Follow note links** is enabled. Requests send native user/assistant messages, use `store: false`, and offer no tools or filesystem access. Title reasoning effort and token-limit settings currently apply only to OpenRouter; the direct ChatGPT connection uses model defaults.
+The conversation selected by the normal chat boundaries is submitted, along with linked note context if **Include linked notes** is enabled. Requests send native user/assistant messages, use `store: false`, and offer no tools or filesystem access. Title reasoning effort and token-limit settings currently apply only to OpenRouter; the direct ChatGPT connection uses model defaults.
 
 **Migrating from the earlier Codex connection:** Sign in again using **Continue with ChatGPT**. Existing `chatgpt/` model selections are preserved, but you may need to select a replacement from the new catalog. The new connection does not read or reuse the old Codex credentials in `~/.simple-note-chat/codex`; signing out here only disconnects the new connection. You can separately remove the old isolated Codex directory if you no longer use it.
 
@@ -90,13 +90,13 @@ If you archive the chat afterward (using `gg`), then only content up to the boun
 
 ### Including linked notes
 
-Enable **Settings → Simple Note Chat → Linked notes → Follow note links** to include linked Markdown notes in chat requests. This is **off by default** and works with either connection.
+Enable **Settings → Simple Note Chat → Linked notes → Include linked notes** to include linked Markdown notes in chat requests. This is **off by default** and works with either connection.
 
-**Link depth** defaults to **2**:
+**Linked note depth** defaults to **2**:
 
 - **1:** Include notes linked directly from the current conversation.
 - **2:** Also include those notes' linked notes, but nothing beyond that.
-- Enable **Unlimited link depth** to include every reachable note. Each note is included once, so circular links stop safely. Large collections can exceed the model's context limit or increase usage.
+- Enable **Unlimited depth**, below the depth field, to include every reachable note. The depth field stays visible but disabled, and its previous value is restored when unlimited is turned off. Each note is included once, so circular links stop safely. Large collections can exceed the model's context limit or increase usage.
 
 Both `[[notename.md]]` and `[description](link.md)` work, as do aliases, heading/block links, and embedded Markdown notes. Obsidian's metadata cache and link resolver handle parsing and finding the destination relative to each source note. External URLs, unresolved links, and non-Markdown attachments are skipped. Heading and block links include the entire destination note.
 
