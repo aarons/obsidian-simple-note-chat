@@ -94,8 +94,6 @@ export class ModelSelectorModal extends Modal {
 					attr: { type: 'button', 'aria-pressed': String(isSelected), 'aria-disabled': String(this.saving) },
 				});
 				select.createSpan({ text: model.displayName });
-				// Favorites combine providers, so keep the connection explicit on each row.
-				select.createSpan({ text: model.provider === 'chatgpt' ? 'ChatGPT subscription' : 'OpenRouter', cls: 'snc-model-provider' });
 				select.addEventListener('click', () => { void this.selectModel(model); });
 				if (focusedFavorite === model.id) star.focus({ preventScroll: true });
 			}

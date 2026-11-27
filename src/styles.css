@@ -94,9 +94,3 @@
     white-space: normal;
     overflow-wrap: anywhere;
 }
-
-.snc-model-provider {
-    color: var(--text-muted);
-    font-size: var(--font-ui-smaller);
-    margin-top: var(--size-2-1);
-}
