@@ -714,10 +714,10 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 
 	private populateModelDropdowns(): void {
 		if (this.modelDropdown) {
-			populateModelOptions(this.modelDropdown.selectEl, this.availableModels, this.plugin.settings.defaultModel, '-- Select a model --');
+			populateModelOptions(this.modelDropdown.selectEl, this.availableModels, this.plugin.settings.defaultModel, '-- Select a model --', this.plugin.settings.favoriteModels);
 		}
 		if (this.llmModelDropdown) {
-			populateModelOptions(this.llmModelDropdown.selectEl, this.availableModels, this.plugin.settings.llmRenameModel, 'Use default chat model');
+			populateModelOptions(this.llmModelDropdown.selectEl, this.availableModels, this.plugin.settings.llmRenameModel, 'Use default chat model', this.plugin.settings.favoriteModels);
 		}
 	}
 

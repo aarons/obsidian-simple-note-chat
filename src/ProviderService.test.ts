@@ -82,10 +82,15 @@ class Element {
 it('groups models in all pickers and retains unavailable selections without switching providers', () => {
     const select = new Element('select');
     populateModelOptions(select as any, [
+        { id: 'test/image-z', displayName: 'Z image 🎨', provider: 'openrouter', isImageModel: true },
         { id: 'openai/example', displayName: 'Example API', provider: 'openrouter' },
+        { id: 'test/image-a', displayName: 'A image 🎨 📎', provider: 'openrouter', isImageModel: true },
         { id: 'chatgpt/example', displayName: 'Example subscription', provider: 'chatgpt' },
     ], 'chatgpt/old-model', 'Choose a model');
-    expect(select.children.filter(child => child.tag === 'optgroup').map(child => child.label)).toEqual(['ChatGPT subscription · Using ChatGPT plan', 'OpenRouter']);
+    const groups = select.children.filter(child => child.tag === 'optgroup');
+    expect(groups.map(child => child.label)).toEqual(['ChatGPT subscription · Using ChatGPT plan', 'OpenRouter', 'OpenRouter · Image models']);
+    expect(groups[1].children.map(child => child.value)).toEqual(['openai/example']);
+    expect(groups[2].children.map(child => child.value)).toEqual(['test/image-z', 'test/image-a']);
     expect(select.value).toBe('chatgpt/old-model');
-    expect(select.children[3].textContent).toContain('unavailable');
+    expect(select.children[4].textContent).toContain('unavailable');
 });

@@ -36,7 +36,10 @@ describe('OpenRouter image generation', () => {
             signal: f.controller.signal,
             body: JSON.stringify({ model: 'test/image', prompt: 'Draw a cat', response_format: 'b64_json' }),
         }));
-        expect(f.service.getFormattedModels([f.model])[0].displayName).toContain('Image output');
+        expect(f.service.getFormattedModels([f.model])[0]).toMatchObject({ isImageModel: true, displayName: 'Image model | free in | free out 🎨' });
+        const referenceModel = { ...f.model, architecture: { ...f.model.architecture, input_modalities: ['text', 'image'] } };
+        expect(f.service.getFormattedModels([referenceModel])[0].displayName).toBe('Image model | free in | free out 🎨 📎');
+        expect(f.service.getFormattedModels([{ ...referenceModel, id: 'test/image:free' }])[0].displayName).toBe('Image model | free | free 🎨 📎');
     });
 
     it('requests text and images for chat models and preserves image order', async () => {
@@ -67,7 +70,7 @@ describe('OpenRouter image generation', () => {
         f.model.architecture.tokenizer = 'Router';
         f.fetchMock.mockResolvedValue(new Response('data: {"choices":[{"delta":{"content":"Hello"}}]}\n\ndata: [DONE]\n\n'));
         expect(await f.run()).toEqual(['Hello']);
-        expect(f.service.getFormattedModels([f.model])[0].displayName).not.toContain('Image output');
+        expect(f.service.getFormattedModels([f.model])[0]).toMatchObject({ isImageModel: false, displayName: 'Image model | free in | free out' });
     });
 
     it('uses advertised endpoints when a text-and-image model only serves images', async () => {

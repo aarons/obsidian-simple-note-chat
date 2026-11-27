@@ -27,3 +27,76 @@
     background-color: var(--background-modifier-error);
     border-color: var(--background-modifier-error-border);
 }
+/* Searchable model picker */
+.snc-model-search {
+    width: 100%;
+    margin-bottom: var(--size-4-3);
+}
+
+.snc-model-list {
+    max-height: 55vh;
+    overflow-y: auto;
+}
+
+.snc-model-section-title {
+    margin: var(--size-4-3) 0 var(--size-4-2);
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+}
+
+.snc-model-row {
+    display: flex;
+    align-items: center;
+    gap: var(--size-4-1);
+    border-radius: var(--radius-s);
+}
+
+.snc-model-row:hover {
+    background: var(--background-modifier-hover);
+}
+
+.snc-model-row.is-selected {
+    background: var(--background-modifier-active-hover);
+}
+
+.snc-model-row button {
+    height: auto;
+    padding: var(--size-4-2);
+    background: transparent;
+    box-shadow: none;
+}
+
+.snc-model-row button:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: -2px;
+}
+
+.snc-model-row .snc-model-star {
+    flex: 0 0 36px;
+    color: var(--text-muted);
+}
+
+.snc-model-row .snc-model-star.is-favorite {
+    color: var(--text-accent);
+}
+
+.snc-model-star.is-favorite svg {
+    fill: currentColor;
+}
+
+.snc-model-row .snc-model-choice {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.snc-model-provider {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    margin-top: var(--size-2-1);
+}

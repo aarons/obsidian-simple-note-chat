@@ -87,6 +87,7 @@ export enum ModelSortOption {
 export interface FormattedModelInfo {
     id: string;
     displayName: string;
+    isImageModel: boolean;
 }
 
 
@@ -292,12 +293,17 @@ export class OpenRouterService {
      */
     getFormattedModels(models: OpenRouterModel[]): FormattedModelInfo[] {
         return models.map(model => {
-            const modelName = (model.name || model.id) + (this.isImageModel(model) ? ' · Image output' : '');
+            const modelName = model.name || model.id;
+            const isImageModel = this.isImageModel(model);
+            const suffix = isImageModel
+                ? (model.architecture?.input_modalities?.includes('image') ? ' 🎨 📎' : ' 🎨')
+                : '';
 
             // Handle special cases like free models or auto-routing
             if (model.id === 'openrouter/auto') {
                 return {
                     id: model.id,
+                    isImageModel,
                     displayName: `${modelName} | variable pricing`
                 };
             }
@@ -312,12 +318,14 @@ export class OpenRouterService {
                  // Use the name but indicate free pricing clearly
                  return {
                      id: model.id,
-                     displayName: `${modelName} | free | free`
+                     isImageModel,
+                     displayName: `${modelName} | free | free${suffix}`
                  };
             } else {
                  return {
                      id: model.id,
-                     displayName: `${modelName} | ${promptPriceStr} in | ${completionPriceStr} out`
+                     isImageModel,
+                     displayName: `${modelName} | ${promptPriceStr} in | ${completionPriceStr} out${suffix}`
                  };
             }
         });

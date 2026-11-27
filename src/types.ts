@@ -25,6 +25,7 @@ export interface PluginSettings {
   apiKey: string;
   chatGptEnabled: boolean;
   defaultModel: string;
+  favoriteModels: string[];
   archiveFolderName: string;
   // Settings for the 'New Note' command
   newNoteLocation: 'current' | 'archive' | 'custom';
@@ -67,6 +68,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   apiKey: '',
   chatGptEnabled: false,
   defaultModel: 'openrouter/auto',
+  favoriteModels: [],
   archiveFolderName: DEFAULT_ARCHIVE_FOLDER,
   // New Note settings defaults
   newNoteLocation: 'archive',

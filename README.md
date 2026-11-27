@@ -125,7 +125,7 @@ If the LLM response is not useful or going off track, you can stop it mid-stream
 
 ### Changing the Model
 
-Typing `cm` on it's own line will open a model selection modal, making it easy to quickly switch which model you are chatting with.
+Typing `cm` on its own line opens a searchable model picker. Click a model to use it, or toggle the star on its left to add or remove it from Favorites without changing the active model. Favorites are saved across restarts and appear in their own section at the top of the picker and settings dropdowns. Your model sorting preference is preserved within each section.
 
 ### Finished with a Chat (`gg`)
 
