@@ -104,6 +104,10 @@ Only links after the last `^^^` boundary and before the chat initiation point in
 
 The plugin waits briefly for Obsidian to index the current note so newly typed links are included. If indexing does not finish, the request stops with a retry message. Missing or unreadable linked-note metadata/content produces a notice when context cannot be fully loaded.
 
+### Reading While a Response Streams
+
+You can scroll through the note and select text while a response is being generated. Incoming text and the end of the response leave your navigation under your control, without jumping back to the cursor or the bottom of the note.
+
 ### Stopping a Response
 
 If the LLM response is not useful or going off track, you can stop it mid-stream by pressing the `Escape` key.

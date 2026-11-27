@@ -1,4 +1,5 @@
 import { Notice, Plugin, Editor, TFile, EditorPosition } from 'obsidian';
+import type { EditorView } from '@codemirror/view';
 import { PluginSettings, ChatMessage } from './types';
 import { CompletionProvider } from './ModelProvider';
 import { log } from './utils/logger';
@@ -20,6 +21,27 @@ export class ChatService {
     constructor(plugin: Plugin, provider: CompletionProvider) {
         this.plugin = plugin;
         this.provider = provider;
+    }
+
+    /** Apply a background edit without asking Obsidian to reveal the cursor. */
+    private replaceRange(editor: Editor, text: string, from: EditorPosition, to = from): void {
+        // Obsidian's replaceRange AND transaction APIs request scrollIntoView.
+        // The underlying CM6 view is not part of the public Editor type, so keep
+        // access here and retain a fallback for editors without it.
+        const cm = (editor as Editor & { cm?: EditorView }).cm;
+        if (cm) {
+            cm.dispatch({
+                changes: { from: editor.posToOffset(from), to: editor.posToOffset(to), insert: text },
+                scrollIntoView: false,
+            });
+            // Omitting selection lets CodeMirror map the user's current ranges
+            // through the change without moving the caret to the response.
+        } else {
+            const { left, top } = editor.getScrollInfo();
+            editor.replaceRange(text, from, to);
+            // Capture each edit's viewport, never the position at stream start.
+            editor.scrollTo(left, top);
+        }
     }
 
     /**
@@ -74,7 +96,7 @@ export class ChatService {
         const startInsertOffset = currentOffset;
         const startInsertPos = editor.offsetToPos(startInsertOffset);
 
-        editor.replaceRange(textToInsert, startInsertPos, startInsertPos);
+        this.replaceRange(editor, textToInsert, startInsertPos);
 
         const endInsertOffset = startInsertOffset + textToInsert.length;
         const endInsertPos = editor.offsetToPos(endInsertOffset);
@@ -108,7 +130,6 @@ export class ChatService {
         const statusMessage = `Calling ${settings.defaultModel}...`;
         const [actualStatusStartPos, actualStatusEndPos] = this.insertTextAtPos(editor, statusMessage, insertionPos);
         log.debug(`Inserted status message from [${actualStatusStartPos.line}, ${actualStatusStartPos.ch}] to [${actualStatusEndPos.line}, ${actualStatusEndPos.ch}]`);
-        editor.setCursor(actualStatusEndPos); // Move cursor after status message
 
         // 2. Parse Content *before* the status message
         const parseUntilOffset = editor.posToOffset(actualStatusStartPos);
@@ -118,7 +139,6 @@ export class ChatService {
         if (messages.length === 0) {
             new Notice('No content found before the chat initiation point.');
             this.removeStatusMessageAtPos(editor, statusMessage, actualStatusStartPos, actualStatusEndPos, 'No content found.');
-            editor.setCursor(actualStatusStartPos); // Move cursor back
             return;
         }
 
@@ -169,7 +189,7 @@ export class ChatService {
                         );
 
                         // 4c. Insert the first chunk
-                        editor.replaceRange(chunk, currentInsertPos, currentInsertPos);
+                        this.replaceRange(editor, chunk, currentInsertPos);
                         lastPosition = editor.offsetToPos(
                             editor.posToOffset(currentInsertPos) + chunk.length
                         );
@@ -179,7 +199,7 @@ export class ChatService {
                         if (!lastPosition) {
                             throw new Error("Internal state error: lastPosition not set after first chunk.");
                         }
-                        editor.replaceRange(chunk, lastPosition, lastPosition);
+                        this.replaceRange(editor, chunk, lastPosition);
                         lastPosition = editor.offsetToPos(
                             editor.posToOffset(lastPosition) + chunk.length
                         );
@@ -192,16 +212,14 @@ export class ChatService {
             if (isFirstChunk) {
                 // No chunks received - status message should still be there
                 this.removeStatusMessageAtPos(editor, statusMessage, actualStatusStartPos, actualStatusEndPos, 'Stream ended with no content.');
-                editor.setCursor(actualStatusStartPos); // Move cursor back to where status was
                 new Notice("Chat completed with no response.");
             } else if (lastPosition) {
-                // Append final separator and position cursor
+                // Append the final separator without interrupting navigation.
                 lastPosition = this.insertSeparatorWithSpacing(
                     editor,
                     lastPosition,
                     CHAT_SEPARATOR
                 );
-                editor.setCursor(lastPosition); // Set cursor after the separator
             }
         } catch (error: any) {
             // 6. Handle Errors
@@ -229,7 +247,6 @@ export class ChatService {
             if (isFirstChunk) {
                 log.debug("Error occurred before first chunk, attempting status message cleanup.");
                 this.removeStatusMessageAtPos(editor, statusMessage, actualStatusStartPos, actualStatusEndPos, `Error/Cancel occurred: ${reason}`);
-                editor.setCursor(actualStatusStartPos); // Move cursor back
             } else {
                  log.debug("Error occurred after first chunk, status message should already be removed.");
                  // Cursor might be somewhere in the partially inserted response
@@ -266,7 +283,7 @@ export class ChatService {
             const currentText = editor.getRange(startPos, endPos).trim(); // Trim to handle potential extra newlines from insertTextAtPos
 
             if (currentText === expectedStatusBase) {
-                editor.replaceRange('', startPos, endPos);
+                this.replaceRange(editor, '', startPos, endPos);
                 removed = true;
                 log.debug(`Removed status message at [${startPos.line}, ${startPos.ch}]-[${endPos.line}, ${endPos.ch}]. Reason: ${reason || 'N/A'}`);
             } else {
@@ -308,7 +325,7 @@ export class ChatService {
         const suffix = '\n\n'; // Always need two newlines after
         const block = `${prefix}${separator}${suffix}`;
 
-        editor.replaceRange(block, adjustedPos, adjustedPos);
+        this.replaceRange(editor, block, adjustedPos);
 
         // Return the position *after* the entire inserted block
         return editor.offsetToPos(currentOffset + block.length);
@@ -336,10 +353,7 @@ export class ChatService {
         streamInfo.controller.abort(reason);
 
         // Attempt status message cleanup using stored positions
-        const removed = this.removeStatusMessageAtPos(editor, streamInfo.statusText, streamInfo.statusStartPos, streamInfo.statusEndPos, reason);
-        if (removed) {
-             editor.setCursor(streamInfo.statusStartPos); // Move cursor back if status was removed
-        }
+        this.removeStatusMessageAtPos(editor, streamInfo.statusText, streamInfo.statusStartPos, streamInfo.statusEndPos, reason);
 
         this.activeStreams.delete(filePath); // Ensure removal
         log.debug(`Stream cancelled and removed from active streams for: ${filePath}`);
