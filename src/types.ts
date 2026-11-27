@@ -104,3 +104,6 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
 }
+
+/** Text streams as before; generated images arrive as complete data or HTTPS URLs. */
+export type ChatOutput = string | { type: 'image'; url: string };

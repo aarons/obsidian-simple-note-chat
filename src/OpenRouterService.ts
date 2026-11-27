@@ -1,7 +1,7 @@
 // src/OpenRouterService.ts
 import { requestUrl } from 'obsidian';
 import { OPENROUTER_API_URL } from './constants';
-import { PluginSettings, ChatMessage, ReasoningEffort } from './types';
+import { PluginSettings, ChatMessage, ChatOutput, ReasoningEffort } from './types';
 import { log } from './utils/logger';
 
 /**
@@ -27,10 +27,13 @@ export interface OpenRouterModel {
         image?: string;   // Optional
     };
     context_length?: number; // Optional
+    endpoints?: string[];
     architecture?: { // Optional
-        modality: string;
-        tokenizer: string;
-        instruct_type: string | null;
+        modality?: string;
+        tokenizer?: string;
+        instruct_type?: string | null;
+        input_modalities?: string[];
+        output_modalities?: string[];
     };
     top_provider?: { // Optional
         max_completion_tokens: number | null;
@@ -91,6 +94,13 @@ export class OpenRouterService {
     private availableModels: OpenRouterModel[] = [];
     private modelsLastFetched: number = 0;
     private cacheValidityDuration: number = 1000 * 60 * 60 * 24; // 24 hours in milliseconds
+
+    private isImageModel(model: OpenRouterModel | undefined): boolean {
+        // Dynamic routers advertise aggregate capabilities; keep normal chat mode.
+        return model?.architecture?.tokenizer?.toLowerCase() !== 'router'
+            && !/^openrouter\/auto(?:-|$)/.test(model?.id || '')
+            && !!model?.architecture?.output_modalities?.includes('image');
+    }
     /**
      * Formats a price string (representing price per token) into price per million tokens.
      * @param price The price string (e.g., "0.0000015") or undefined/null.
@@ -162,7 +172,7 @@ export class OpenRouterService {
         let response;
         try {
             response = await requestUrl({
-                url: `${OPENROUTER_API_URL}/models`,
+                url: `${OPENROUTER_API_URL}/models?output_modalities=all`,
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
@@ -190,7 +200,10 @@ export class OpenRouterService {
         }
 
         // Update the cache
-        this.availableModels = data.data as OpenRouterModel[];
+        this.availableModels = (data.data as OpenRouterModel[]).filter(model => {
+            const outputs = model.architecture?.output_modalities;
+            return !outputs || outputs.includes('text') || outputs.includes('image');
+        });
         this.modelsLastFetched = Date.now();
         log.debug(`Model cache updated at: ${this.modelsLastFetched}`)
         return this.availableModels;
@@ -279,7 +292,7 @@ export class OpenRouterService {
      */
     getFormattedModels(models: OpenRouterModel[]): FormattedModelInfo[] {
         return models.map(model => {
-            const modelName = model.name || model.id; // Fallback to ID if name is missing
+            const modelName = (model.name || model.id) + (this.isImageModel(model) ? ' · Image output' : '');
 
             // Handle special cases like free models or auto-routing
             if (model.id === 'openrouter/auto') {
@@ -323,7 +336,7 @@ export class OpenRouterService {
         messages: ChatMessage[],
         settings: PluginSettings,
         signal: AbortSignal
-    ): AsyncGenerator<string> {
+    ): AsyncGenerator<ChatOutput> {
         const { apiKey, defaultModel } = settings;
 
         // Validate settings before proceeding
@@ -335,6 +348,20 @@ export class OpenRouterService {
         if (!defaultModel) {
             log.error('OpenRouterService: Default model is not set.');
             throw new Error("Default model is not set");
+        }
+
+        if (signal.aborted) return;
+        const models = await this.fetchModels(apiKey);
+        if (signal.aborted) return;
+        const model = models.find(model => model.id === defaultModel);
+        if (model && this.isImageModel(model)) {
+            const textOutput = !!model.architecture?.output_modalities?.includes('text');
+            const supportsChat = !model.endpoints || model.endpoints.includes('/api/v1/chat/completions');
+            const supportsImages = !model.endpoints || model.endpoints.includes('/api/v1/images');
+            if (!supportsChat && !supportsImages) throw new Error('This image model does not support a compatible generation endpoint.');
+            const useChat = supportsChat && (textOutput || !supportsImages);
+            yield* this.generateImages(messages, settings, signal, useChat, textOutput);
+            return;
         }
 
         const requestBody = {
@@ -464,6 +491,45 @@ export class OpenRouterService {
         }
     }
 
+    /** Image requests return complete images; text-only requests keep streaming. */
+    private async *generateImages(messages: ChatMessage[], settings: PluginSettings, signal: AbortSignal, chatModel: boolean, textOutput: boolean): AsyncGenerator<ChatOutput> {
+        const requestBody = chatModel
+            ? { model: settings.defaultModel, messages, modalities: textOutput ? ['text', 'image'] : ['image'], stream: false }
+            : { model: settings.defaultModel,
+                // The images endpoint accepts a prompt, not native chat history.
+                prompt: messages.length === 1 ? messages[0].content : messages.map(message => `${message.role}: ${message.content}`).join('\n\n'),
+                response_format: 'b64_json' };
+        const response = await fetch(`${OPENROUTER_API_URL}/${chatModel ? 'chat/completions' : 'images'}`, {
+            method: 'POST', headers: { Authorization: `Bearer ${settings.apiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody), signal,
+        });
+        const data = await response.json();
+        if (signal.aborted) return;
+        const choice = data?.choices?.[0];
+        const error = data?.error || choice?.error;
+        if (!response.ok || error || choice?.finish_reason === 'error') {
+            throw new Error(`Image generation failed (${response.status}): ${error?.message || 'The provider could not complete the request.'}`);
+        }
+        let receivedOutput = false;
+        if (chatModel && typeof choice?.message?.content === 'string' && choice.message.content) {
+            receivedOutput = true;
+            yield choice.message.content;
+        }
+        const images = chatModel ? choice?.message?.images : data?.data;
+        if (Array.isArray(images)) {
+            for (const image of images) {
+                if (signal.aborted) return;
+                const url = chatModel ? image?.image_url?.url :
+                    typeof image?.b64_json === 'string' && image.b64_json
+                        ? `data:${image.media_type || 'application/octet-stream'};base64,${image.b64_json}` : image?.url;
+                if (typeof url !== 'string' || !url) throw new Error('The provider returned an image without image data.');
+                receivedOutput = true;
+                yield { type: 'image', url };
+            }
+        }
+        if (!receivedOutput) throw new Error('The model returned no image or text. Try another prompt or model.');
+    }
+
     /**
      * Performs a non-streaming chat completion request to the OpenRouter API.
      * @param apiKey The OpenRouter API key.
@@ -482,6 +548,10 @@ export class OpenRouterService {
     ): Promise<string> {
         if (!apiKey) {
             throw new Error('OpenRouter API key is not set. Please configure it in the plugin settings.');
+        }
+        const outputModalities = this.availableModels.find(entry => entry.id === model)?.architecture?.output_modalities;
+        if (outputModalities?.includes('image') && !outputModalities.includes('text')) {
+            throw new Error('This model only generates images. Select a text model for note titles.');
         }
 
         const requestBody: any = {

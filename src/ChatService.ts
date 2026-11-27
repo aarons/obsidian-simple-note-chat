@@ -5,6 +5,7 @@ import { CompletionProvider } from './ModelProvider';
 import { log } from './utils/logger';
 import { CHAT_SEPARATOR, getChatContentStart } from './constants';
 import { LinkedNoteContext, withLinkedNoteContext } from './LinkedNoteContext';
+import { GeneratedImageService } from './GeneratedImageService';
 
 interface ActiveStreamInfo {
     controller: AbortController;
@@ -174,7 +175,10 @@ export class ChatService {
                 abortController.signal
             );
 
-            for await (const chunk of streamGenerator) {
+            const images = new GeneratedImageService(this.plugin.app);
+            for await (const output of streamGenerator) {
+                if (abortController.signal.aborted) throw new DOMException('Chat cancelled', 'AbortError');
+                const chunk = typeof output === 'string' ? output : await images.save(output.url, file, abortController.signal);
                 if (chunk) {
                     if (isFirstChunk) {
                         // 4a. Remove status message

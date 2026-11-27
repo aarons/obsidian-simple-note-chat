@@ -10,7 +10,7 @@ vi.mock('obsidian', () => ({
 
 import { ChatService } from './ChatService';
 import { CHAT_SEPARATOR } from './constants';
-import { DEFAULT_SETTINGS } from './types';
+import { ChatOutput, DEFAULT_SETTINGS } from './types';
 
 function setup(useCodeMirror = true) {
     let text = `Private [[secret]]\n^^^\nQuestion [[reference]]\n\n${CHAT_SEPARATOR}\n\nPrevious answer\n\n${CHAT_SEPARATOR}\n\nFollow up\n`;
@@ -51,9 +51,17 @@ function setup(useCodeMirror = true) {
         getFirstLinkpathDest: vi.fn(() => target),
         getFileCache: vi.fn(() => ({})),
     };
-    const app = { metadataCache, vault: { cachedRead: vi.fn(async () => 'Reference before\n^^^\nReference after') } };
+    const app = {
+        metadataCache,
+        fileManager: { getAvailablePathForAttachment: vi.fn(async () => 'attachments/generated.png') },
+        vault: {
+            cachedRead: vi.fn(async () => 'Reference before\n^^^\nReference after'),
+            createBinary: vi.fn(async () => ({ path: 'attachments/generated.png' })),
+            delete: vi.fn(async () => {}),
+        },
+    };
     const provider = {
-        streamChatCompletion: vi.fn(async function* () { yield 'New answer'; }),
+        streamChatCompletion: vi.fn(async function* (): AsyncGenerator<ChatOutput> { yield 'New answer'; }),
         getChatCompletion: vi.fn(), getModelReasoningInfo: vi.fn(),
     };
     const service = new ChatService({ app } as unknown as Plugin, provider);
@@ -107,6 +115,39 @@ describe('chat context integration', () => {
             expect(f.provider.streamChatCompletion).not.toHaveBeenCalled();
             expect(f.app.metadataCache.offref).toHaveBeenCalledTimes(1);
             expect(f.editor.getValue()).not.toContain('Calling');
+            expect(f.service.isStreamActive(f.file.path)).toBe(false);
+        } finally { errorLog.mockRestore(); }
+    });
+});
+
+describe('image output in chat notes', () => {
+    it.each([false, true])('embeds saved images within the assistant response (with text: %s)', async withText => {
+        const f = setup();
+        f.provider.streamChatCompletion.mockImplementation(async function* () {
+            if (withText) yield 'Here is your image.';
+            yield { type: 'image', url: 'data:image/png;base64,iVBORw0KGgo=' };
+        });
+        const previousSeparators = f.editor.getValue().split(CHAT_SEPARATOR).length;
+        await f.start();
+        expect(f.editor.getValue()).toContain('![[attachments/generated.png]]');
+        expect(f.editor.getValue()).not.toContain('base64');
+        expect(f.editor.getValue()).not.toContain('Calling');
+        expect(f.editor.getValue().split(CHAT_SEPARATOR)).toHaveLength(previousSeparators + 2);
+        expect(f.app.vault.createBinary).toHaveBeenCalledOnce();
+        expect(f.service.isStreamActive(f.file.path)).toBe(false);
+    });
+
+    it('cleans up status without inserting a broken embed when saving fails', async () => {
+        const f = setup();
+        const original = f.editor.getValue();
+        const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+        f.app.vault.createBinary.mockRejectedValue(new Error('Disk full'));
+        f.provider.streamChatCompletion.mockImplementation(async function* () {
+            yield { type: 'image', url: 'data:image/png;base64,iVBORw0KGgo=' };
+        });
+        try {
+            await f.start();
+            expect(f.editor.getValue()).toBe(original);
             expect(f.service.isStreamActive(f.file.path)).toBe(false);
         } finally { errorLog.mockRestore(); }
     });

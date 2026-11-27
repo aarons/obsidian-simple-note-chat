@@ -1,4 +1,4 @@
-import { ChatMessage, PluginSettings } from './types';
+import { ChatMessage, ChatOutput, PluginSettings } from './types';
 import { ChatCompletionOptions, ModelReasoningInfo } from './OpenRouterService';
 
 export const CHATGPT_MODEL_PREFIX = 'chatgpt/';
@@ -7,7 +7,7 @@ export const isModelConfigured = (id: string, settings: PluginSettings): boolean
     !!id && (isChatGptModel(id) ? settings.chatGptEnabled : !!settings.apiKey);
 
 export interface CompletionProvider {
-    streamChatCompletion(messages: ChatMessage[], settings: PluginSettings, signal: AbortSignal): AsyncGenerator<string>;
+    streamChatCompletion(messages: ChatMessage[], settings: PluginSettings, signal: AbortSignal): AsyncGenerator<ChatOutput>;
     getChatCompletion(apiKey: string, model: string, messages: ChatMessage[], options?: ChatCompletionOptions): Promise<string>;
     getModelReasoningInfo(model: string): ModelReasoningInfo | undefined;
 }

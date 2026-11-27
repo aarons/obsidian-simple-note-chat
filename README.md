@@ -23,6 +23,7 @@ This plugin enables Obsidian to act as a lightweight chat interface for most any
 * You can mask content to prevent it from being included in the chat
 	* `^^^` - anything above this will be ignored
 * Responses are streamed
+* Generate images with OpenRouter image models and save them as embedded vault attachments
 * Optionally include linked notes as context, with a configurable depth or unlimited traversal
 * Press `Escape` to quickly stop a stream
 * Nearly everything is configurable
@@ -64,6 +65,16 @@ cc  <- cc on it's own line, just press enter for it to work
 Tell me a haiku about kittens. cc  <- 'cc' is not on it's own line, so it won't be recognized
 ```
 
+
+### Generating images
+
+Select an OpenRouter model labeled **Image output** with `cm` or in settings, describe your image, then use `cc` as usual. The plugin supports both text-and-image chat models and image-only models. Image requests wait for the complete result; ordinary text models continue streaming.
+
+Generated images are saved using Obsidian's attachment-folder setting for the current note, then embedded in the assistant response. Multiple images and accompanying text are supported. The embeds use vault-relative paths so they also work when a conversation is copied to an archive note. Press `Escape` to cancel a pending request.
+
+This supports image **output**. Existing image embeds are sent as Markdown text, not uploaded as image inputs, so follow-up image editing and models requiring reference images are not supported. Use a text-capable model for automatic note titles.
+
+Image generation is currently unavailable through the ChatGPT subscription connection: OpenAI's [token-sharing preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations) explicitly exclude it. OpenRouter generation uses your OpenRouter API key and billing.
 
 ### Limiting what is sent to the AI
 

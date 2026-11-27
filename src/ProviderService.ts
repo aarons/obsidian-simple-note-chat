@@ -1,7 +1,7 @@
 import { ChatCompletionOptions, ModelSortOption, OpenRouterService } from './OpenRouterService';
 import { ChatGptService } from './ChatGptService';
 import { CHATGPT_MODEL_PREFIX, CompletionProvider, isChatGptModel, ProviderModel } from './ModelProvider';
-import { ChatMessage, PluginSettings } from './types';
+import { ChatMessage, ChatOutput, PluginSettings } from './types';
 
 export class ProviderService implements CompletionProvider {
     constructor(private openRouter: OpenRouterService, private chatGpt: ChatGptService, private settings: () => PluginSettings) {}
@@ -27,7 +27,7 @@ export class ProviderService implements CompletionProvider {
         return isChatGptModel(model) ? undefined : this.openRouter.getModelReasoningInfo(model);
     }
 
-    async *streamChatCompletion(messages: ChatMessage[], settings: PluginSettings, signal: AbortSignal): AsyncGenerator<string> {
+    async *streamChatCompletion(messages: ChatMessage[], settings: PluginSettings, signal: AbortSignal): AsyncGenerator<ChatOutput> {
         if (isChatGptModel(settings.defaultModel)) {
             if (!settings.chatGptEnabled) throw new Error('Enable and connect ChatGPT in plugin settings.');
             yield* this.chatGpt.streamChatCompletion(messages, settings.defaultModel.slice(CHATGPT_MODEL_PREFIX.length), signal);

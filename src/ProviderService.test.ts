@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('obsidian', () => ({ requestUrl: vi.fn(), Platform: { isDesktopApp: true } }));
 import { ProviderService } from './ProviderService';
 import { OpenRouterService } from './OpenRouterService';
-import { DEFAULT_SETTINGS } from './types';
+import { ChatOutput, DEFAULT_SETTINGS } from './types';
 import { isModelConfigured, populateModelOptions } from './ModelProvider';
 
-async function collect(stream: AsyncGenerator<string>): Promise<string> {
+async function collect(stream: AsyncGenerator<ChatOutput>): Promise<string> {
     let output = '';
     for await (const chunk of stream) output += chunk;
     return output;
