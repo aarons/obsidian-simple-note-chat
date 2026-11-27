@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { App, CachedMetadata, ReferenceCache, TFile } from 'obsidian';
 
-vi.mock('obsidian', () => ({ getLinkpath: (link: string) => link.split('#')[0] }));
+vi.mock('obsidian', () => ({
+    getLinkpath: (link: string) => link.split('#')[0],
+    arrayBufferToBase64: (bytes: ArrayBuffer) => Buffer.from(bytes).toString('base64'),
+}));
 
 import { LinkedNoteContext, normalizeNoteLinkDepth, withLinkedNoteContext } from './LinkedNoteContext';
 import { DEFAULT_SETTINGS } from './types';
@@ -26,7 +29,10 @@ function fixture() {
     const caches = new Map<string, CachedMetadata>();
     const listeners = new Set<(file: TFile, data: string, cache: CachedMetadata) => void>();
     const app = {
-        vault: { cachedRead: vi.fn(async (file: TFile) => contents.get(file.path)!) },
+        vault: {
+            cachedRead: vi.fn(async (file: TFile) => contents.get(file.path)!),
+            readBinary: vi.fn(async (file: TFile) => Uint8Array.from(Buffer.from(contents.get(file.path)!, 'base64')).buffer),
+        },
         metadataCache: {
             on: vi.fn((_event, callback) => { listeners.add(callback); return callback; }),
             offref: vi.fn(callback => listeners.delete(callback)),
@@ -48,7 +54,7 @@ function fixture() {
         for (const callback of listeners) callback(file, data, cache);
     };
     const service = new LinkedNoteContext(app as unknown as App);
-    const collect = (source: TFile, depth: number | 'unlimited', end = contents.get(source.path)!.length) => {
+    const collect = (source: TFile, depth: number | 'unlimited' | false, end = contents.get(source.path)!.length) => {
         const result = service.collect(source, contents.get(source.path)!, end, depth, new AbortController().signal);
         indexed(source);
         return result;
@@ -116,15 +122,87 @@ describe('linked note traversal', () => {
         expect(f.app.metadataCache.getFirstLinkpathDest).toHaveBeenCalledWith('literal%20.md', 'folder/root.md');
     });
 
-    it('ignores missing notes, non-Markdown files, external URLs and local headings', async () => {
+    it('ignores missing notes, other attachments, external links and local headings', async () => {
         const f = fixture();
-        const root = f.add('root.md', '[[missing]] [[image.png]] [[#Heading]] [web](https://example.com)', [
-            ['[[missing]]', 'missing'], ['[[image.png]]', 'image.png'], ['[[#Heading]]', '#Heading'],
+        const root = f.add('root.md', '[[missing]] [[manual.pdf]] [[#Heading]] [web](https://example.com)', [
+            ['[[missing]]', 'missing'], ['[[manual.pdf]]', 'manual.pdf'], ['[[#Heading]]', '#Heading'],
             ['[web](https://example.com)', 'https://example.com'],
         ]);
-        f.add('image.png', 'binary');
+        f.add('manual.pdf', 'other attachment');
         expect((await f.collect(root, 'unlimited')).notes).toEqual([]);
         expect(f.app.vault.cachedRead).not.toHaveBeenCalled();
+        expect(f.app.vault.readBinary).not.toHaveBeenCalled();
+    });
+
+    it('restricts root images to the selected chat and includes images in a linked note at the depth limit', async () => {
+        const f = fixture();
+        const png = 'iVBORw0KGgo=';
+        const jpeg = '/9j/';
+        const content = '![[private.png]]\n^^^\n[[guide]] ![[icon.png|80]]\ncc\n![[later.png]]';
+        const root = f.add('root.md', content, [['[[guide]]', 'notes/guide']], [
+            ['![[private.png]]', 'private.png'], ['![[icon.png|80]]', 'icon.png'], ['![[later.png]]', 'later.png'],
+        ]);
+        f.add('icon.png', png);
+        const linked = '![side](<../side%20view.jpg>)\n^^^\n[[icon.png]] [[deeper]]';
+        f.add('notes/guide.md', linked, [['[[icon.png]]', 'icon.png'], ['[[deeper]]', 'deeper']], [
+            ['![side](<../side%20view.jpg>)', '../side view.jpg'],
+        ]);
+        const side = f.add('side view.jpg', jpeg);
+        f.add('deeper.md', '![[unselected.png]]');
+        const resolve = f.app.metadataCache.getFirstLinkpathDest.getMockImplementation()!;
+        f.app.metadataCache.getFirstLinkpathDest.mockImplementation((link, source) =>
+            link === '../side view.jpg' && source === 'notes/guide.md' ? side : resolve(link, source));
+
+        const result = await f.collect(root, 1, content.indexOf('cc'));
+        const pngUrl = `data:image/png;base64,${png}`;
+        expect(result.images).toEqual([{ offset: content.indexOf('![[icon'), url: pngUrl }]);
+        expect(result.notes).toEqual([{ path: 'notes/guide.md', content: linked, images: [`data:image/jpeg;base64,${jpeg}`, pngUrl] }]);
+        expect(f.app.vault.readBinary.mock.calls.map(([file]) => file.path)).toEqual(['icon.png', 'side view.jpg']);
+    });
+
+    it('stops when a requested attachment cannot be sent', async () => {
+        const f = fixture();
+        const root = f.add('root.md', '![[ref.png]]', [], [['![[ref.png]]', 'ref.png']]);
+        await expect(f.collect(root, false)).rejects.toThrow('Could not find reference image "ref.png"');
+        f.add('ref.png', 'bm90IGFuIGltYWdl');
+        await expect(f.collect(root, false)).rejects.toThrow('PNG, JPEG, WebP, or GIF');
+        f.app.vault.readBinary.mockRejectedValueOnce(new Error('I/O error'));
+        await expect(f.collect(root, false)).rejects.toThrow('Could not read reference image "ref.png"');
+    });
+
+    it('preserves web and vault image order while excluding literal Markdown and out-of-chat embeds', async () => {
+        const f = fixture();
+        const literal = '![literal](https://example.com/literal)';
+        const content = [
+            '![private](https://example.com/private)', '^^^',
+            '![front [view]](https://example.com/mug_(front).png "Mug")', '![[cat.png]]',
+            '![side](<https://example.com/side view>)',
+            '`' + literal + '` <!-- ' + literal + ' --> %% ' + literal + ' %% \\' + literal,
+            '> ~~~md', '> ' + literal, '> ~~~',
+            '[ordinary link](https://example.com/page)', 'cc', '![later](https://example.com/later)',
+        ].join('\n');
+        // Obsidian omits remote URLs from its embeds array.
+        const root = f.add('chat.md', content, [], [['![[cat.png]]', 'cat.png']]);
+        f.add('cat.png', 'iVBORw0KGgo=');
+        const result = await f.collect(root, false, content.indexOf('\ncc'));
+        expect(result.images.map(image => image.url)).toEqual([
+            'https://example.com/mug_(front).png', 'data:image/png;base64,iVBORw0KGgo=', 'https://example.com/side%20view',
+        ]);
+    });
+
+    it('honors cancellation during an image read', async () => {
+        const f = fixture();
+        const text = '![[ref.png]]';
+        const root = f.add('root.md', text, [], [[text, 'ref.png']]);
+        f.add('ref.png', 'iVBORw0KGgo=');
+        const controller = new AbortController();
+        f.app.vault.readBinary.mockImplementationOnce(async () => {
+            controller.abort();
+            return new ArrayBuffer(0);
+        });
+        const request = f.service.collect(root, text, text.length, false, controller.signal);
+        f.indexed(root);
+        await expect(request).rejects.toMatchObject({ name: 'AbortError' });
     });
 
     it('continues past unreadable notes and reports missing metadata', async () => {

@@ -1,15 +1,5 @@
 import { App, TFile, requestUrl } from 'obsidian';
-
-/** Some providers omit media_type or return a generic download content type. */
-function imageExtension(data: ArrayBuffer): string {
-    const bytes = new Uint8Array(data);
-    const starts = (signature: number[], offset = 0) => signature.every((byte, index) => bytes[offset + index] === byte);
-    if (starts([137, 80, 78, 71, 13, 10, 26, 10])) return 'png';
-    if (starts([255, 216, 255])) return 'jpg';
-    if (starts([82, 73, 70, 70]) && starts([87, 69, 66, 80], 8)) return 'webp';
-    if (starts([71, 73, 70, 56, 55, 97]) || starts([71, 73, 70, 56, 57, 97])) return 'gif';
-    throw new Error('The model returned invalid or unsupported image data. Expected PNG, JPEG, WebP, or GIF.');
-}
+import { imageExtension } from './utils/imageFormat';
 
 /** Keep image bytes in attachments, never in the Markdown conversation. */
 export class GeneratedImageService {
@@ -41,6 +31,7 @@ export class GeneratedImageService {
             bytes = array.buffer;
         }
         const extension = imageExtension(bytes);
+        if (!extension) throw new Error('The model returned invalid or unsupported image data. Expected PNG, JPEG, WebP, or GIF.');
 
         const filename = `generated-${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${extension}`;
         const path = await this.app.fileManager.getAvailablePathForAttachment(filename, source.path);

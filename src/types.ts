@@ -105,6 +105,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  /** Vault data URLs or web image URLs, in the order they appear in this turn. */
+  images?: string[];
 }
 
 /** Text streams as before; generated images arrive as complete data or HTTPS URLs. */

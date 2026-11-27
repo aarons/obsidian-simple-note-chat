@@ -4,7 +4,7 @@ import { PluginSettings, ChatMessage } from './types';
 import { CompletionProvider } from './ModelProvider';
 import { log } from './utils/logger';
 import { CHAT_SEPARATOR, getChatContentStart } from './constants';
-import { LinkedNoteContext, withLinkedNoteContext } from './LinkedNoteContext';
+import { LinkedNoteContext, mayContainImages, NoteImage, withLinkedNoteContext } from './LinkedNoteContext';
 import { GeneratedImageService } from './GeneratedImageService';
 
 interface ActiveStreamInfo {
@@ -45,32 +45,21 @@ export class ChatService {
         }
     }
 
-    /**
-     * Parses note content into ChatMessages, excluding content at or after a given position.
-     * @param fullContent The raw string content of the note.
-     * @param separator The separator used to divide messages.
-     * @param parseUntilPos The position in the editor up to which content should be parsed.
-     * @returns An array of ChatMessage objects.
-     */
-    private parseNoteContent(fullContent: string, separator: string, parseUntilOffset: number): ChatMessage[] {
-        const start = getChatContentStart(fullContent, parseUntilOffset);
-        const contentToParse = fullContent.slice(start, parseUntilOffset);
-
-        // Proceed with splitting the correctly selected content
-        const parts = contentToParse.split(separator)
-                                    .map(part => part.trim())
-                                    .filter(part => part.length > 0);
-
+    /** Image offsets refer to the untrimmed note, including earlier turns. */
+    private parseNoteContent(conversation: string, start: number, images: NoteImage[]): ChatMessage[] {
         const messages: ChatMessage[] = [];
-        let currentRole: 'user' | 'assistant' = 'user';
-
-        for (const part of parts) {
-             messages.push({ role: currentRole, content: part });
-            currentRole = currentRole === 'user' ? 'assistant' : 'user';
-        }
-
-        if (messages.length === 0) {
-            log.debug("Parsing resulted in zero messages. Ensure note content before insertion point is structured correctly.");
+        let nextImage = 0;
+        for (const part of conversation.split(CHAT_SEPARATOR)) {
+            const end = start + part.length;
+            const content = part.trim();
+            if (content) {
+                const message: ChatMessage = { role: messages.length % 2 === 0 ? 'user' : 'assistant', content };
+                while (nextImage < images.length && images[nextImage].offset < end) {
+                    (message.images ??= []).push(images[nextImage++].url);
+                }
+                messages.push(message);
+            }
+            start = end + CHAT_SEPARATOR.length;
         }
         return messages;
     }
@@ -135,13 +124,8 @@ export class ChatService {
         // 2. Parse Content *before* the status message
         const parseUntilOffset = editor.posToOffset(actualStatusStartPos);
         const sourceContent = editor.getValue();
-        let messages = this.parseNoteContent(sourceContent, CHAT_SEPARATOR, parseUntilOffset);
-
-        if (messages.length === 0) {
-            new Notice('No content found before the chat initiation point.');
-            this.removeStatusMessageAtPos(editor, statusMessage, actualStatusStartPos, actualStatusEndPos, 'No content found.');
-            return;
-        }
+        const start = getChatContentStart(sourceContent, parseUntilOffset);
+        const conversation = sourceContent.slice(start, parseUntilOffset);
 
         // 3. Set up AbortController and track stream
         const abortController = new AbortController();
@@ -157,15 +141,20 @@ export class ChatService {
         let lastPosition: EditorPosition | null = null; // Tracks the end of the last inserted chunk
 
         try {
-            if (settings.followNoteLinks) {
-                const { notes, skipped } = await new LinkedNoteContext(this.plugin.app).collect(
-                    file, sourceContent, parseUntilOffset, settings.noteLinkDepth, abortController.signal
-                );
-                if (skipped.length) {
-                    new Notice(`Could not fully load ${skipped.length} linked note(s). Some linked context may be missing.`);
-                }
-                messages = withLinkedNoteContext(messages, notes);
+            const context = conversation.trim() && (settings.followNoteLinks || mayContainImages(conversation))
+                ? await new LinkedNoteContext(this.plugin.app).collect(file, sourceContent, parseUntilOffset,
+                    settings.followNoteLinks ? settings.noteLinkDepth : false, abortController.signal)
+                : { notes: [], images: [], skipped: [] };
+            if (context.skipped.length) {
+                new Notice(`Could not fully load ${context.skipped.length} linked note(s). Some linked context may be missing.`);
             }
+            const turns = this.parseNoteContent(conversation, start, context.images);
+            if (!turns.length) {
+                new Notice('No content found before the chat initiation point.');
+                this.removeStatusMessageAtPos(editor, statusMessage, actualStatusStartPos, actualStatusEndPos, 'No content found.');
+                return;
+            }
+            const messages = withLinkedNoteContext(turns, context.notes);
             if (abortController.signal.aborted) throw new DOMException('Chat cancelled', 'AbortError');
 
             // 4. Call API and Stream Response

@@ -169,7 +169,7 @@ export class SimpleNoteChatSettingsTab extends PluginSettingTab {
 		new Setting(containerEl).setName('Linked notes').setHeading();
 		new Setting(containerEl)
 			.setName('Include linked notes')
-			.setDesc('Include the full contents of notes linked in your conversation (such as [[note.md]]) for the AI to use.')
+			.setDesc('Send the text and reference images from notes linked in your conversation, such as [[note.md]].')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.followNoteLinks)
 				.onChange(async value => {

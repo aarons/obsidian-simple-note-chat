@@ -41,6 +41,24 @@ describe('direct ChatGPT connection', () => {
         expect(response.destroyed).toBe(true);
     });
 
+    it('uses Responses image inputs for vault attachments and a saved image from the previous turn', async () => {
+        const { service, response, event } = fixture();
+        const image = 'data:image/png;base64,iVBORw0KGgo=';
+        response.end(event('response.output_text.delta', { delta: 'Blue' }) + event('response.completed'));
+        await collect(service.streamChatCompletion([
+            { role: 'user', content: 'Draw a blue mug.' },
+            { role: 'assistant', content: '![[mug.png]]', images: [image] },
+            { role: 'user', content: 'What color is the handle?' },
+        ], 'example', new AbortController().signal));
+        const calls = vi.mocked(chatGptRequest).mock.calls;
+        const body = JSON.parse(calls[calls.length - 1][1]!.body!);
+        expect(body.input[1]).toEqual({ role: 'assistant', content: '![[mug.png]]' });
+        expect(body.input[2]).toEqual({ role: 'user', content: [
+            { type: 'input_text', text: 'What color is the handle?' },
+            { type: 'input_image', image_url: image, detail: 'auto' },
+        ] });
+    });
+
     it.each(['response.failed', 'error', 'response.incomplete', 'EOF', 'malformed'])('surfaces %s without treating partial output as success', async failure => {
         const { service, response, event } = fixture();
         response.write(event('response.output_text.delta', { delta: 'partial' }));

@@ -2,6 +2,7 @@ import { ChatGptAuth } from './ChatGptAuth';
 import { chatGptJson, chatGptRequest } from './ChatGptHttp';
 import { CHATGPT_MODEL_PREFIX, ProviderModel } from './ModelProvider';
 import { ChatMessage, ReasoningEffort } from './types';
+import { formatChatInputs } from './ChatInputs';
 
 const API = 'https://api.openai.com/v1';
 
@@ -43,12 +44,13 @@ export class ChatGptService {
             response = await chatGptRequest(`${API}/responses`, {
                 method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'text/event-stream' },
                 signal: controller.signal,
-                body: JSON.stringify({ model, input: messages.map(({ role, content }) => ({ role, content })),
+                body: JSON.stringify({ model, input: formatChatInputs(messages, 'responses'),
                     instructions: 'You are a helpful text chat assistant inside Obsidian. Respond in Markdown.', store: false, stream: true }),
             });
             if (response.statusCode !== 200) {
                 throw new Error(response.statusCode === 401 ? 'Your ChatGPT connection expired. Sign in again.' :
                     response.statusCode === 429 ? 'ChatGPT sharing usage limit reached. Manage usage at https://chatgpt.com/settings/usage or try again later.' :
+                    response.statusCode === 400 && messages.some(message => message.images?.length) ? 'ChatGPT could not use the reference images. Check the image format, size, and selected model\'s image support.' :
                     `ChatGPT request failed (${response.statusCode}). Please try again.`);
             }
             const contentType = response.headers['content-type']?.split(';')[0].trim().toLowerCase();

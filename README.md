@@ -23,7 +23,7 @@ This plugin enables Obsidian to act as a lightweight chat interface for most any
 * You can mask content to prevent it from being included in the chat
 	* `^^^` - anything above this will be ignored
 * Responses are streamed
-* Generate images with OpenRouter image models and save them as embedded vault attachments
+* Use vault images as chat inputs, edit them with OpenRouter image models, and save the results as embedded attachments
 * Optionally include linked notes as context, with a configurable depth or unlimited traversal
 * Press `Escape` to quickly stop a stream
 * Nearly everything is configurable
@@ -66,15 +66,24 @@ Tell me a haiku about kittens. cc  <- 'cc' is not on it's own line, so it won't 
 ```
 
 
-### Generating images
+### Generating and editing images
 
-Select an OpenRouter model labeled **Image output** with `cm` or in settings, describe your image, then use `cc` as usual. The plugin supports both text-and-image chat models and image-only models. Image requests wait for the complete result; ordinary text models continue streaming.
+Select an OpenRouter model marked 🎨 with `cm` or in settings, describe your image, then use `cc` as usual. For edits, choose a model marked 🎨 📎. Paste or drop the reference image into your note, or embed a vault attachment with `![[photo.png]]` or `![photo](photo.png)`. The plugin sends the image file with your instructions. Regular links to vault images work too. PNG, JPEG, WebP, and GIF attachments are supported, subject to the selected model's limits.
+
+For a web-hosted image, use an inline Markdown embed such as `![photo](https://example.com/photo.png)`. The provider loads the image from that URL.
+
+```markdown
+^^^
+![[mug.png]]
+Make only the handle blue. Keep the cup and background the same.
+cc
+```
 
 Generated images are saved using Obsidian's attachment-folder setting for the current note, then embedded in the assistant response. Multiple images and accompanying text are supported. The embeds use vault-relative paths so they also work when a conversation is copied to an archive note. Press `Escape` to cancel a pending request.
 
-This supports image **output**. Existing image embeds are sent as Markdown text, not uploaded as image inputs, so follow-up image editing and models requiring reference images are not supported. Use a text-capable model for automatic note titles.
+For a follow-up edit, leave the generated image in the conversation and type the change you want. The plugin automatically sends the saved image again. In the active note, only images after the last standalone `^^^` and before the chat command are included. Images in the active conversation work with **Include linked notes** turned off.
 
-Image generation is currently unavailable through the ChatGPT subscription connection: OpenAI's [token-sharing preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations) explicitly exclude it. OpenRouter generation uses your OpenRouter API key and billing.
+Vision-capable models on either connection can answer questions about your images. Image generation and editing use your OpenRouter API key and billing. The ChatGPT subscription connection supports image input and text replies. [OpenAI token-sharing preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations)
 
 ### Limiting what is sent to the AI
 
@@ -109,7 +118,7 @@ Enable **Settings → Simple Note Chat → Linked notes → Include linked notes
 - **2:** Also include those notes' linked notes, but nothing beyond that.
 - Enable **Unlimited depth**, below the depth field, to include every reachable note. The depth field stays visible but disabled, and its previous value is restored when unlimited is turned off. Each note is included once, so circular links stop safely. Large collections can exceed the model's context limit or increase usage.
 
-Both `[[notename.md]]` and `[description](link.md)` work, as do aliases, heading/block links, and embedded Markdown notes. Obsidian's metadata cache and link resolver handle parsing and finding the destination relative to each source note. External URLs, unresolved links, and non-Markdown attachments are skipped. Heading and block links include the entire destination note.
+Both `[[notename.md]]` and `[description](link.md)` work, as do aliases, heading/block links, and embedded Markdown notes. Obsidian resolves each vault link relative to the note that contains it. Included notes also contribute their reference images, even at the selected depth limit. Ordinary web links and other attachment types stay in the Markdown text. A missing or unreadable vault image stops the request so you can fix its link. Heading and block links include the entire destination note.
 
 Only links after the last `^^^` boundary and before the chat initiation point in the **current note** are followed. **Linked notes are included in full**, including text and links above any `^^^` markers they contain. A link back to the current note never adds its excluded content. Linked context is labeled with vault paths in the request; it is not inserted into your note or included in archive title generation.
 

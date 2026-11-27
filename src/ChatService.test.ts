@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Editor, EditorPosition, Plugin, TFile } from 'obsidian';
+import type { CachedMetadata, Editor, EditorPosition, Plugin, TFile } from 'obsidian';
 import { EditorSelection, EditorState } from '@codemirror/state';
 import type { TransactionSpec } from '@codemirror/state';
 
 vi.mock('obsidian', () => ({
     Notice: class {},
     getLinkpath: (link: string) => link.split('#')[0],
+    arrayBufferToBase64: (bytes: ArrayBuffer) => Buffer.from(bytes).toString('base64'),
 }));
 
 import { ChatService } from './ChatService';
@@ -56,7 +57,8 @@ function setup(useCodeMirror = true) {
         fileManager: { getAvailablePathForAttachment: vi.fn(async () => 'attachments/generated.png') },
         vault: {
             cachedRead: vi.fn(async () => 'Reference before\n^^^\nReference after'),
-            createBinary: vi.fn(async () => ({ path: 'attachments/generated.png' })),
+            createBinary: vi.fn(async (path: string, _bytes: ArrayBuffer) => ({ path })),
+            readBinary: vi.fn<(file: TFile) => Promise<ArrayBuffer>>(),
             delete: vi.fn(async () => {}),
         },
     };
@@ -65,10 +67,10 @@ function setup(useCodeMirror = true) {
         getChatCompletion: vi.fn(), getModelReasoningInfo: vi.fn(),
     };
     const service = new ChatService({ app } as unknown as Plugin, provider);
-    const indexed = () => {
+    const indexed = (cache?: CachedMetadata) => {
         const original = '[[reference]]';
         const offset = text.indexOf(original);
-        listener?.(file, text, { links: [{ original, link: 'reference', position: {
+        listener?.(file, text, cache ?? { links: [{ original, link: 'reference', position: {
             start: { offset }, end: { offset: offset + original.length },
         } }] });
     };
@@ -121,6 +123,33 @@ describe('chat context integration', () => {
 });
 
 describe('image output in chat notes', () => {
+    it('sends the saved image bytes on a follow-up edit with linked notes disabled', async () => {
+        const f = setup();
+        const png = 'data:image/png;base64,iVBORw0KGgo=';
+        f.provider.streamChatCompletion.mockImplementationOnce(async function* () { yield { type: 'image' as const, url: png }; });
+        await f.start();
+        const [path, bytes] = f.app.vault.createBinary.mock.calls[0];
+        f.app.vault.readBinary.mockResolvedValue(bytes);
+        const attachment = { path, extension: 'png' } as TFile;
+        f.app.metadataCache.getFirstLinkpathDest.mockReturnValue(attachment);
+        f.editor.replaceRange('Make the handle blue.\n', f.editor.offsetToPos(f.editor.getValue().length));
+        const edit = f.start();
+        const original = `![[${path}]]`;
+        const start = f.editor.getValue().indexOf(original);
+        f.indexed({ embeds: [{ link: path, original, position: {
+            start: { line: 0, col: 0, offset: start }, end: { line: 0, col: 0, offset: start + original.length },
+        } }] });
+        await edit;
+        const [messages] = f.provider.streamChatCompletion.mock.calls[1] as unknown as [object[]];
+        expect(messages.slice(-2)).toEqual([
+            { role: 'assistant', content: original, images: [png] },
+            { role: 'user', content: 'Make the handle blue.' },
+        ]);
+        expect(f.app.vault.cachedRead).not.toHaveBeenCalled();
+        expect(f.app.vault.readBinary).toHaveBeenCalledWith(attachment);
+        expect(f.editor.getValue()).not.toContain('base64');
+    });
+
     it.each([false, true])('embeds saved images within the assistant response (with text: %s)', async withText => {
         const f = setup();
         f.provider.streamChatCompletion.mockImplementation(async function* () {

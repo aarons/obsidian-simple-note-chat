@@ -3,6 +3,7 @@ import { requestUrl } from 'obsidian';
 import { OPENROUTER_API_URL } from './constants';
 import { PluginSettings, ChatMessage, ChatOutput, ReasoningEffort } from './types';
 import { log } from './utils/logger';
+import { formatChatInputs, formatImageInputs } from './ChatInputs';
 
 /**
  * Per-model reasoning capabilities reported by GET /models.
@@ -362,6 +363,10 @@ export class OpenRouterService {
         const models = await this.fetchModels(apiKey);
         if (signal.aborted) return;
         const model = models.find(model => model.id === defaultModel);
+        const inputs = model?.architecture?.input_modalities;
+        if (inputs && !inputs.includes('image') && messages.some(message => message.images?.length)) {
+            throw new Error(`${model?.name || defaultModel} does not accept reference images. Choose a model with image input or use ^^^ to start after the image.`);
+        }
         if (model && this.isImageModel(model)) {
             const textOutput = !!model.architecture?.output_modalities?.includes('text');
             const supportsChat = !model.endpoints || model.endpoints.includes('/api/v1/chat/completions');
@@ -374,11 +379,11 @@ export class OpenRouterService {
 
         const requestBody = {
             model: defaultModel,
-            messages: messages,
+            messages: formatChatInputs(messages, 'chat/completions'),
             stream: true,
         };
 
-        log.debug('OpenRouterService: Sending stream request:', JSON.stringify(requestBody, null, 2));
+        log.debug('OpenRouterService: Sending stream request:', defaultModel, messages.length, 'messages');
 
         let response: Response;
         try {
@@ -502,11 +507,9 @@ export class OpenRouterService {
     /** Image requests return complete images; text-only requests keep streaming. */
     private async *generateImages(messages: ChatMessage[], settings: PluginSettings, signal: AbortSignal, chatModel: boolean, textOutput: boolean): AsyncGenerator<ChatOutput> {
         const requestBody = chatModel
-            ? { model: settings.defaultModel, messages, modalities: textOutput ? ['text', 'image'] : ['image'], stream: false }
-            : { model: settings.defaultModel,
-                // The images endpoint accepts a prompt, not native chat history.
-                prompt: messages.length === 1 ? messages[0].content : messages.map(message => `${message.role}: ${message.content}`).join('\n\n'),
-                response_format: 'b64_json' };
+            ? { model: settings.defaultModel, messages: formatChatInputs(messages, 'chat/completions'),
+                modalities: textOutput ? ['text', 'image'] : ['image'], stream: false }
+            : { model: settings.defaultModel, ...formatImageInputs(messages), response_format: 'b64_json' };
         const response = await fetch(`${OPENROUTER_API_URL}/${chatModel ? 'chat/completions' : 'images'}`, {
             method: 'POST', headers: { Authorization: `Bearer ${settings.apiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody), signal,
@@ -564,7 +567,7 @@ export class OpenRouterService {
 
         const requestBody: any = {
             model: model,
-            messages: messages,
+            messages: formatChatInputs(messages, 'chat/completions'),
             stream: false,
         };
 
@@ -575,7 +578,7 @@ export class OpenRouterService {
             requestBody.reasoning = options.reasoning;
         }
 
-        log.debug('OpenRouterService: Sending non-stream request:', JSON.stringify(requestBody, null, 2));
+        log.debug('OpenRouterService: Sending non-stream request:', model, messages.length, 'messages');
 
         let response;
         try {
